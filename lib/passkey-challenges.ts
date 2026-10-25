@@ -18,7 +18,7 @@ function config() {
   return { url: url.replace(/\/$/, ""), key };
 }
 
-async function supabase(path: string, method: string, body: object) {
+async function supabase(path: string, method: string, body: object, minimal = false) {
   const { url, key } = config();
   const response = await fetch(url + path, {
     method,
@@ -26,7 +26,7 @@ async function supabase(path: string, method: string, body: object) {
       apikey: key,
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
-      Prefer: "return=minimal",
+      ...(minimal ? { Prefer: "return=minimal" } : {}),
     },
     body: JSON.stringify(body),
     cache: "no-store",
@@ -37,7 +37,7 @@ async function supabase(path: string, method: string, body: object) {
 }
 
 export async function saveChallenge(hash: string, purpose: "register" | "authenticate", expiresAt: string) {
-  await supabase("/rest/v1/jarvis_webauthn_challenges", "POST", { challenge_hash: hash, purpose, expires_at: expiresAt });
+  await supabase("/rest/v1/jarvis_webauthn_challenges", "POST", { challenge_hash: hash, purpose, expires_at: expiresAt }, true);
 }
 
 export async function consumeChallenge(hash: string, purpose: "register" | "authenticate"): Promise<boolean> {
