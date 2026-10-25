@@ -1,0 +1,1 @@
+import "./style.css";import type { Metadata } from "next";export const metadata:Metadata={title:"Jarvis Kiro | Central Pessoal",description:"Assistente pessoal da Kiro Produções"};export default function Layout({children}:{children:React.ReactNode}){return <html lang="pt-BR"><body>{children}</body></html>}
