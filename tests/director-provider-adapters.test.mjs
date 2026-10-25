@@ -8,7 +8,7 @@ const routes = ["github-status","vercel-status","supabase-status"].map(x => {
 for(const {name,code} of routes){
  test(name+" requires authorization before external read",()=>{
   assert.match(code,/await authorized\(\)/);
-  assert.match(code,/status:401/);
+  assert.match(code,/status:\s*401/);
   assert.match(code,/no-store/);
   assert.doesNotMatch(code,/method:\s*["'](?:POST|PATCH|DELETE|PUT)["']/);
  });
