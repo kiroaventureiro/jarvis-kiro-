@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 const apple=JSON.parse(fs.readFileSync("config/apple-integration-plan.json","utf8"));
-const route=fs.readFileSync("app/api/director/apple-social-plan/route.ts","utf8");
+const route=fs.readFileSync("app/api/director/device-plan/route.ts","utf8");
 const social=fs.readFileSync("lib/social-metrics-contracts.ts","utf8");
 test("Apple access separated by purpose without claiming connection",()=>{
  assert.deepEqual(apple.features.map(x=>x.id),["iphone_pwa","apple_sign_in","icloud_mail","device_companion"]);
