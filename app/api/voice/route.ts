@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../lib/auth";
 import { getJarvisProfile, getIntegrationStatus } from "../../../lib/jarvis-profile";
+import { lookupJarvisMemory } from "../../../lib/jarvis-memory";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,11 @@ function buildVoiceInstructions() {
   const profile = getJarvisProfile();
   const connections = getIntegrationStatus();
   const unavailable = connections.filter((item) => !item.connected).map((item) => item.name);
+  const curated = lookupJarvisMemory("Jarvis Kiro Sistema Origem Supabase arquitetura",3);
+  const memoryContext = curated.map(item => `Projeto: ${item.project}. Origem: ${item.source}. Confiança: ${item.confidence}. Registrado: ${item.recorded_at}. Resumo: ${item.summary}. Referência: ${item.retrieval_reference}.`);
   return [
+    "Memória indexada e limitada; não é sincronização ao vivo. Trate relatos como relatos e cite a origem ao responder.",
+    ...memoryContext,
     `Você é ${profile.identity.name}, ${profile.identity.role}. Converse em ${profile.identity.language}.`,
     `Estilo de voz: ${profile.voice.style}. Respostas: ${profile.voice.responseLength}.`,
     ...profile.principles,
