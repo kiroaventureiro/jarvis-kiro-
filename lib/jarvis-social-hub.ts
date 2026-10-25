@@ -17,7 +17,7 @@ export function validateSnapshot(value:unknown):value is SocialSnapshot {
  if(!Object.hasOwn(socialConnections,String(s.network)))return false;
  if(typeof s.accountReference!=="string"||s.accountReference.length>120)return false;
  if(typeof s.source!=="string"||s.source.length>150||!s.source)return false;
- if(![s.periodStart,s.periodEnd,s.observedAt].every(x=>typeof x==="string"&&/^\\d{4}-\\d{2}-\\d{2}/.test(x)))return false;
+ if(![s.periodStart,s.periodEnd,s.observedAt].every(x=>typeof x==="string"&&/^\d{4}-\d{2}-\d{2}/.test(x)))return false;
  if(!s.values||typeof s.values!=="object"||Array.isArray(s.values))return false;
  return Object.entries(s.values as Record<string,unknown>).every(([k,v])=>
   ["views","followers","reach","engagements","watchTimeSeconds"].includes(k)&&
