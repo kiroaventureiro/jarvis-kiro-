@@ -24,7 +24,7 @@ async function supabase(path: string, method: string, body: object, minimal = fa
     method,
     headers: {
       apikey: key,
-      Authorization: `Bearer ${key}`,
+      ...(key.startsWith("sb_secret_") ? {} : { Authorization: `Bearer ${key}` }),
       "Content-Type": "application/json",
       ...(minimal ? { Prefer: "return=minimal" } : {}),
     },
