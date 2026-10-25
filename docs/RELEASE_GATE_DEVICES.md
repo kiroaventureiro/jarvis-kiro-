@@ -1,6 +1,6 @@
 # Jarvis Kiro — Gate de lançamento (iPhone + Windows)
 
-Status: **BLOQUEADO**. Só declarar pronto depois de todos os testes verificados com evidência.
+Status: **BLOQUEADO para produção**. CI passou, mas testes de integração e dispositivos permanecem pendentes. Só declarar pronto depois de todos os testes verificados com evidência.
 
 ## Pré-requisitos
 - Backend implementa registro WebAuthn com sessão do dono; sem enrollment público.
@@ -40,3 +40,10 @@ Status: **BLOQUEADO**. Só declarar pronto depois de todos os testes verificados
 - Testes estáticos de segurança e workflow CI foram adicionados à branch; **resultado de execução ainda não confirmado**.
 - Testes de dispositivos **não executados**; GitHub inventory **apenas descoberto**.
 - Não solicitar utilização do Jarvis como se estivesse pronto.
+
+## Evidência CI verificada (25/10/2026)
+- GitHub Actions, execução 40238326526, job 121304558143: **success**.
+- Etapas bem-sucedidas: instalação de dependências, testes estáticos de segurança, TypeScript e build Next.js.
+- Atenção: testes existentes verificam sobretudo presença/estrutura do código; não comprovam autenticação WebAuthn real, integração Supabase, resistência a ataques nem funcionamento em iPhone/Windows.
+- Link para revisão: https://github.com/kiroaventureiro/jarvis-kiro-/pull/1
+- Próximo gate: testes de WebAuthn com autenticador virtual, banco dedicado e E2E; depois dispositivos reais.
