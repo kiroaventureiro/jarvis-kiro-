@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "updatedAt": "2026-10-25",
+  "principle": "Catálogo descritivo. Não concede credenciais nem executa conexão.",
+  "connections": [
+    {
+      "name": "GitHub",
+      "purpose": "repositórios, issues, commits, PRs",
+      "priority": "P0",
+      "mode": "read-first, isolated development writes",
+      "status": "connector_available_in_chat; Jarvis runtime not yet connected"
+    },
+    {
+      "name": "Vercel",
+      "purpose": "deployments, logs, status e configuração",
+      "priority": "P0",
+      "mode": "read-first",
+      "status": "project identified; Jarvis runtime not yet connected"
+    },
+    {
+      "name": "OpenAI voice",
+      "purpose": "conversa natural no celular e computador",
+      "priority": "P0",
+      "mode": "server-mediated",
+      "status": "UI exists; real-device tests pending"
+    },
+    {
+      "name": "Google Drive/Gmail/Calendar",
+      "purpose": "documentos, correio e agenda",
+      "priority": "P1",
+      "mode": "minimal OAuth scopes, read-first",
+      "status": "not integrated in Jarvis runtime"
+    },
+    {
+      "name": "Microsoft OneDrive/Outlook",
+      "purpose": "arquivos e correio",
+      "priority": "P1",
+      "mode": "minimal OAuth scopes, read-first",
+      "status": "not integrated in Jarvis runtime"
+    },
+    {
+      "name": "n8n",
+      "purpose": "orquestração de tarefas específicas",
+      "priority": "P1",
+      "mode": "workflow-specific",
+      "status": "not integrated"
+    },
+    {
+      "name": "OBS/KIRO TV Windows Agent",
+      "purpose": "diagnóstico local e automação assistida",
+      "priority": "P1",
+      "mode": "localhost agent with allowlisted commands",
+      "status": "not integrated"
+    },
+    {
+      "name": "YouTube/Instagram/TikTok",
+      "purpose": "métricas e produção com publicação aprovada",
+      "priority": "P2",
+      "mode": "read analytics before any posting",
+      "status": "not integrated"
+    },
+    {
+      "name": "Supabase Jarvis",
+      "purpose": "persistência mínima de identidade, auditoria e aprovações",
+      "priority": "P2",
+      "mode": "server-only privileged credential",
+      "status": "dedicated database created; private Vercel credential pending"
+    },
+    {
+      "name": "Supabase legado Sistema Origem",
+      "purpose": "consulta histórica de estruturas e decisões",
+      "priority": "P3",
+      "mode": "read-only; never automatically restore",
+      "status": "inactive; history documented"
+    }
+  ]
+}
