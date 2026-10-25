@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "source": "GitHub repository search",
+  "owner": "kiroaventureiro",
+  "checkedAt": "2026-10-25",
+  "repositories": [
+    {
+      "name": "KIRO-Gest-ao",
+      "url": "https://github.com/kiroaventureiro/KIRO-Gest-ao",
+      "connection": "discovered_not_authorized_in_jarvis",
+      "classification": "pending_review"
+    },
+    {
+      "name": "kiro-editor",
+      "url": "https://github.com/kiroaventureiro/kiro-editor",
+      "connection": "discovered_not_authorized_in_jarvis",
+      "classification": "pending_review"
+    },
+    {
+      "name": "jarvis-kiro-",
+      "url": "https://github.com/kiroaventureiro/jarvis-kiro-",
+      "connection": "discovered_not_authorized_in_jarvis",
+      "classification": "pending_review"
+    },
+    {
+      "name": "kiro-game",
+      "url": "https://github.com/kiroaventureiro/kiro-game",
+      "connection": "discovered_not_authorized_in_jarvis",
+      "classification": "pending_review"
+    },
+    {
+      "name": "Sistema-Origem",
+      "url": "https://github.com/kiroaventureiro/Sistema-Origem",
+      "connection": "discovered_not_authorized_in_jarvis",
+      "classification": "pending_review"
+    },
+    {
+      "name": "site-guardioes-origem",
+      "url": "https://github.com/kiroaventureiro/site-guardioes-origem",
+      "connection": "discovered_not_authorized_in_jarvis",
+      "classification": "pending_review"
+    }
+  ],
+  "notes": [
+    "Inventory metadata only, not an active Jarvis connection",
+    "No repository was modified except the jarvis-kiro- development branch",
+    "Do not infer privacy, deploy status, or production health from this inventory"
+  ]
+}
