@@ -4,14 +4,14 @@ import fs from "node:fs";
 const social=fs.readFileSync("lib/jarvis-social-hub.ts","utf8");
 const api=fs.readFileSync("app/api/director/social-readiness/route.ts","utf8");
 const approvals=fs.readFileSync("lib/jarvis-approval-policy.ts","utf8");
-test("social readiness never claims active accounts",()=>{
- for(const network of ["youtube","instagram","tiktok","spotify"])assert.match(social,new RegExp(network+":\\\\{"));
- assert.match(api,/await authorized\\(\\)/);
- assert.match(api,/dataAvailable:false/);
- assert.doesNotMatch(api,/fetch\\(/);
+test("social readiness does not claim active accounts",()=>{
+ for(const name of ["youtube","instagram","tiktok","spotify"])assert.ok(social.includes(name+":{"));
+ assert.ok(api.includes("await authorized()"));
+ assert.ok(api.includes("dataAvailable:false"));
+ assert.ok(!api.includes("fetch("));
 });
-test("write actions remain blocked even with proposed approval",()=>{
- assert.match(approvals,/requiresApproval:true/);
- assert.match(approvals,/allowed:false,requiresApproval:true/);
- assert.match(approvals,/execução desabilitada/);
+test("dangerous actions remain disabled even with proposed approval",()=>{
+ assert.ok(approvals.includes("requiresApproval:true"));
+ assert.ok(approvals.includes("allowed:false,requiresApproval:true"));
+ assert.ok(approvals.includes("execução desabilitada"));
 });
