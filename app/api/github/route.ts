@@ -7,7 +7,7 @@ export async function GET() {
   const token = process.env.GITHUB_READ_TOKEN;
   if (!token) return NextResponse.json({ error: "Configure GITHUB_READ_TOKEN no servidor com permissão somente leitura." }, { status: 503 });
   try {
-    const response = await fetch(`https://api.github.com/users/${USER}/repos?per_page=100&type=owner&sort=updated`, {
+    const response = await fetch(`https://api.github.com/user/repos?per_page=100&affiliation=owner&sort=updated`, {
       headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, "X-GitHub-Api-Version": "2022-11-28" },
       cache: "no-store", signal: AbortSignal.timeout(10000)
     });
