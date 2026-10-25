@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "phase": "architecture_only",
+  "flows": [
+    {
+      "id": "project_report",
+      "trigger": "owner_request",
+      "steps": [
+        "authorize_session",
+        "query_github_readonly",
+        "query_vercel_readonly",
+        "summarize_with_provenance"
+      ],
+      "sideEffects": false
+    },
+    {
+      "id": "content_pipeline",
+      "trigger": "owner_request",
+      "steps": [
+        "load_character_bible",
+        "create_draft",
+        "review_consistency",
+        "request_approval_before_publish"
+      ],
+      "sideEffects": false
+    },
+    {
+      "id": "broadcast_health",
+      "trigger": "owner_request",
+      "steps": [
+        "request_windows_agent_status",
+        "request_obs_status",
+        "diagnose",
+        "report"
+      ],
+      "sideEffects": false
+    },
+    {
+      "id": "social_performance",
+      "trigger": "owner_request",
+      "steps": [
+        "request_provider_metrics",
+        "normalize_metrics",
+        "compare_periods",
+        "report"
+      ],
+      "sideEffects": false
+    },
+    {
+      "id": "daily_briefing",
+      "trigger": "owner_request",
+      "steps": [
+        "read_calendar",
+        "read_open_tasks",
+        "prioritize",
+        "report"
+      ],
+      "sideEffects": false
+    }
+  ]
+}
