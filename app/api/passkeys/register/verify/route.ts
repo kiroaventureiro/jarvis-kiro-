@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
-import { authorized } from "../../../../lib/auth";
-import { consumeChallenge, hashChallenge } from "../../../../lib/passkey-challenges";
-import { verifyNewDevice } from "../../../../lib/passkey-verify";
-import { storeCredential } from "../../../../lib/passkey-store";
+import { authorized } from "../../../../../lib/auth";
+import { consumeChallenge, hashChallenge } from "../../../../../lib/passkey-challenges";
+import { verifyNewDevice } from "../../../../../lib/passkey-verify";
+import { storeCredential } from "../../../../../lib/passkey-store";
 
 export const dynamic = "force-dynamic";
 
