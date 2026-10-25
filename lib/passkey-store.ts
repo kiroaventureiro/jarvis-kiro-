@@ -1,5 +1,4 @@
 import "server-only";
-import { createHash } from "node:crypto";
 import type { WebAuthnCredential } from "@simplewebauthn/server";
 
 function settings() {
