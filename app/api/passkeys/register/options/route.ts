@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { generateRegistrationOptions } from "@simplewebauthn/server";
-import { authorized } from "../../../../lib/auth";
-import { getPasskeyConfig } from "../../../../lib/passkey-config";
-import { hashChallenge, saveChallenge } from "../../../../lib/passkey-challenges";
+import { authorized } from "../../../../../lib/auth";
+import { getPasskeyConfig } from "../../../../../lib/passkey-config";
+import { hashChallenge, saveChallenge } from "../../../../../lib/passkey-challenges";
 
 export const dynamic = "force-dynamic";
 
