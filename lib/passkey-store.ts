@@ -8,7 +8,7 @@ function settings() {
 }
 async function request(path:string,method:string,body?:unknown,prefer?:string) {
   const {url,key}=settings();
-  const res=await fetch(url+path,{method,headers:{"apikey":key,"Authorization":`Bearer ${key}`,"Content-Type":"application/json",...(prefer?{"Prefer":prefer}:{})},body:body===undefined?undefined:JSON.stringify(body),cache:"no-store",signal:AbortSignal.timeout(10000)});
+  const res=await fetch(url+path,{method,headers:{"apikey":key,...(key.startsWith("sb_secret_") ? {} : { "Authorization": `Bearer ${key}` }),"Content-Type":"application/json",...(prefer?{"Prefer":prefer}:{})},body:body===undefined?undefined:JSON.stringify(body),cache:"no-store",signal:AbortSignal.timeout(10000)});
   if(!res.ok) throw new Error("Passkey storage request failed");
   return res;
 }
