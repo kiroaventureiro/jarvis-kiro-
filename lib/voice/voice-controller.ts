@@ -24,6 +24,7 @@ type Options = {
   command: (text: string, signal: AbortSignal) => Promise<VoiceReply>;
   onUser: (text: string) => void;
   onReply: (reply: VoiceReply) => void;
+  onSpeechUnavailable?: () => void;
   onState: (state: VoiceSnapshot) => void;
   navigate?: (path: string) => void;
   now?: () => number;
@@ -39,6 +40,7 @@ const fatal = new Set([
 ]);
 export class VoiceController {
   private skipSpeech = false;
+  private speechPending = false;
   private enabled = false;
   private busy = false;
   private rec: RecognitionDriver | null = null;
@@ -117,6 +119,8 @@ export class VoiceController {
     this.listen();
   }
   stop(message = "Escuta desligada.") {
+    if (this.speechPending) this.options.onSpeechUnavailable?.();
+    this.speechPending = false;
     this.enabled = false;
     this.epoch++;
     this.clearTimers();
@@ -252,11 +256,17 @@ export class VoiceController {
       if (!this.options.muted()) {
         this.emit("speaking", "Jarvis respondendo · reconhecimento pausado.");
         this.skipSpeech = false;
+        this.speechPending = true;
         try {
           await this.options.speech.speak(reply.text, abort.signal);
         } catch (error) {
+          if (epoch === this.epoch) this.options.onSpeechUnavailable?.();
           if (!this.skipSpeech) throw error;
+        } finally {
+          if (epoch === this.epoch) this.speechPending = false;
         }
+      } else {
+        this.options.onSpeechUnavailable?.();
       }
       if (epoch !== this.epoch || !this.enabled) return;
       this.busy = false;

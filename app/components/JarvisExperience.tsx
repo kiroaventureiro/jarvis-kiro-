@@ -4,6 +4,13 @@ import Link from "next/link";
 import JarvisNavigation from "./JarvisNavigation";
 import AttachmentHUD from "./AttachmentHUD";
 import WakeListener from "./WakeListener";
+import {
+  appendSpokenReply,
+  speechUnavailable,
+  visibleResponses,
+} from "../../lib/response-presentation";
+import { getVoiceManager } from "../../lib/voice/speech-output";
+import { readVoicePreferences } from "../../lib/voice/voice-preferences";
 import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
 import { useFileWorkspace } from "./useFileWorkspace";
 import {
@@ -41,6 +48,25 @@ export default function JarvisExperience() {
     message: "",
   });
   const [typingRequest, setTypingRequest] = useState(false);
+  const [desktopVoice, setDesktopVoice] = useState(false);
+  const browserReplyId = useRef<string | null>(null);
+  const realtimeReplyIds = useRef(new Set<string>());
+  const realtimeSpeechAvailable = useRef(true);
+  useEffect(() => {
+    const pointer = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const mobile =
+      /Android|iPhone|iPad|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const update = () => setDesktopVoice(!mobile && pointer.matches);
+    update();
+    pointer.addEventListener("change", update);
+    return () => pointer.removeEventListener("change", update);
+  }, []);
+  const unavailableRealtime = useCallback(() => {
+    realtimeSpeechAvailable.current = false;
+    const ids = new Set(realtimeReplyIds.current);
+    setMessages((items) => speechUnavailable(items, ids));
+  }, []);
   const wakeWasActive = useRef(false);
   const wakeStop = useRef<() => void>(() => {});
   const typingAbort = useRef<AbortController | null>(null);
@@ -103,13 +129,14 @@ export default function JarvisExperience() {
   }, [cleanup]);
   const fail = useCallback(
     (message: string) => {
+      unavailableRealtime();
       cleanup();
       setConnected(false);
       setMic(false);
       setError(message);
       setState("error");
     },
-    [cleanup],
+    [cleanup, unavailableRealtime],
   );
   const workspace = useFileWorkspace({
     stopVoice: stop,
@@ -220,19 +247,26 @@ export default function JarvisExperience() {
       if (!r.ok || !data.value)
         throw new Error(data.error || "Não foi possível iniciar a sessão");
       if (attempt !== generation.current) return false;
+      realtimeSpeechAvailable.current = true;
+      realtimeReplyIds.current = new Set();
       const pc = new RTCPeerConnection();
       peer.current = pc;
       const el = document.createElement("audio");
       el.autoplay = true;
       el.muted = muteRef.current;
       audio.current = el;
+      el.onerror = () => {
+        if (attempt === generation.current) unavailableRealtime();
+      };
       pc.ontrack = (e) => {
         el.srcObject = e.streams[0];
         el.play().catch(() => {
-          if (attempt === generation.current)
+          if (attempt === generation.current) {
+            unavailableRealtime();
             setError(
               "O navegador bloqueou o áudio. Use o controle de áudio para reproduzir.",
             );
+          }
         });
       };
       if (withMicrophone) {
@@ -262,6 +296,7 @@ export default function JarvisExperience() {
         if (event.type === "response.created") {
           responseFinished.current = false;
           playing.current = false;
+          realtimeReplyIds.current = new Set();
         }
         if (event.type === "output_audio_buffer.started")
           playing.current = true;
@@ -273,6 +308,7 @@ export default function JarvisExperience() {
         const next = eventState(event.type);
         if (next) setState(next);
         if (event.type === "error") {
+          unavailableRealtime();
           setError(event.error?.message || "A sessão informou um erro.");
           setState("error");
         }
@@ -285,20 +321,39 @@ export default function JarvisExperience() {
             "response.text.delta",
           ].includes(event.type) &&
           typeof event.delta === "string"
-        )
+        ) {
+          const spoken = event.type.includes("audio_transcript");
+          if (spoken) realtimeReplyIds.current.add(id);
           setMessages((items) =>
-            appendTranscript(items, id, "assistant", event.delta!),
+            spoken
+              ? appendSpokenReply(
+                  items,
+                  id,
+                  event.delta!,
+                  false,
+                  realtimeSpeechAvailable.current && !muteRef.current,
+                )
+              : appendTranscript(items, id, "assistant", event.delta!),
           );
+        }
         if (
           [
             "response.output_audio_transcript.done",
             "response.audio_transcript.done",
           ].includes(event.type) &&
           typeof event.transcript === "string"
-        )
+        ) {
+          realtimeReplyIds.current.add(id);
           setMessages((items) =>
-            appendTranscript(items, id, "assistant", event.transcript!, true),
+            appendSpokenReply(
+              items,
+              id,
+              event.transcript!,
+              true,
+              realtimeSpeechAvailable.current && !muteRef.current,
+            ),
           );
+        }
         if (
           event.type ===
             "conversation.item.input_audio_transcription.completed" &&
@@ -309,7 +364,9 @@ export default function JarvisExperience() {
           );
         if (event.type === "response.done") {
           responseFinished.current = true;
+          if (!audio.current?.srcObject) unavailableRealtime();
           if (event.response?.status === "failed") {
+            unavailableRealtime();
             setError(
               event.response.status_details?.error?.message ||
                 "Não foi possível gerar a resposta.",
@@ -460,16 +517,37 @@ export default function JarvisExperience() {
             ? result.error
             : "Falha na resposta da Abacus",
         );
-      setMessages((items) =>
-        appendTranscript(
-          items,
-          assistantId,
-          "assistant",
-          result.text as string,
-          true,
-        ),
-      );
-      setState("idle");
+      if (
+        desktopVoice &&
+        !muteRef.current &&
+        readVoicePreferences().volume > 0
+      ) {
+        setMessages((items) =>
+          appendSpokenReply(items, assistantId, result.text as string, true),
+        );
+        setState("responding");
+        try {
+          await getVoiceManager().speak(
+            result.text as string,
+            requestController.signal,
+          );
+        } catch {
+          setMessages((items) =>
+            speechUnavailable(items, new Set([assistantId])),
+          );
+        }
+      } else {
+        setMessages((items) =>
+          appendTranscript(
+            items,
+            assistantId,
+            "assistant",
+            result.text as string,
+            true,
+          ),
+        );
+      }
+      if (!requestController.signal.aborted) setState("idle");
     } catch (err) {
       if (!requestController.signal.aborted) {
         setError(
@@ -488,17 +566,20 @@ export default function JarvisExperience() {
     const next = !muted;
     muteRef.current = next;
     setMuted(next);
+    if (next && typingAbort.current) getVoiceManager().cancel();
     if (audio.current) {
       audio.current.muted = next;
       if (!next)
-        audio.current
-          .play()
-          .catch(() => setError("Não foi possível reproduzir o áudio."));
+        audio.current.play().catch(() => {
+          unavailableRealtime();
+          setError("Não foi possível reproduzir o áudio.");
+        });
     }
   }
-  const responses = messages.filter((item) => item.role === "assistant");
+  const visibleMessages = visibleResponses(messages, desktopVoice, muted);
+  const responses = visibleMessages.filter((item) => item.role === "assistant");
   const last = responses[responses.length - 1];
-  const shown = history ? messages : last ? [last] : [];
+  const shown = history ? visibleMessages : last ? [last] : [];
   return (
     <main
       className={
@@ -510,6 +591,7 @@ export default function JarvisExperience() {
       data-state={state}
       data-voice-phase={voiceSnapshot.phase}
       data-audio-visual="representative"
+      data-speech-presentation={desktopVoice ? "voice-first" : "transcript"}
       onDragEnter={dragEnter}
       onDragOver={dragOver}
       onDragLeave={dragLeave}
@@ -686,23 +768,31 @@ export default function JarvisExperience() {
               stop();
               setError("");
             }}
-            onUser={(spoken) =>
+            onUser={(spoken) => {
+              browserReplyId.current = null;
               setMessages((items) => [
                 ...items,
                 { id: crypto.randomUUID(), role: "user", text: spoken },
-              ])
-            }
-            onReply={(reply) =>
+              ]);
+            }}
+            onReply={(reply) => {
+              const id = crypto.randomUUID();
+              browserReplyId.current = id;
               setMessages((items) =>
-                appendTranscript(
+                appendSpokenReply(
                   items,
-                  crypto.randomUUID(),
-                  "assistant",
+                  id,
                   reply.text,
                   true,
+                  !muteRef.current,
                 ),
-              )
-            }
+              );
+            }}
+            onSpeechUnavailable={() => {
+              const id = browserReplyId.current;
+              if (id)
+                setMessages((items) => speechUnavailable(items, new Set([id])));
+            }}
             onState={(snapshot) => {
               const wasActive = wakeWasActive.current;
               wakeWasActive.current = snapshot.enabled;

@@ -132,6 +132,8 @@ async function activate(page) {
     ]) {
       const context = await browser.newContext({
         viewport: { width, height },
+        hasTouch: width < 850,
+        isMobile: width < 850,
         reducedMotion: "reduce",
       });
       await mock(context);
@@ -172,11 +174,17 @@ async function activate(page) {
       assert.equal(calls.length, 0);
       await page.evaluate(() => window.__emit("Bom dia, Jarvis"));
       await page.locator("main[data-voice-phase=speaking]").waitFor();
-      await page
-        .getByText("Bom dia! Estou à disposição. O que vamos fazer hoje?", {
-          exact: true,
-        })
-        .waitFor();
+      const greeting = page.getByText(
+        "Bom dia! Estou à disposição. O que vamos fazer hoje?",
+        { exact: true },
+      );
+      if (name === "desktop") {
+        await page
+          .locator("main[data-speech-presentation=voice-first]")
+          .waitFor();
+        assert.equal(await greeting.count(), 0);
+        assert.equal(await page.locator(".response-hud").count(), 0);
+      } else await greeting.waitFor();
       assert.equal(calls.length, 0);
       assert.equal(
         await page.evaluate(() => window.__recs.filter((r) => r.active).length),
@@ -220,6 +228,18 @@ async function activate(page) {
         .getByRole("textbox", { name: "Mensagem para o Jarvis" })
         .fill("Pedido pelo teclado");
       await page.getByRole("button", { name: "Enviar mensagem" }).click();
+      if (name === "desktop") {
+        await page.locator("main[data-state=responding]").waitFor();
+        assert.equal(
+          await page
+            .getByText("Aqui estão três ideias para o seu projeto.", {
+              exact: true,
+            })
+            .count(),
+          0,
+        );
+        await page.evaluate(() => window.__finish());
+      }
       await page.locator("main[data-state=idle]").waitFor();
       assert.equal(calls.length, 2);
       assert.equal(calls[1].message, "Pedido pelo teclado");
@@ -273,6 +293,8 @@ async function activate(page) {
       results.push({
         viewport: name,
         greeting: true,
+        speechPresentation:
+          name === "desktop" ? "voice-only" : "mobile-transcript",
         echoBlocked: true,
         continuation: true,
         deduplication: true,
@@ -282,6 +304,53 @@ async function activate(page) {
         authentication: true,
       });
       await context.close();
+    }
+    for (const mode of ["failure", "muted", "mute-during", "no-voice"]) {
+      const fallback = await browser.newContext();
+      await mock(fallback);
+      const fp = await fallback.newPage();
+      await fp.goto(base);
+      await fp.locator("main[data-speech-presentation=voice-first]").waitFor();
+      if (mode === "muted")
+        await fp
+          .getByRole("button", { name: "Silenciar áudio", exact: true })
+          .click();
+      if (mode === "no-voice")
+        await fp.evaluate(() => {
+          window.speechSynthesis.getVoices = () => [];
+        });
+      await activate(fp);
+      await fp.evaluate(() => window.__emit("Bom dia, Jarvis"));
+      if (mode === "mute-during") {
+        await fp.locator("main[data-voice-phase=speaking]").waitFor();
+        await fp
+          .getByRole("button", { name: "Silenciar áudio", exact: true })
+          .click();
+        await fp.waitForFunction(
+          () => window.__recs.filter((r) => r.active).length === 1,
+        );
+      }
+      if (mode === "failure") {
+        await fp.locator("main[data-voice-phase=speaking]").waitFor();
+        assert.equal(
+          await fp
+            .getByText("Bom dia! Estou à disposição. O que vamos fazer hoje?", {
+              exact: true,
+            })
+            .count(),
+          0,
+        );
+        await fp.evaluate(() =>
+          window.__synthCurrent.onerror({ error: "not-allowed" }),
+        );
+      }
+      await fp
+        .getByText("Bom dia! Estou à disposição. O que vamos fazer hoje?", {
+          exact: true,
+        })
+        .waitFor();
+      results.push({ scenario: "desktop text fallback " + mode, passed: true });
+      await fallback.close();
     }
     const controls = await browser.newContext();
     await mock(controls);

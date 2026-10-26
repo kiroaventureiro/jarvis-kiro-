@@ -15,6 +15,7 @@ type Props = {
   onMessage: (text: string, signal: AbortSignal) => Promise<VoiceReply>;
   onUser: (text: string) => void;
   onReply: (reply: VoiceReply) => void;
+  onSpeechUnavailable: () => void;
   onState: (state: VoiceSnapshot) => void;
   beforeStart: () => void;
   registerStop: (stop: () => void) => void;
@@ -49,10 +50,12 @@ export default function WakeListener(props: Props) {
       recognition: api.SpeechRecognition || api.webkitSpeechRecognition || null,
       speech: getVoiceManager(),
       continuous: () => !ios.current && readVoicePreferences().continuous,
-      muted: () => callback.current.muted,
+      muted: () =>
+        callback.current.muted || readVoicePreferences().volume === 0,
       command: (text, signal) => callback.current.onMessage(text, signal),
       onUser: (text) => callback.current.onUser(text),
       onReply: (reply) => callback.current.onReply(reply),
+      onSpeechUnavailable: () => callback.current.onSpeechUnavailable(),
       onState: (state) => {
         if (mounted) {
           setSnapshot(state);

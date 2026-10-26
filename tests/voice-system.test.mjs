@@ -48,7 +48,8 @@ function setup({
     users = [],
     replies = [],
     speeches = [],
-    calls = [];
+    calls = [],
+    unavailable = [];
   let resolveSpeech = null;
   class Rec {
     start() {
@@ -98,6 +99,7 @@ function setup({
     },
     onUser: (x) => users.push(x),
     onReply: (x) => replies.push(x),
+    onSpeechUnavailable: () => unavailable.push(true),
     onState: (x) => states.push(x),
     now: () => now,
     delay: (fn, ms) => {
@@ -115,6 +117,7 @@ function setup({
     replies,
     speeches,
     calls,
+    unavailable,
     finish: async () => {
       resolveSpeech?.();
       await flush();
@@ -503,4 +506,24 @@ test("speech waits for asynchronously loaded voices and cancellation prevents la
   events.dispatchEvent(new Event("voiceschanged"));
   await assert.rejects(cancelled, { name: "AbortError" });
   assert.equal(calls, 1);
+});
+
+test("muted voice explicitly requests text fallback", async () => {
+  const t = setup({ muted: true });
+  t.engine.start();
+  t.instances[0].emit("Bom dia, Jarvis");
+  await flush();
+  assert.equal(t.unavailable.length, 1);
+  assert.equal(t.speeches.length, 0);
+  t.engine.stop();
+});
+test("stopping speech requests fallback once and cancelled work cannot repeat it", async () => {
+  const t = setup();
+  t.engine.start();
+  t.instances[0].emit("Bom dia, Jarvis");
+  await flush();
+  t.engine.stop();
+  await flush();
+  assert.equal(t.unavailable.length, 1);
+  assert.equal(t.states.at(-1).phase, "off");
 });

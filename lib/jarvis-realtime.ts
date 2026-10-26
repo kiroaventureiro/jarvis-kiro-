@@ -9,6 +9,8 @@ export type TranscriptEntry = {
   id: string;
   role: "user" | "assistant";
   text: string;
+  presentation?: "speech" | "result";
+  speechAvailable?: boolean;
 };
 export type RealtimeEvent = {
   type: string;

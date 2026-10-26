@@ -21,6 +21,8 @@ const out = process.env.TEST_OUTPUT_DIR || "work/ui-evidence";
     ]) {
       const context = await browser.newContext({
         viewport: { width, height },
+        hasTouch: width < 850,
+        isMobile: width < 850,
         reducedMotion: "reduce",
       });
       const page = await context.newPage();
@@ -30,6 +32,18 @@ const out = process.env.TEST_OUTPUT_DIR || "work/ui-evidence";
         window.__stopped = 0;
         window.__micRequests = 0;
         window.__sent = [];
+        Object.defineProperty(window, "speechSynthesis", {
+          configurable: true,
+          value: {
+            getVoices: () => [],
+            cancel() {},
+            addEventListener() {},
+            removeEventListener() {},
+          },
+        });
+        HTMLMediaElement.prototype.play = async function () {
+          window.__audio = this;
+        };
         class Channel extends EventTarget {
           constructor() {
             super();
@@ -67,6 +81,7 @@ const out = process.env.TEST_OUTPUT_DIR || "work/ui-evidence";
         window.RTCPeerConnection = class {
           constructor() {
             this.connectionState = "new";
+            window.__pc = this;
           }
           createDataChannel() {
             return (this.dc = new Channel());
@@ -178,6 +193,28 @@ const out = process.env.TEST_OUTPUT_DIR || "work/ui-evidence";
         .getByRole("button", { name: "Desativar microfone", exact: true })
         .waitFor();
       assert.equal(await page.evaluate(() => window.__micRequests), 1);
+      await page.evaluate(() => {
+        window.__pc.ontrack({ streams: [new MediaStream()] });
+        window.__dc.onmessage({
+          data: JSON.stringify({
+            type: "response.output_audio_transcript.done",
+            item_id: "native-answer",
+            transcript: "Resposta falada da sessão neural.",
+          }),
+        });
+      });
+      if (width > 850) {
+        assert.equal(
+          await page
+            .getByText("Resposta falada da sessão neural.", { exact: true })
+            .count(),
+          0,
+        );
+        await page.evaluate(() => window.__audio.onerror());
+      }
+      await page
+        .getByText("Resposta falada da sessão neural.", { exact: true })
+        .waitFor();
       await page.getByRole("button", { name: "Encerrar sessão" }).click();
       assert.ok(await page.evaluate(() => window.__stopped >= 1));
       await page.getByRole("button", { name: "Abrir navegação" }).click();
