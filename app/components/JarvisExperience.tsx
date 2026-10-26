@@ -4,6 +4,7 @@ import Link from "next/link";
 import JarvisNavigation from "./JarvisNavigation";
 import AttachmentHUD from "./AttachmentHUD";
 import WakeListener from "./WakeListener";
+import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
 import { useFileWorkspace } from "./useFileWorkspace";
 import {
   appendTranscript,
@@ -33,6 +34,19 @@ export default function JarvisExperience() {
     [error, setError] = useState(""),
     [hidden, setHidden] = useState(false),
     [dragging, setDragging] = useState(false);
+  const [voiceSnapshot, setVoiceSnapshot] = useState<VoiceSnapshot>({
+    phase: "off",
+    enabled: false,
+    microphoneActive: false,
+    message: "",
+  });
+  const [typingRequest, setTypingRequest] = useState(false);
+  const wakeWasActive = useRef(false);
+  const wakeStop = useRef<() => void>(() => {});
+  const typingAbort = useRef<AbortController | null>(null);
+  const registerWakeStop = useCallback((stop: () => void) => {
+    wakeStop.current = stop;
+  }, []);
   const dragDepth = useRef(0);
   const analysisContext = useRef("");
   const peer = useRef<RTCPeerConnection | null>(null),
@@ -50,6 +64,7 @@ export default function JarvisExperience() {
     deadline = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cleanup = useCallback(() => {
     generation.current++;
+    typingAbort.current?.abort();
     abort.current?.abort();
     abort.current = null;
     if (deadline.current) clearTimeout(deadline.current);
@@ -386,6 +401,7 @@ export default function JarvisExperience() {
     }
   }
   async function microphone() {
+    wakeStop.current();
     if (workspace.files.length) {
       await workspace.voiceInstruction();
       return;
@@ -408,34 +424,64 @@ export default function JarvisExperience() {
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || ["connecting", "processing", "responding"].includes(state)) return;
+    if (!text || ["connecting", "processing", "responding"].includes(state))
+      return;
     if (workspace.files.length) {
       if (workspace.recording) return;
       const success = await workspace.analyze(text);
       if (success) setDraft("");
       return;
     }
+    wakeStop.current();
+    typingAbort.current?.abort();
+    const requestController = new AbortController();
+    typingAbort.current = requestController;
+    setTypingRequest(true);
     // Typed messages use the server-side RouteLLM adapter. Voice remains a separate session.
     const userId = crypto.randomUUID();
     const assistantId = crypto.randomUUID();
-    setMessages(items => [...items, { id:userId, role:"user", text }]);
+    setMessages((items) => [...items, { id: userId, role: "user", text }]);
     setDraft("");
     setError("");
     setState("processing");
     try {
       const response = await fetch("/api/director/abacus", {
-        method:"POST", credentials:"same-origin", cache:"no-store",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({message:text}),
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text }),
+        signal: requestController.signal,
       });
-      const result: { text?:unknown; error?:unknown } = await response.json();
+      const result: { text?: unknown; error?: unknown } = await response.json();
       if (!response.ok || typeof result.text !== "string")
-        throw new Error(typeof result.error === "string" ? result.error : "Falha na resposta da Abacus");
-      setMessages(items => appendTranscript(items, assistantId, "assistant", result.text as string, true));
+        throw new Error(
+          typeof result.error === "string"
+            ? result.error
+            : "Falha na resposta da Abacus",
+        );
+      setMessages((items) =>
+        appendTranscript(
+          items,
+          assistantId,
+          "assistant",
+          result.text as string,
+          true,
+        ),
+      );
       setState("idle");
-    } catch(err) {
-      setError(err instanceof Error ? err.message : "Falha na resposta da Abacus");
-      setState("error");
+    } catch (err) {
+      if (!requestController.signal.aborted) {
+        setError(
+          err instanceof Error ? err.message : "Falha na resposta da Abacus",
+        );
+        setState("error");
+      }
+    } finally {
+      if (typingAbort.current === requestController) {
+        typingAbort.current = null;
+        setTypingRequest(false);
+      }
     }
   }
   function toggleAudio() {
@@ -462,6 +508,8 @@ export default function JarvisExperience() {
         (dragging ? "is-dragging" : "")
       }
       data-state={state}
+      data-voice-phase={voiceSnapshot.phase}
+      data-audio-visual="representative"
       onDragEnter={dragEnter}
       onDragOver={dragOver}
       onDragLeave={dragLeave}
@@ -514,17 +562,27 @@ export default function JarvisExperience() {
             ? "Análise não concluída"
             : workspace.recording
               ? "Ouvindo orientação"
-              : labels[state]}
+              : voiceSnapshot.enabled
+                ? voiceSnapshot.phase === "waiting"
+                  ? "Aguardando Jarvis"
+                  : voiceSnapshot.phase === "command"
+                    ? "Ouvindo comando"
+                    : labels[state]
+                : labels[state]}
           <span className="connection-label">
             {workspace.busy
               ? "Arquivos em análise"
               : workspace.files.length
                 ? "Modo arquivos"
-                : connected
-                  ? mic
+                : voiceSnapshot.enabled
+                  ? voiceSnapshot.microphoneActive
                     ? "Microfone ativo"
-                    : "Microfone desligado"
-                  : "Desconectado"}
+                    : "Reconhecimento pausado"
+                  : connected
+                    ? mic
+                      ? "Microfone ativo"
+                      : "Microfone desligado"
+                    : "Desconectado"}
           </span>
         </div>
       </section>
@@ -615,22 +673,76 @@ export default function JarvisExperience() {
           </form>
         ) : null}
         <div className="dock-controls glass">
-          <WakeListener muted={muted} onMessage={async (spoken) => {
-            const userId=crypto.randomUUID(),replyId=crypto.randomUUID();
-            setMessages(items=>[...items,{id:userId,role:"user",text:spoken}]);
-            setError("");setState("processing");
-            try{
-              const response=await fetch("/api/director/abacus",{method:"POST",credentials:"same-origin",cache:"no-store",
-                headers:{"Content-Type":"application/json"},body:JSON.stringify({message:spoken.slice(0,1500)})});
-              const data:unknown=await response.json();
-              if(!response.ok||!data||typeof data!=="object")throw new Error("Falha na Abacus");
-              const reply=data as {text?:unknown;error?:unknown};
-              if(typeof reply.text!=="string")throw new Error(typeof reply.error==="string"?reply.error:"Resposta inválida");
-              setMessages(items=>appendTranscript(items,replyId,"assistant",reply.text as string,true));
-              setState("idle");
-              return reply.text;
-            }catch(err){setState("error");setError(err instanceof Error?err.message:"Erro na escuta");throw err}
-          }}/>
+          <WakeListener
+            muted={muted}
+            blocked={
+              connected ||
+              workspace.files.length > 0 ||
+              typingRequest ||
+              state === "connecting"
+            }
+            registerStop={registerWakeStop}
+            beforeStart={() => {
+              stop();
+              setError("");
+            }}
+            onUser={(spoken) =>
+              setMessages((items) => [
+                ...items,
+                { id: crypto.randomUUID(), role: "user", text: spoken },
+              ])
+            }
+            onReply={(reply) =>
+              setMessages((items) =>
+                appendTranscript(
+                  items,
+                  crypto.randomUUID(),
+                  "assistant",
+                  reply.text,
+                  true,
+                ),
+              )
+            }
+            onState={(snapshot) => {
+              const wasActive = wakeWasActive.current;
+              wakeWasActive.current = snapshot.enabled;
+              setVoiceSnapshot(snapshot);
+              if (snapshot.phase === "off" && !wasActive) return;
+              setState(
+                snapshot.phase === "processing"
+                  ? "processing"
+                  : snapshot.phase === "speaking"
+                    ? "responding"
+                    : snapshot.phase === "command"
+                      ? "listening"
+                      : snapshot.phase === "error"
+                        ? "error"
+                        : "idle",
+              );
+            }}
+            onMessage={async (spoken, signal) => {
+              if (spoken.length > 1500)
+                throw new Error(
+                  "O comando é longo demais. Use uma mensagem de até 1.500 caracteres.",
+                );
+              const response = await fetch("/api/director/abacus", {
+                method: "POST",
+                credentials: "same-origin",
+                cache: "no-store",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: spoken }),
+                signal,
+              });
+              const data = await response.json();
+              if (!response.ok || typeof data.text !== "string")
+                throw new Error(
+                  typeof data.error === "string"
+                    ? data.error
+                    : "Falha na resposta da Abacus",
+                );
+              return { text: data.text, provider: "abacus" };
+            }}
+          />
           <button
             className={
               "icon-button microphone " +

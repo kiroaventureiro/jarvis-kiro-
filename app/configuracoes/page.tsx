@@ -1,6 +1,7 @@
 import InternalPage from "../components/InternalPage";
 import DeviceAccess from "../components/DeviceAccess";
 import OwnerLogin from "../components/OwnerLogin";
+import VoiceSettings from "../components/VoiceSettings";
 export default function SettingsPage() {
   return (
     <InternalPage title="Configurações" eyebrow="Preferências e acesso">
@@ -8,6 +9,7 @@ export default function SettingsPage() {
         <OwnerLogin />
         <DeviceAccess />
       </section>
+      <VoiceSettings />
       <div className="card-grid">
         <article className="glass card">
           <h2>Voz e áudio</h2>

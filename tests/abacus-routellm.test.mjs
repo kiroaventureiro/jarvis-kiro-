@@ -1,18 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-const client=fs.readFileSync("lib/abacus-routellm.ts","utf8");
-const api=fs.readFileSync("app/api/director/abacus/route.ts","utf8");
-test("Abacus key remains server-only and requests are capped",()=>{
- assert.ok(client.includes("process.env.ABACUS_API_KEY"));
- assert.ok(client.includes("routellm.abacus.ai/v1/chat/completions"));
- assert.ok(client.includes('max_tokens:350'));
- assert.ok(client.includes("AbortController"));
- assert.ok(!client.includes("NEXT_PUBLIC_ABACUS"));
+const client = fs.readFileSync("lib/abacus-routellm.ts", "utf8"),
+  api = fs.readFileSync("app/api/director/abacus/route.ts", "utf8"),
+  gateway = fs.readFileSync("lib/voice/abacus-gateway.ts", "utf8");
+test("Abacus key remains server-only and requests are capped", () => {
+  assert.match(client, /process\.env\.ABACUS_API_KEY/);
+  assert.match(client, /routellm\.abacus\.ai\/v1\/chat\/completions/);
+  assert.match(client, /max_tokens:\s*350/);
+  assert.match(client, /AbortController/);
+  assert.doesNotMatch(client, /NEXT_PUBLIC_ABACUS/);
 });
-test("Abacus endpoint requires auth and missing keys fail closed",()=>{
- assert.ok(api.includes("await authorized()"));
- assert.ok(api.includes("status:401"));
- assert.ok(api.includes("status:503"));
- assert.ok(api.includes("message.length>1500"));
+test("Abacus endpoint retains authentication and gateway rejects missing keys and oversized text", () => {
+  assert.match(api, /await authorized\(\)/);
+  assert.match(api, /status:\s*401/);
+  assert.match(gateway, /503/);
+  assert.match(gateway, /message\.length\s*>\s*1500/);
+  assert.match(api, /costPermission/);
 });

@@ -113,6 +113,15 @@ const out = process.env.TEST_OUTPUT_DIR || "work/ui-evidence";
       await page.route("https://api.openai.com/**", (route) =>
         route.fulfill({ body: "mock-answer", contentType: "application/sdp" }),
       );
+      await page.route("**/api/director/abacus", (route) =>
+        route.fulfill({
+          json: {
+            text: "Resposta de teste do HUD. O conteúdo permanece legível e pode ser expandido.",
+            model: "route-llm",
+            usage: null,
+          },
+        }),
+      );
       await page.goto(base);
       await page
         .getByRole("button", { name: "Escrever mensagem", exact: true })
@@ -141,11 +150,7 @@ const out = process.env.TEST_OUTPUT_DIR || "work/ui-evidence";
         .waitFor();
       await page.locator("main[data-state=idle]").waitFor();
       assert.equal(await page.evaluate(() => window.__micRequests), 0);
-      assert.ok(
-        (await page.evaluate(() => window.__sent)).some(
-          (e) => e.type === "conversation.item.create",
-        ),
-      );
+      assert.equal(await page.evaluate(() => window.__sent.length), 0);
       await page.getByRole("button", { name: "Expandir", exact: true }).click();
       await page.screenshot({
         path: path.join(out, name + "-hud.png"),
@@ -165,13 +170,7 @@ const out = process.env.TEST_OUTPUT_DIR || "work/ui-evidence";
           hud.y + hud.height <= dock.y + 2,
           "HUD must not overlap controls",
         );
-      await page.getByRole("button", { name: "Encerrar sessão" }).click();
-      await page.getByText("Desconectado", { exact: true }).waitFor();
-      assert.equal(
-        await page.locator(".response-hud").count(),
-        1,
-        "History survives call cleanup",
-      );
+      assert.equal(await page.locator(".response-hud").count(), 1);
       await page
         .getByRole("button", { name: "Ativar microfone", exact: true })
         .click();

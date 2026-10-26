@@ -1052,3 +1052,68 @@ details summary .badge {
     max-height: none;
   }
 }
+
+.wake-status {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  transform: translateX(-50%);
+  width: min(460px, calc(100vw - 40px));
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #9dc8d6;
+  pointer-events: none;
+}
+.voice-consent {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 42px);
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100dvh - 220px);
+  overflow: auto;
+  padding: 22px;
+  z-index: 25;
+}
+.voice-consent h2 {
+  margin-top: 0;
+}
+.voice-consent p {
+  font-size: 13px;
+  color: #b4cfda;
+}
+.voice-checkbox {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 18px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.voice-checkbox input {
+  min-width: 18px;
+  margin-top: 4px;
+}
+.voice-settings select {
+  width: 100%;
+}
+.voice-settings > p {
+  font-size: 14px;
+  color: #abc8d5;
+}
+.jarvis-stage[data-voice-phase="waiting"] .nucleus {
+  animation: breathe 3.5s ease-in-out infinite;
+  box-shadow: 0 0 70px #4ed8f53a;
+}
+.jarvis-stage[data-voice-phase="command"] .orbit-middle {
+  animation-duration: 7s;
+}
+.jarvis-stage[data-voice-phase="speaking"] .nucleus {
+  animation: breathe 1s ease-in-out infinite;
+}
+.dock-controls .icon-button.active {
+  color: #b9fff0;
+  border-color: #6ee7cb55;
+  background: #1a4c4a77;
+}

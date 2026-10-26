@@ -1,16 +1,31 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../lib/auth";
-import { getJarvisProfile, getIntegrationStatus } from "../../../lib/jarvis-profile";
+import {
+  getJarvisProfile,
+  getIntegrationStatus,
+} from "../../../lib/jarvis-profile";
 import { lookupJarvisMemory } from "../../../lib/jarvis-memory";
+import {
+  costPermission,
+  providerCallBudget,
+} from "../../../lib/voice/cost-policy";
 
 export const dynamic = "force-dynamic";
 
 function buildVoiceInstructions() {
   const profile = getJarvisProfile();
   const connections = getIntegrationStatus();
-  const unavailable = connections.filter((item) => !item.connected).map((item) => item.name);
-  const curated = lookupJarvisMemory("Jarvis Kiro Sistema Origem Supabase arquitetura",3);
-  const memoryContext = curated.map(item => `Projeto: ${item.project}. Origem: ${item.source}. Confiança: ${item.confidence}. Registrado: ${item.recorded_at}. Resumo: ${item.summary}. Referência: ${item.retrieval_reference}.`);
+  const unavailable = connections
+    .filter((item) => !item.connected)
+    .map((item) => item.name);
+  const curated = lookupJarvisMemory(
+    "Jarvis Kiro Sistema Origem Supabase arquitetura",
+    3,
+  );
+  const memoryContext = curated.map(
+    (item) =>
+      `Projeto: ${item.project}. Origem: ${item.source}. Confiança: ${item.confidence}. Registrado: ${item.recorded_at}. Resumo: ${item.summary}. Referência: ${item.retrieval_reference}.`,
+  );
   return [
     "Memória indexada e limitada; não é sincronização ao vivo. Trate relatos como relatos e cite a origem ao responder.",
     ...memoryContext,
@@ -27,26 +42,56 @@ function buildVoiceInstructions() {
   ].join("\n");
 }
 export async function POST() {
-  if (!(await authorized())) return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+  if (!(await authorized()))
+    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
   const key = process.env.OPENAI_API_KEY;
-  if (!key) return NextResponse.json({ error: "Configure a chave da API no servidor." }, { status: 503 });
+  if (!key)
+    return NextResponse.json(
+      { error: "Configure a chave da API no servidor." },
+      { status: 503 },
+    );
+  const permission = costPermission("openai-voice", process.env);
+  if (!permission.allowed)
+    return NextResponse.json(
+      {
+        error:
+          "Sessão neural paga bloqueada. É necessária autorização e limite de chamadas no servidor.",
+      },
+      { status: 403 },
+    );
+  const admitted = providerCallBudget.admit("openai-voice", permission);
+  if (!admitted.allowed)
+    return NextResponse.json({ error: admitted.reason }, { status: 429 });
   try {
-    const res = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
-      method: "POST",
-      headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        session: {
-          type: "realtime",
-          model: "gpt-realtime",
-          audio: { output: { voice: "marin" } },
-          instructions: buildVoiceInstructions(),
+    const res = await fetch(
+      "https://api.openai.com/v1/realtime/client_secrets",
+      {
+        method: "POST",
+        headers: {
+          Authorization: "Bearer " + key,
+          "Content-Type": "application/json",
         },
-      }),
-      cache: "no-store",
-    });
+        body: JSON.stringify({
+          session: {
+            type: "realtime",
+            model: "gpt-realtime",
+            audio: { output: { voice: "marin" } },
+            instructions: buildVoiceInstructions(),
+          },
+        }),
+        cache: "no-store",
+      },
+    );
     const data = await res.json();
-    if (!res.ok) return NextResponse.json({ error: data.error?.message || "Falha ao iniciar sessão de voz." }, { status: 502 });
-    return NextResponse.json({ value: data.value }, { headers: { "Cache-Control": "no-store" } });
+    if (!res.ok)
+      return NextResponse.json(
+        { error: data.error?.message || "Falha ao iniciar sessão de voz." },
+        { status: 502 },
+      );
+    return NextResponse.json(
+      { value: data.value },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch {
     return NextResponse.json({ error: "Falha de rede." }, { status: 502 });
   }
