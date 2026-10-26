@@ -1,0 +1,159 @@
+{
+  "version": 1,
+  "status": "curated_seed_not_synchronized",
+  "projects": [
+    {
+      "id": "universo-kiro",
+      "name": "Universo Kiro / Guardiões da Origem",
+      "context": "kiro",
+      "topics": [
+        "personagens",
+        "fragmentos",
+        "episódios",
+        "continuidade"
+      ],
+      "characters": [
+        "Kiro",
+        "Luna",
+        "Zeca",
+        "T-8",
+        "Amaris",
+        "Zara",
+        "Umbra",
+        "Vertex",
+        "Neon V"
+      ],
+      "sources": [
+        "owner_project_brief"
+      ],
+      "verifiedLive": false
+    },
+    {
+      "id": "codigo-zero",
+      "name": "Código Zero",
+      "context": "kiro",
+      "topics": [
+        "personagens",
+        "histórias",
+        "jogo"
+      ],
+      "characters": [
+        "Leo",
+        "Maya",
+        "Dan",
+        "Nina",
+        "Bia",
+        "Rafa",
+        "Lara",
+        "Bolt"
+      ],
+      "sources": [
+        "owner_project_brief"
+      ],
+      "verifiedLive": false
+    },
+    {
+      "id": "pai-filho-pai",
+      "name": "Pai Filho Pai",
+      "context": "kiro",
+      "topics": [
+        "cotidiano",
+        "animação",
+        "continuidade"
+      ],
+      "characters": [
+        "Pai 1",
+        "Pai 2",
+        "Filho",
+        "Bombom",
+        "Benjamim"
+      ],
+      "sources": [
+        "owner_project_brief"
+      ],
+      "verifiedLive": false
+    },
+    {
+      "id": "kiro-tv",
+      "name": "KIRO TV",
+      "context": "kiro",
+      "topics": [
+        "programação",
+        "OBS",
+        "automações",
+        "programas"
+      ],
+      "characters": [
+        "Danty",
+        "Cocão",
+        "T-8"
+      ],
+      "sources": [
+        "owner_project_brief"
+      ],
+      "verifiedLive": false
+    },
+    {
+      "id": "kiro-editor",
+      "name": "Kiro Editor",
+      "context": "kiro",
+      "topics": [
+        "timeline",
+        "vídeo",
+        "interface",
+        "performance"
+      ],
+      "characters": [],
+      "sources": [
+        "owner_project_brief"
+      ],
+      "verifiedLive": false
+    },
+    {
+      "id": "kiro-gestao",
+      "name": "Kiro Gestão",
+      "context": "kiro",
+      "topics": [
+        "metas",
+        "métricas",
+        "projetos"
+      ],
+      "characters": [],
+      "sources": [
+        "owner_project_brief"
+      ],
+      "verifiedLive": false
+    },
+    {
+      "id": "historia-do-controle",
+      "name": "Histórias do Controle",
+      "context": "kiro",
+      "topics": [
+        "gameplay",
+        "shorts",
+        "vídeos"
+      ],
+      "characters": [],
+      "sources": [
+        "owner_project_brief"
+      ],
+      "verifiedLive": false
+    },
+    {
+      "id": "umbra-eclipse",
+      "name": "Umbra Eclipse",
+      "context": "kiro",
+      "topics": [
+        "reflexões",
+        "shorts"
+      ],
+      "characters": [
+        "Umbra"
+      ],
+      "sources": [
+        "owner_project_brief"
+      ],
+      "verifiedLive": false
+    }
+  ]
+}
