@@ -22,9 +22,9 @@ export default function OwnerLogin(){
   <form onSubmit={login} style={{display:"flex",gap:"0.75rem",flexWrap:"wrap",alignItems:"center"}}>
    <label htmlFor="jarvis-owner-pass">Senha</label>
    <input id="jarvis-owner-pass" type="password" autoComplete="current-password"
-    value={password} onChange={e=>setPassword(e.target.value)} required minLength={12}
+    value={password} onChange={e=>setPassword(e.target.value)} required minLength={8}
     style={{padding:"0.75rem",borderRadius:"0.7rem",maxWidth:"24rem",width:"100%"}}/>
-   <button type="submit" disabled={busy||password.length<12}>{busy?"Entrando...":"Entrar"}</button>
+   <button type="submit" disabled={busy||password.length<8}>{busy?"Entrando...":"Entrar"}</button>
   </form>
   <p role="status" aria-live="polite">{message}</p>
  </section>;
