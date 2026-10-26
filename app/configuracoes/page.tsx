@@ -1,9 +1,11 @@
 import InternalPage from "../components/InternalPage";
 import DeviceAccess from "../components/DeviceAccess";
+import OwnerLogin from "../components/OwnerLogin";
 export default function SettingsPage() {
   return (
     <InternalPage title="Configurações" eyebrow="Preferências e acesso">
       <section className="glass notice">
+        <OwnerLogin />
         <DeviceAccess />
       </section>
       <div className="card-grid">
