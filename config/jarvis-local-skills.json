@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "mode": "local_only",
+  "skills": [
+    {
+      "id": "projects.list",
+      "operation": "read"
+    },
+    {
+      "id": "projects.details",
+      "operation": "read"
+    },
+    {
+      "id": "creative.continuity",
+      "operation": "read"
+    },
+    {
+      "id": "creative.scenes",
+      "operation": "draft"
+    }
+  ],
+  "remoteExecution": false
+}
