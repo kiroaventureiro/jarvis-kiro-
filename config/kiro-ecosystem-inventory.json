@@ -208,6 +208,15 @@
       "status": "planned_not_connected",
       "requiresUserAuthorization": true,
       "automaticWrites": false
+    },
+    {
+      "name": "OpenAI",
+      "category": "ai_video",
+      "connectionStrategy": "Sessão efêmera pelo servidor, após autenticação",
+      "purpose": "Conversa por voz e texto com o Jarvis",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
     }
   ]
 }
