@@ -407,42 +407,34 @@ export default function JarvisExperience() {
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
-    if (
-      !text ||
-      state === "connecting" ||
-      state === "processing" ||
-      state === "responding"
-    )
-      return;
+    if (!text || ["connecting", "processing", "responding"].includes(state)) return;
     if (workspace.files.length) {
       if (workspace.recording) return;
       const success = await workspace.analyze(text);
       if (success) setDraft("");
       return;
     }
-    if (!connected && !(await start(false))) return;
-    const dc = channel.current;
-    if (dc?.readyState !== "open") return;
+    // Typed messages use the server-side RouteLLM adapter. Voice remains a separate session.
+    const userId = crypto.randomUUID();
+    const assistantId = crypto.randomUUID();
+    setMessages(items => [...items, { id:userId, role:"user", text }]);
+    setDraft("");
+    setError("");
+    setState("processing");
     try {
-      setState("processing");
-      dc.send(
-        JSON.stringify({
-          type: "conversation.item.create",
-          item: {
-            type: "message",
-            role: "user",
-            content: [{ type: "input_text", text }],
-          },
-        }),
-      );
-      dc.send(JSON.stringify({ type: "response.create" }));
-      setMessages((items) => [
-        ...items,
-        { id: crypto.randomUUID(), role: "user", text },
-      ]);
-      setDraft("");
-    } catch {
-      fail("Não foi possível enviar a mensagem.");
+      const response = await fetch("/api/director/abacus", {
+        method:"POST", credentials:"same-origin", cache:"no-store",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message:text}),
+      });
+      const result: { text?:unknown; error?:unknown } = await response.json();
+      if (!response.ok || typeof result.text !== "string")
+        throw new Error(typeof result.error === "string" ? result.error : "Falha na resposta da Abacus");
+      setMessages(items => appendTranscript(items, assistantId, "assistant", result.text as string, true));
+      setState("idle");
+    } catch(err) {
+      setError(err instanceof Error ? err.message : "Falha na resposta da Abacus");
+      setState("error");
     }
   }
   function toggleAudio() {
