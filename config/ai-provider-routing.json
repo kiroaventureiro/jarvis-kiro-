@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "stage": "policy_only",
+  "defaultMode": "free_first",
+  "paidFallback": "explicit_approval_only",
+  "providers": [
+    {
+      "id": "local",
+      "name": "IA local",
+      "modes": [
+        "chat",
+        "code"
+      ],
+      "costClass": "potentially_free",
+      "connection": "not_configured",
+      "note": "Requer runtime e hardware; sem promessa de custo zero"
+    },
+    {
+      "id": "abacus",
+      "name": "Abacus RouteLLM",
+      "modes": [
+        "chat",
+        "code",
+        "research"
+      ],
+      "costClass": "metered",
+      "connection": "key_configured_preview",
+      "note": "Consome créditos; não tratar como gratuito"
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "modes": [
+        "chat",
+        "voice",
+        "images"
+      ],
+      "costClass": "metered",
+      "connection": "not_verified"
+    },
+    {
+      "id": "google",
+      "name": "Google Gemini",
+      "modes": [
+        "chat",
+        "images",
+        "video"
+      ],
+      "costClass": "variable",
+      "connection": "not_configured"
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic Claude",
+      "modes": [
+        "chat",
+        "code"
+      ],
+      "costClass": "metered",
+      "connection": "not_configured"
+    },
+    {
+      "id": "grok",
+      "name": "Grok",
+      "modes": [
+        "chat",
+        "images",
+        "video"
+      ],
+      "costClass": "variable",
+      "connection": "not_configured"
+    },
+    {
+      "id": "openart",
+      "name": "OpenArt",
+      "modes": [
+        "images",
+        "video"
+      ],
+      "costClass": "variable",
+      "connection": "not_configured"
+    },
+    {
+      "id": "invideo",
+      "name": "InVideo",
+      "modes": [
+        "video"
+      ],
+      "costClass": "variable",
+      "connection": "not_configured"
+    },
+    {
+      "id": "suno",
+      "name": "Suno",
+      "modes": [
+        "audio",
+        "music"
+      ],
+      "costClass": "variable",
+      "connection": "not_configured"
+    },
+    {
+      "id": "canva",
+      "name": "Canva",
+      "modes": [
+        "images",
+        "design"
+      ],
+      "costClass": "variable",
+      "connection": "not_configured"
+    }
+  ],
+  "guardrails": {
+    "neverAutoPurchase": true,
+    "neverAutoUpgrade": true,
+    "requireConsentForExternalCalls": true,
+    "requireApprovalForPaidJobs": true,
+    "requireApprovalForPublishing": true,
+    "doNotAssumeFreeTier": true
+  }
+}
