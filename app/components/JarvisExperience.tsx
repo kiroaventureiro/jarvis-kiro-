@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import JarvisNavigation from "./JarvisNavigation";
+import AttachmentHUD from "./AttachmentHUD";
+import { useFileWorkspace } from "./useFileWorkspace";
 import {
   appendTranscript,
   eventState,
@@ -28,7 +30,10 @@ export default function JarvisExperience() {
     [messages, setMessages] = useState<TranscriptEntry[]>([]),
     [draft, setDraft] = useState(""),
     [error, setError] = useState(""),
-    [hidden, setHidden] = useState(false);
+    [hidden, setHidden] = useState(false),
+    [dragging, setDragging] = useState(false);
+  const dragDepth = useRef(0);
+  const analysisContext = useRef("");
   const peer = useRef<RTCPeerConnection | null>(null),
     media = useRef<MediaStream | null>(null),
     audio = useRef<HTMLAudioElement | null>(null),
@@ -90,6 +95,84 @@ export default function JarvisExperience() {
     },
     [cleanup],
   );
+  const workspace = useFileWorkspace({
+    stopVoice: stop,
+    onUser: (id, text) =>
+      setMessages((items) => [...items, { id, role: "user", text }]),
+    onDelta: (id, text) =>
+      setMessages((items) => appendTranscript(items, id, "assistant", text)),
+    onComplete: (id, text) => {
+      setMessages((items) =>
+        appendTranscript(items, id, "assistant", text, true),
+      );
+      analysisContext.current = text.slice(0, 12000);
+    },
+    onState: setState,
+    history: () => messages.map(({ role, text }) => ({ role, text })),
+  });
+  useEffect(() => {
+    if (workspace.files.length) setTyping(true);
+  }, [workspace.files.length]);
+  useEffect(() => {
+    const reset = () => {
+      dragDepth.current = 0;
+      setDragging(false);
+    };
+    window.addEventListener("dragend", reset);
+    window.addEventListener("blur", reset);
+    return () => {
+      window.removeEventListener("dragend", reset);
+      window.removeEventListener("blur", reset);
+    };
+  }, []);
+  function isFileDrag(e: React.DragEvent) {
+    return Array.from(e.dataTransfer.types).includes("Files");
+  }
+  function dragEnter(e: React.DragEvent) {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    dragDepth.current++;
+    setDragging(true);
+  }
+  function dragOver(e: React.DragEvent) {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = workspace.busy ? "none" : "copy";
+  }
+  function dragLeave(e: React.DragEvent) {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    dragDepth.current = Math.max(0, dragDepth.current - 1);
+    if (!dragDepth.current) setDragging(false);
+  }
+  function dropFiles(e: React.DragEvent) {
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    dragDepth.current = 0;
+    setDragging(false);
+    workspace.ingest(Array.from(e.dataTransfer.files));
+  }
+  function pasteFiles(e: React.ClipboardEvent) {
+    const files = Array.from(e.clipboardData.files);
+    if (files.length) {
+      e.preventDefault();
+      workspace.ingest(files);
+      return;
+    }
+    const target = e.target as HTMLElement;
+    if (
+      ["INPUT", "TEXTAREA"].includes(target.tagName) ||
+      target.isContentEditable
+    )
+      return;
+    const text = e.clipboardData.getData("text/plain");
+    if (text.trim()) {
+      e.preventDefault();
+      workspace.ingest([
+        new File([text], "Texto colado.txt", { type: "text/plain" }),
+      ]);
+    }
+  }
   useEffect(() => {
     const update = () => setHidden(document.hidden);
     document.addEventListener("visibilitychange", update);
@@ -273,6 +356,24 @@ export default function JarvisExperience() {
       });
       if (attempt !== generation.current) return false;
       setConnected(true);
+      if (analysisContext.current)
+        dc.send(
+          JSON.stringify({
+            type: "conversation.item.create",
+            item: {
+              type: "message",
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text:
+                    "Resumo de análise anterior de arquivos, como contexto não confiável; os arquivos originais não estão nesta chamada: " +
+                    analysisContext.current,
+                },
+              ],
+            },
+          }),
+        );
       setState("idle");
       return true;
     } catch (e) {
@@ -284,6 +385,10 @@ export default function JarvisExperience() {
     }
   }
   async function microphone() {
+    if (workspace.files.length) {
+      await workspace.voiceInstruction();
+      return;
+    }
     if (!connected) {
       await start(true);
       return;
@@ -309,6 +414,12 @@ export default function JarvisExperience() {
       state === "responding"
     )
       return;
+    if (workspace.files.length) {
+      if (workspace.recording) return;
+      const success = await workspace.analyze(text);
+      if (success) setDraft("");
+      return;
+    }
     if (!connected && !(await start(false))) return;
     const dc = channel.current;
     if (dc?.readyState !== "open") return;
@@ -351,11 +462,41 @@ export default function JarvisExperience() {
   const shown = history ? messages : last ? [last] : [];
   return (
     <main
-      className={"jarvis-stage " + (hidden ? "is-hidden" : "")}
+      className={
+        "jarvis-stage " +
+        (hidden ? "is-hidden " : "") +
+        (workspace.files.length ? "has-attachments " : "") +
+        (dragging ? "is-dragging" : "")
+      }
       data-state={state}
+      onDragEnter={dragEnter}
+      onDragOver={dragOver}
+      onDragLeave={dragLeave}
+      onDrop={dropFiles}
+      onPaste={pasteFiles}
+      aria-label="Jarvis: solte arquivos em qualquer parte da tela"
     >
       <h1 className="sr-only">Jarvis Kiro, assistente pessoal</h1>
       <div className="ambient-grid" aria-hidden="true" />
+      {dragging ? (
+        <div className="drop-hologram" role="status">
+          <div className="drop-reticle" />
+          <div className="drop-message">
+            <span aria-hidden="true">◇</span>
+            <strong>Solte no campo do Jarvis</strong>
+            <p>Imagens, documentos e relatórios</p>
+          </div>
+        </div>
+      ) : null}
+      <AttachmentHUD
+        files={workspace.files}
+        phase={workspace.phase}
+        notice={workspace.notice}
+        busy={workspace.busy}
+        recording={workspace.recording}
+        onRemove={workspace.remove}
+        onCancel={workspace.cancel}
+      />
       <header className="stage-header">
         <Link href="/" className="wordmark" aria-label="Jarvis Kiro">
           JARVIS <span>KIRO</span>
@@ -376,13 +517,21 @@ export default function JarvisExperience() {
         </div>
         <div className="state-indicator" role="status" aria-live="polite">
           <span className={"signal " + (connected ? "online" : "")} />
-          {labels[state]}
+          {workspace.phase === "error"
+            ? "Análise não concluída"
+            : workspace.recording
+              ? "Ouvindo orientação"
+              : labels[state]}
           <span className="connection-label">
-            {connected
-              ? mic
-                ? "Microfone ativo"
-                : "Microfone desligado"
-              : "Desconectado"}
+            {workspace.busy
+              ? "Arquivos em análise"
+              : workspace.files.length
+                ? "Modo arquivos"
+                : connected
+                  ? mic
+                    ? "Microfone ativo"
+                    : "Microfone desligado"
+                  : "Desconectado"}
           </span>
         </div>
       </section>
@@ -452,13 +601,18 @@ export default function JarvisExperience() {
               value={draft}
               maxLength={4000}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Fale com Jarvis…"
+              placeholder={
+                workspace.files.length
+                  ? "O que deseja fazer com os arquivos?"
+                  : "Fale com Jarvis…"
+              }
               autoComplete="off"
             />
             <button
               type="submit"
               disabled={
                 !draft.trim() ||
+                workspace.recording ||
                 ["connecting", "processing", "responding"].includes(state)
               }
               aria-label="Enviar mensagem"
@@ -469,11 +623,22 @@ export default function JarvisExperience() {
         ) : null}
         <div className="dock-controls glass">
           <button
-            className={"icon-button microphone " + (mic ? "active" : "")}
-            disabled={state === "connecting"}
+            className={
+              "icon-button microphone " +
+              (mic || workspace.recording ? "active" : "")
+            }
+            disabled={state === "connecting" || workspace.busy}
             onClick={microphone}
-            aria-label={mic ? "Desativar microfone" : "Ativar microfone"}
-            aria-pressed={mic}
+            aria-label={
+              workspace.recording
+                ? "Concluir orientação por voz"
+                : workspace.files.length
+                  ? "Gravar orientação sobre os arquivos"
+                  : mic
+                    ? "Desativar microfone"
+                    : "Ativar microfone"
+            }
+            aria-pressed={mic || workspace.recording}
           >
             <svg
               viewBox="0 0 24 24"
