@@ -14,6 +14,6 @@ export async function POST(request:Request){
  (x.format!==undefined&&!["short_9_16","video_16_9"].includes(String(x.format)))||
  (x.sceneCount!==undefined&&(!Number.isInteger(x.sceneCount)||Number(x.sceneCount)<1||Number(x.sceneCount)>12)))
  return NextResponse.json({error:"Parâmetros inválidos"},{status:400});
- const result=runLocalSkill(x);
+ const result=runLocalSkill(x as Parameters<typeof runLocalSkill>[0]);
  return NextResponse.json(result,{status:result.ok?200:400,headers:{"Cache-Control":"no-store"}});
 }
