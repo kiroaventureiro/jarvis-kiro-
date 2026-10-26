@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import JarvisNavigation from "./JarvisNavigation";
 import AttachmentHUD from "./AttachmentHUD";
+import WakeListener from "./WakeListener";
 import { useFileWorkspace } from "./useFileWorkspace";
 import {
   appendTranscript,
@@ -614,6 +615,22 @@ export default function JarvisExperience() {
           </form>
         ) : null}
         <div className="dock-controls glass">
+          <WakeListener muted={muted} onMessage={async (spoken) => {
+            const userId=crypto.randomUUID(),replyId=crypto.randomUUID();
+            setMessages(items=>[...items,{id:userId,role:"user",text:spoken}]);
+            setError("");setState("processing");
+            try{
+              const response=await fetch("/api/director/abacus",{method:"POST",credentials:"same-origin",cache:"no-store",
+                headers:{"Content-Type":"application/json"},body:JSON.stringify({message:spoken.slice(0,1500)})});
+              const data:unknown=await response.json();
+              if(!response.ok||!data||typeof data!=="object")throw new Error("Falha na Abacus");
+              const reply=data as {text?:unknown;error?:unknown};
+              if(typeof reply.text!=="string")throw new Error(typeof reply.error==="string"?reply.error:"Resposta inválida");
+              setMessages(items=>appendTranscript(items,replyId,"assistant",reply.text as string,true));
+              setState("idle");
+              return reply.text;
+            }catch(err){setState("error");setError(err instanceof Error?err.message:"Erro na escuta");throw err}
+          }}/>
           <button
             className={
               "icon-button microphone " +
