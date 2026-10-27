@@ -202,120 +202,6 @@ h3 {
   width: min(70vw, 520px);
   text-align: center;
 }
-.hologram {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 1;
-  filter: drop-shadow(0 0 28px #3bd6ef20);
-}
-.orbit {
-  position: absolute;
-  border-radius: 50%;
-  border: 1px solid #7ce4fa36;
-  inset: 8%;
-  animation: rotation 40s linear infinite;
-}
-.orbit:before,
-.orbit:after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border: 2px solid transparent;
-  border-top-color: #b1f5ffb3;
-  border-right-color: #5ccbd922;
-  border-radius: 50%;
-  transform: rotate(38deg);
-}
-.orbit:after {
-  inset: 7px;
-  border-width: 1px;
-  border-top-color: #4ee9ff50;
-  transform: rotate(220deg);
-}
-.orbit-outer {
-  inset: 1%;
-  border-style: dashed;
-  border-color: #7ce4fa26;
-  animation-duration: 100s;
-}
-.orbit-middle {
-  inset: 10%;
-  transform: rotateX(42deg);
-  animation-direction: reverse;
-  animation-duration: 32s;
-  box-shadow: 0 0 25px #59daff08;
-}
-.orbit-inner {
-  inset: 22%;
-  border-color: #8ff1ff5c;
-  animation-duration: 21s;
-}
-.nucleus {
-  position: absolute;
-  inset: 28%;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 40% 32%,
-    #e1ffff 0%,
-    #96f1ff 4%,
-    #2c839a 14%,
-    #123b4c 42%,
-    #071b2b 67%,
-    #4bc6e73d 71%,
-    transparent 73%
-  );
-  box-shadow:
-    inset -12px -8px 25px #020b13,
-    inset 8px 6px 20px #74eeff46,
-    0 0 70px #2bcee820;
-  animation: breathe 7s ease-in-out infinite;
-}
-.nucleus:after {
-  content: "";
-  position: absolute;
-  inset: 3%;
-  border-radius: 50%;
-  background: repeating-radial-gradient(
-    ellipse at 40% 40%,
-    transparent 0 9px,
-    #a7f9ff16 10px 11px,
-    transparent 12px 20px
-  );
-  mix-blend-mode: screen;
-}
-.nucleus-light {
-  position: absolute;
-  inset: 22%;
-  background: #a4f5ff80;
-  border-radius: 50%;
-  filter: blur(22px);
-}
-.orbital-dot {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #b9faff;
-  box-shadow: 0 0 15px #6de7ff;
-}
-.dot-a {
-  top: 17%;
-  left: 17%;
-}
-.dot-b {
-  right: 23%;
-  bottom: 13%;
-  opacity: 0.55;
-}
-.horizon {
-  position: absolute;
-  left: -15%;
-  right: -15%;
-  top: 50%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #6adeff3d, transparent);
-  transform: rotate(-12deg);
-}
 .state-indicator {
   display: flex;
   justify-content: center;
@@ -342,17 +228,7 @@ h3 {
   border-left: 1px solid #34515d;
   padding-left: 9px;
 }
-.jarvis-stage[data-state="listening"] .nucleus {
-  animation: breathe 1.5s ease-in-out infinite;
-  box-shadow: 0 0 90px #57ddff50;
-}
-.jarvis-stage[data-state="processing"] .orbit-inner {
-  animation-duration: 3s;
-}
-.jarvis-stage[data-state="responding"] .nucleus {
-  animation: breathe 1s ease-in-out infinite;
-  filter: brightness(1.25);
-}
+
 .jarvis-stage[data-state="error"] .signal {
   background: #e8ac95;
 }
@@ -1102,16 +978,7 @@ details summary .badge {
   font-size: 14px;
   color: #abc8d5;
 }
-.jarvis-stage[data-voice-phase="waiting"] .nucleus {
-  animation: breathe 3.5s ease-in-out infinite;
-  box-shadow: 0 0 70px #4ed8f53a;
-}
-.jarvis-stage[data-voice-phase="command"] .orbit-middle {
-  animation-duration: 7s;
-}
-.jarvis-stage[data-voice-phase="speaking"] .nucleus {
-  animation: breathe 1s ease-in-out infinite;
-}
+
 .dock-controls .icon-button.active {
   color: #b9fff0;
   border-color: #6ee7cb55;

@@ -2,6 +2,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import JarvisNavigation from "./JarvisNavigation";
+import HolographicCore from "./HolographicCore";
+import HologramBackdrop from "./HologramBackdrop";
+import { corePhase, type AudioVisualMode } from "../../lib/hologram/policy";
 import AttachmentHUD from "./AttachmentHUD";
 import WakeListener from "./WakeListener";
 import { createOperationalVoiceTool } from "../../lib/operational/realtime-tool";
@@ -55,6 +58,9 @@ export default function JarvisExperience() {
     microphoneActive: false,
     message: "",
   });
+  const [audioVisual, setAudioVisual] =
+    useState<AudioVisualMode>("representative");
+  const [remoteAudio, setRemoteAudio] = useState<MediaStream | null>(null);
   const [retainHistory, setRetainHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   useEffect(() => {
@@ -134,6 +140,7 @@ export default function JarvisExperience() {
     }
     media.current?.getTracks().forEach((t) => t.stop());
     media.current = null;
+    setRemoteAudio(null);
     if (audio.current) {
       audio.current.pause();
       audio.current.srcObject = null;
@@ -283,6 +290,7 @@ export default function JarvisExperience() {
       };
       pc.ontrack = (e) => {
         el.srcObject = e.streams[0];
+        setRemoteAudio(e.streams[0] || null);
         el.play().catch(() => {
           if (attempt === generation.current) {
             unavailableRealtime();
@@ -648,7 +656,7 @@ export default function JarvisExperience() {
       }
       data-state={state}
       data-voice-phase={voiceSnapshot.phase}
-      data-audio-visual="representative"
+      data-audio-visual={audioVisual}
       data-speech-presentation={desktopVoice ? "voice-first" : "transcript"}
       onDragEnter={dragEnter}
       onDragOver={dragOver}
@@ -658,7 +666,7 @@ export default function JarvisExperience() {
       aria-label="Jarvis: solte arquivos em qualquer parte da tela"
     >
       <h1 className="sr-only">Jarvis Kiro, assistente pessoal</h1>
-      <div className="ambient-grid" aria-hidden="true" />
+      <HologramBackdrop />
       {dragging ? (
         <div className="drop-hologram" role="status">
           <div className="drop-reticle" />
@@ -685,17 +693,19 @@ export default function JarvisExperience() {
         <JarvisNavigation />
       </header>
       <section className="presence" aria-label="Presença do Jarvis">
-        <div className="hologram" aria-hidden="true">
-          <div className="orbit orbit-outer" />
-          <div className="orbit orbit-middle" />
-          <div className="orbit orbit-inner" />
-          <div className="nucleus">
-            <div className="nucleus-light" />
-          </div>
-          <div className="orbital-dot dot-a" />
-          <div className="orbital-dot dot-b" />
-          <div className="horizon" />
-        </div>
+        <HolographicCore
+          phase={corePhase(
+            workspace.phase === "error" ? "error" : state,
+            voiceSnapshot.phase,
+            workspace.busy,
+            workspace.recording,
+          )}
+          hidden={hidden}
+          inputStream={mic ? media.current : null}
+          outputStream={remoteAudio}
+          muted={muted}
+          onVisualMode={setAudioVisual}
+        />
         <div className="state-indicator" role="status" aria-live="polite">
           <span className={"signal " + (connected ? "online" : "")} />
           {workspace.phase === "error"

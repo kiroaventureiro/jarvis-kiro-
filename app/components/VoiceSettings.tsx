@@ -223,9 +223,11 @@ export default function VoiceSettings() {
         fechado ou aparelho bloqueado.
       </p>
       <p>
-        O núcleo usa animação representativa da fala, sem medir a amplitude do
-        áudio. Chamados, cumprimentos e abertura de páginas são resolvidos
-        localmente. Outros pedidos usam apenas o provedor autorizado.
+        O núcleo pode medir a intensidade dos fluxos de áudio já autorizados da
+        sessão neural. Na voz do navegador ou sem acesso ao sinal, usa animação
+        representativa. Nenhum microfone adicional é aberto para o efeito.
+        Chamados, cumprimentos e abertura de páginas são resolvidos localmente.
+        Outros pedidos usam apenas o provedor autorizado.
       </p>
       <h3>Provedor e limites</h3>
       <p>

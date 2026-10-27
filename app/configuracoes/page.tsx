@@ -5,6 +5,7 @@ import OwnerLogin from "../components/OwnerLogin";
 import MemorySyncSettings from "../components/MemorySyncSettings";
 import AbacusBudgetSettings from "../components/AbacusBudgetSettings";
 import VoiceSettings from "../components/VoiceSettings";
+import HologramSettings from "../components/HologramSettings";
 export default function SettingsPage() {
   return (
     <InternalPage title="Configurações" eyebrow="Preferências e acesso">
@@ -12,7 +13,14 @@ export default function SettingsPage() {
         <OwnerLogin />
         <DeviceAccess />
       </section>
-      <section className="glass notice"><h2>Central de Conexões</h2><p>Explore o catálogo de IAs, redes sociais, voz, vídeos e ferramentas para integrar futuramente ao Jarvis.</p><Link href="/conexoes">Abrir Central de Conexões →</Link></section>
+      <section className="glass notice">
+        <h2>Central de Conexões</h2>
+        <p>
+          Explore o catálogo de IAs, redes sociais, voz, vídeos e ferramentas
+          para integrar futuramente ao Jarvis.
+        </p>
+        <Link href="/conexoes">Abrir Central de Conexões →</Link>
+      </section>
       <MemorySyncSettings />
       <AbacusBudgetSettings />
       <VoiceSettings />
@@ -26,6 +34,7 @@ export default function SettingsPage() {
         </article>
         <article className="glass card">
           <h2>Aparência e movimento</h2>
+          <HologramSettings />
           <p>
             A interface acompanha a preferência de movimento reduzido do seu
             sistema. As animações pausam quando a página não está visível.
