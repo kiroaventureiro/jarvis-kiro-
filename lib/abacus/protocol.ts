@@ -1,3 +1,4 @@
+import {kiroChatContext} from "../kiro-context-for-chat";
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 export type TaskKind = "chat" | "code" | "research";
 export type AbacusInput = { history?: ChatTurn[]; task?: TaskKind };
@@ -153,7 +154,7 @@ export function buildAbacusPlan(
     {
       role: "system",
       content:
-        system +
+        system + kiroChatContext(message) +
         (records.length
           ? " Contexto curado, limitado e datado (não é consulta ao vivo): " +
             JSON.stringify(records)
