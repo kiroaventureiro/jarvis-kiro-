@@ -1,4 +1,5 @@
 import "server-only";
+import { jarvisOperationalContext } from "./jarvis-operational-context";
 import { lookupJarvisMemory } from "./jarvis-memory";
 import {
   buildAbacusPlan,
@@ -33,6 +34,7 @@ export async function* streamAbacus(
     message,
     input,
     lookupJarvisMemory(contextQuery, 2),
+    jarvisOperationalContext(),
   );
   const reservation = plan.messages.reduce(
     (n, x) => n + new TextEncoder().encode(x.content).length + 12,
