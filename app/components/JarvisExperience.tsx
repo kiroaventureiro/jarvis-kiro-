@@ -701,19 +701,6 @@ export default function JarvisExperience() {
             <div>
               <button
                 className="subtle-button"
-                type="button"
-                onClick={() => {
-                  const next = !retainHistory;
-                  setHistoryConsent(next);
-                  setRetainHistory(next);
-                }}
-                aria-pressed={retainHistory}
-                title="Armazenamento local não criptografado neste navegador; evite dados sensíveis. Desligar apaga o histórico guardado."
-              >
-                {retainHistory ? "Não guardar" : "Guardar neste dispositivo"}
-              </button>
-              <button
-                className="subtle-button"
                 onClick={() => setHistory(!history)}
                 aria-pressed={history}
               >
@@ -759,6 +746,19 @@ export default function JarvisExperience() {
         </div>
       ) : null}
       <div className="interaction-dock">
+        <button
+          className="subtle-button"
+          type="button"
+          onClick={() => {
+            const next = !retainHistory;
+            setHistoryConsent(next);
+            setRetainHistory(next);
+          }}
+          aria-pressed={retainHistory}
+          title="Armazenamento local não criptografado. Desativar apaga a cópia local."
+        >
+          {retainHistory ? "Não guardar neste dispositivo" : "Guardar neste dispositivo"}
+        </button>
         {typing ? (
           <form onSubmit={send} className="text-composer glass">
             <label className="sr-only" htmlFor="jarvis-input">
