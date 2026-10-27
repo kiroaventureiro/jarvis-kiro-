@@ -1,4 +1,5 @@
 import "server-only";
+import { withNativeConnectors } from "../connectors/native-status";
 import { createHash } from "node:crypto";
 import catalog from "../../config/connection-catalog.json";
 import projects from "../../config/kiro-project-registry.json";
@@ -112,9 +113,12 @@ export const operationalRegistry = new OperationalRegistry({
 export function operationalSnapshot() {
   return operationalRegistry.snapshot();
 }
+export async function operationalSnapshotLive(verify = false) {
+  return withNativeConnectors(operationalSnapshot(), verify);
+}
 export async function operationalContext(message = "", signal?: AbortSignal) {
   const kind = operationalQuestion(message);
-  const snapshot = await operationalRegistry.read({
+  const coreSnapshot = await operationalRegistry.read({
     verify: !!kind && kind !== "projects",
     ids:
       kind === "abacus"
@@ -124,6 +128,10 @@ export async function operationalContext(message = "", signal?: AbortSignal) {
           : undefined,
     signal,
   });
+  const snapshot = await withNativeConnectors(
+    coreSnapshot,
+    !!kind && kind !== "projects",
+  );
   return operationalPrompt(snapshot);
 }
 export async function answerOperationalQuestion(
@@ -132,7 +140,7 @@ export async function answerOperationalQuestion(
 ) {
   const kind = operationalQuestion(message);
   if (!kind) return null;
-  const snapshot = await operationalRegistry.read({
+  const coreSnapshot = await operationalRegistry.read({
     verify: kind !== "projects",
     ids:
       kind === "abacus"
@@ -142,8 +150,15 @@ export async function answerOperationalQuestion(
           : undefined,
     signal,
   });
+  const snapshot = await withNativeConnectors(
+    coreSnapshot,
+    kind !== "projects",
+  );
   return {
-    text: operationalAnswer(kind, snapshot),
+    text:
+      snapshot.nativeRegistryState === "unavailable" && kind === "overview"
+        ? "O cofre dos conectores nativos está temporariamente indisponível. Não posso confirmar seus estados atuais nem afirmar que estão desconectados."
+        : operationalAnswer(kind, snapshot),
     model: "jarvis-operational",
     usage: null,
     provider: "local_operational",

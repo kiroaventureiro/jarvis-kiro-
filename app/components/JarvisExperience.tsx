@@ -1,6 +1,10 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  connectorResultLink,
+  type ConnectorResultLink,
+} from "../../lib/connectors/result";
 import JarvisNavigation from "./JarvisNavigation";
 import HolographicCore from "./HolographicCore";
 import HologramBackdrop from "./HologramBackdrop";
@@ -61,6 +65,8 @@ export default function JarvisExperience() {
   const [audioVisual, setAudioVisual] =
     useState<AudioVisualMode>("representative");
   const [remoteAudio, setRemoteAudio] = useState<MediaStream | null>(null);
+  const [connectorResult, setConnectorResult] =
+    useState<ConnectorResultLink | null>(null);
   const [retainHistory, setRetainHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   useEffect(() => {
@@ -579,6 +585,8 @@ export default function JarvisExperience() {
           );
         },
       });
+      const taskResult = connectorResultLink(result.result);
+      if (taskResult) setConnectorResult(taskResult);
       if (
         desktopVoice &&
         !muteRef.current &&
@@ -736,6 +744,22 @@ export default function JarvisExperience() {
           </span>
         </div>
       </section>
+      {connectorResult ? (
+        <section
+          className="connector-result-hud glass"
+          aria-label="Resultado de desenvolvimento"
+        >
+          <h2>{connectorResult.title}</h2>
+          <Link href={connectorResult.href}>Ver diagnóstico e plano →</Link>
+          <button
+            className="subtle-button"
+            onClick={() => setConnectorResult(null)}
+            aria-label="Fechar resultado de desenvolvimento"
+          >
+            Fechar
+          </button>
+        </section>
+      ) : null}
       {shown.length ? (
         <section
           className={"response-hud glass " + (expanded ? "expanded" : "")}
@@ -863,6 +887,8 @@ export default function JarvisExperience() {
               ]);
             }}
             onReply={(reply) => {
+              const taskResult = connectorResultLink(reply.result);
+              if (taskResult) setConnectorResult(taskResult);
               const id = crypto.randomUUID();
               browserReplyId.current = id;
               setMessages((items) =>
@@ -909,7 +935,11 @@ export default function JarvisExperience() {
                 })),
                 signal,
               });
-              return { text: data.text, provider: data.provider || "abacus" };
+              return {
+                text: data.text,
+                provider: data.provider || "abacus",
+                result: connectorResultLink(data.result) || undefined,
+              };
             }}
           />
           <button

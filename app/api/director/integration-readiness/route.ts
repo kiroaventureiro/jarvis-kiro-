@@ -1,4 +1,4 @@
-import { operationalSnapshot } from "../../../../lib/operational/server";
+import { operationalSnapshotLive } from "../../../../lib/operational/server";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
 import { getIntegrationReadiness } from "../../../../lib/integration-readiness";
@@ -8,14 +8,13 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   if (!(await authorized()))
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const operational = await operationalSnapshotLive();
   return NextResponse.json(
     {
       stage: "operational_registry",
-      operational: operationalSnapshot(),
-      liveValidationDeferred: !operationalSnapshot().integrations.some(
-        (x) => x.verified,
-      ),
-      integrations: getIntegrationReadiness(),
+      operational: operational,
+      liveValidationDeferred: !operational.integrations.some((x) => x.verified),
+      integrations: getIntegrationReadiness(operational),
       warning:
         "Credenciais presentes não significam integração ativa. Nenhuma conexão externa é testada nesta rota.",
     },

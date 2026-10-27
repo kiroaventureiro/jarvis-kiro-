@@ -1,3 +1,4 @@
+import type { ConnectorResultLink } from "../connectors/result";
 export type VoicePhase =
   | "off"
   | "waiting"
@@ -45,4 +46,9 @@ export interface SpeechOutput {
   speak(text: string, signal: AbortSignal): Promise<void>;
   cancel(): void;
 }
-export type VoiceReply = { text: string; navigate?: string; provider?: string };
+export type VoiceReply = {
+  text: string;
+  navigate?: string;
+  provider?: string;
+  result?: ConnectorResultLink;
+};

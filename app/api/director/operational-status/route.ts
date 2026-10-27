@@ -1,3 +1,4 @@
+import { withNativeConnectors } from "../../../../lib/connectors/native-status";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
 import { operationalRegistry } from "../../../../lib/operational/server";
@@ -18,7 +19,13 @@ export async function GET(request: Request) {
     ids,
     signal: request.signal,
   });
-  return NextResponse.json(snapshot, {
-    headers: { "Cache-Control": "private, no-store" },
-  });
+  return NextResponse.json(
+    await withNativeConnectors(
+      snapshot,
+      params.get("verify") === "1" && !service,
+    ),
+    {
+      headers: { "Cache-Control": "private, no-store" },
+    },
+  );
 }

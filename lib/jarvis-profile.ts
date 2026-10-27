@@ -13,8 +13,7 @@ export function getJarvisProfile() {
     interaction: personality.interaction,
   };
 }
-export function getIntegrationStatus() {
-  const snapshot = operationalSnapshot();
+export function getIntegrationStatus(snapshot = operationalSnapshot()) {
   const find = (name: string) =>
     snapshot.integrations.find(
       (item) =>

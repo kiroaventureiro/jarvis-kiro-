@@ -4,8 +4,7 @@ import inventory from "../config/kiro-ecosystem-inventory.json";
 import { N8N_WORKFLOWS } from "./n8n-workflow-registry";
 import { AGENT_TRANSPORT } from "./agent-transport-contract";
 import { TASK_RETENTION } from "./task-memory-policy";
-export function getJarvisReadinessReport() {
-  const operational = operationalSnapshot();
+export function getJarvisReadinessReport(operational = operationalSnapshot()) {
   return {
     stage: "architecture_before_authorization",
     generatedAt: new Date().toISOString(),

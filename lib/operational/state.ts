@@ -7,6 +7,7 @@ export type IntegrationState =
 export type ServiceId =
   | "abacus"
   | "supabase-memory"
+  | "supabase-admin"
   | "github"
   | "vercel"
   | "openai-voice"
@@ -101,6 +102,7 @@ export function serviceStatus(
 }
 export type OperationalSnapshot = {
   schemaVersion: 1;
+  nativeRegistryState?: "ready" | "not_configured" | "unavailable";
   environment: string;
   generatedAt: string;
   integrations: ServiceStatus[];
@@ -115,6 +117,7 @@ export type OperationalSnapshot = {
 export function operationalPrompt(snapshot: OperationalSnapshot) {
   const compact = {
     schemaVersion: 1,
+    nativeRegistryState: snapshot.nativeRegistryState,
     environment: snapshot.environment,
     generatedAt: snapshot.generatedAt,
     integrations: snapshot.integrations
@@ -158,7 +161,7 @@ export function operationalPrompt(snapshot: OperationalSnapshot) {
     },
   };
   return (
-    " Registro operacional confiável DESTE ambiente, gerado em " +
+    " Se nativeRegistryState for unavailable, não afirme que os conectores nativos estão desconectados: falta acesso ao cofre atual. Registro operacional confiável DESTE ambiente, gerado em " +
     snapshot.generatedAt +
     ": " +
     JSON.stringify(compact) +

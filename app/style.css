@@ -984,3 +984,188 @@ details summary .badge {
   border-color: #6ee7cb55;
   background: #1a4c4a77;
 }
+
+.native-connectors {
+  margin: 32px 0 44px;
+  padding: 28px 0;
+  border-block: 1px solid #42dfff30;
+}
+.connector-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.connector-environment {
+  color: #8acbdc;
+  font-size: 13px;
+}
+.connector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.connector-card {
+  padding: 22px;
+  min-width: 0;
+}
+.connector-card h3 {
+  font-size: 21px;
+  color: #c4f2ff;
+}
+.connector-card p,
+.connector-plan p,
+.connector-repair p {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.connector-card label,
+.connector-repair label,
+.connector-plan label {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+  font-size: 13px;
+}
+.connector-card input,
+.connector-card textarea,
+.connector-card select,
+.connector-repair input,
+.connector-repair textarea,
+.connector-repair select {
+  width: 100%;
+}
+.connector-card textarea,
+.connector-repair textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+.connector-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+.connector-card button,
+.connector-plan button,
+.connector-repair button {
+  font-size: 12px;
+  margin: 4px 5px 4px 0;
+  padding: 10px 12px;
+}
+.connector-card details {
+  margin: 20px 0;
+  border-top: 1px solid #42dfff22;
+  padding-top: 15px;
+}
+.connector-resource {
+  padding: 12px 0;
+  border-bottom: 1px solid #42dfff22;
+}
+.connector-resource label:has(input[type="checkbox"]),
+.connector-card fieldset label,
+.connector-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.connector-resource input[type="checkbox"],
+.connector-card fieldset input[type="checkbox"],
+.connector-check input[type="checkbox"] {
+  width: 18px;
+  min-width: 18px;
+}
+.connector-resource small {
+  overflow-wrap: anywhere;
+  color: #8aafc5;
+}
+.connector-card fieldset {
+  margin: 20px 0;
+  border: 1px solid #42dfff30;
+  border-radius: 12px;
+}
+.connector-hint {
+  color: #a8b9ca;
+}
+.connector-notice {
+  padding: 12px;
+  background: #0d304344;
+  border-radius: 10px;
+  color: #a4e7ee;
+}
+.connector-card > a {
+  font-size: 12px;
+}
+.connector-plan,
+.connector-repair {
+  padding: 24px;
+  margin: 20px 0;
+}
+.connector-plan {
+  scroll-margin-top: 24px;
+}
+.connector-plan h4 {
+  font-size: 18px;
+  margin-top: 0;
+}
+.connector-plan pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #020a14;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  max-height: 350px;
+  overflow: auto;
+}
+.connector-plan li {
+  padding: 12px 0;
+}
+.connector-history {
+  padding: 20px;
+  margin-top: 28px;
+  font-size: 12px;
+}
+.connector-history ol {
+  max-height: 330px;
+  overflow: auto;
+  padding-left: 22px;
+}
+.connector-history li {
+  margin: 14px 0;
+  overflow-wrap: anywhere;
+}
+.connector-result-hud {
+  position: absolute;
+  z-index: 3;
+  right: 5vw;
+  top: 18%;
+  width: min(310px, 30vw);
+  padding: 18px;
+}
+.connector-result-hud h2 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.connector-result-hud a {
+  font-size: 13px;
+}
+@media (max-width: 850px) {
+  .connector-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .connector-result-hud {
+    top: auto;
+    bottom: 180px;
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+  .connector-card,
+  .connector-plan,
+  .connector-repair {
+    padding: 18px;
+  }
+}

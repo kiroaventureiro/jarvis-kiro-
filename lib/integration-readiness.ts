@@ -21,15 +21,15 @@ const envRequirements: Record<string, string[]> = {
   "Supabase Jarvis": ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"],
   "Supabase legado Sistema Origem": [],
 };
-export function getIntegrationReadiness() {
-  const snapshot = operationalSnapshot();
+export function getIntegrationReadiness(snapshot = operationalSnapshot()) {
   return catalog.connections.map((entry) => {
     const current = snapshot.integrations.find(
       (item) =>
         item.name === entry.name ||
         (entry.name === "Supabase Jarvis" && item.id === "supabase-memory"),
     );
-    const required = envRequirements[entry.name] ?? [];
+    const native = current?.note.startsWith("Conector nativo") === true;
+    const required = native ? [] : (envRequirements[entry.name] ?? []);
     const missing = required.filter((key) => !process.env[key]?.trim());
     return {
       name: entry.name,
@@ -38,7 +38,9 @@ export function getIntegrationReadiness() {
       plannedMode: entry.mode,
       credentialNamesRequired: required,
       credentialNamesMissing: missing,
-      configPresent: required.length > 0 && missing.length === 0,
+      configPresent:
+        current?.configured === true ||
+        (required.length > 0 && missing.length === 0),
       liveConnectionVerified: current?.verified === true,
       operational: current || null,
       status:

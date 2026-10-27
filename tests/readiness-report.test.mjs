@@ -18,6 +18,6 @@ test("readiness report explicitly distinguishes plans and real access", () => {
 });
 test("readiness endpoint requires authentication and exposes no secrets", () => {
   assert.ok(route.includes("await authorized()"));
-  assert.ok(route.includes("status:401"));
+  assert.match(route, /status:\s*401/);
   assert.ok(!route.includes("process.env"));
 });

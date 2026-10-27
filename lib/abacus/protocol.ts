@@ -1,3 +1,4 @@
+import type { ConnectorResultLink } from "../connectors/result";
 import { kiroChatContext } from "../kiro-context-for-chat";
 export type ChatTurn = { role: "user" | "assistant"; content: string };
 export type TaskKind = "chat" | "code" | "research";
@@ -9,6 +10,7 @@ export type TokenUsage = {
   cachedTokens: number;
 };
 export type AbacusResult = {
+  result?: ConnectorResultLink;
   provider?: "abacus" | "local_operational";
   text: string;
   model: string;

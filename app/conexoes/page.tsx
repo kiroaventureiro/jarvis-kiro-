@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AbacusStatus from "../components/AbacusStatus";
+import NativeConnectors from "../components/NativeConnectors";
 type Item = {
   id: string;
   name: string;
@@ -52,11 +53,12 @@ export default function ConnectionsPage() {
       <Link href="/configuracoes">← Configurações</Link>
       <h1>Central de Conexões</h1>
       <AbacusStatus />
+      <NativeConnectors />
       <p>
         Explore plataformas de IA, redes sociais e ferramentas para a KIRO.
         Catálogo de possibilidades: a presença aqui não significa que a conta
-        esteja conectada ou que exista integração oficial. Credenciais não são
-        solicitadas nesta fase.
+        esteja conectada ou que exista integração oficial. Os conectores nativos
+        acima têm autorização própria e são independentes deste catálogo.
       </p>
       <p>
         <strong>

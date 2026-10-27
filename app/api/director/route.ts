@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../lib/auth";
-import { operationalSnapshot } from "../../../lib/operational/server";
+import { operationalSnapshotLive } from "../../../lib/operational/server";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export async function GET() {
       { error: "Sessão necessária." },
       { status: 401, headers: { "Cache-Control": "no-store" } },
     );
-  const operational = operationalSnapshot();
+  const operational = await operationalSnapshotLive();
   const capability = (id: string) => {
     const current = operational.integrations.find((item) => item.id === id)!;
     return {
@@ -40,14 +40,14 @@ export async function GET() {
             "Acesso por dispositivo depende do cadastro e validação do dispositivo.",
         },
         githubCodeWriting: {
-          status: "not_implemented",
+          status: "requires_connection_and_approval",
           detail:
-            "Alteração de código, branches e PRs pelo Jarvis ainda não habilitados.",
+            "Conector nativo implementado; branches e arquivos exigem escopo e plano aprovado. Merge não habilitado.",
         },
         n8n: capability("n8n"),
       },
       safeguards: {
-        githubWriteDisabled: true,
+        githubWriteRequiresPlanApproval: true,
         productionChangesRequireApproval: true,
         secretsReturned: false,
       },

@@ -1,3 +1,4 @@
+import { answerNativeRequest } from "../../../../lib/connectors/server";
 import {
   answerOperationalQuestion,
   operationalSnapshot,
@@ -46,7 +47,9 @@ export async function POST(request: Request) {
     configured: () => !!process.env.ABACUS_API_KEY,
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
-    localReply: answerOperationalQuestion,
+    localReply: async (message, signal) =>
+      (await answerNativeRequest(message)) ||
+      answerOperationalQuestion(message, signal),
     reply: askAbacus,
     stream: streamAbacus,
   });
