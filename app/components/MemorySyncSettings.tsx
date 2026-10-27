@@ -41,6 +41,24 @@ export default function MemorySyncSettings(){
    setMessage(`Cópia restaurada neste navegador (${turns.length} mensagens). Atualize a página principal para carregá-la.`);
   }catch(e){setMessage(e instanceof Error?e.message:"Falha ao restaurar")}finally{setBusy(false)}
  }
+ async function testMemory(){
+  if(!window.confirm("Testar gravação, leitura e exclusão com uma mensagem fictícia? O teste só inicia se não existir histórico remoto."))return;
+  setBusy(true);setMessage("Testando memória criptografada, sem usar Abacus...");
+  try{
+   const previous=await send("GET");
+   if(!previous.configured)throw new Error("Armazenamento remoto não configurado");
+   if((previous.history??[]).length)throw new Error("Já existe histórico remoto. Teste cancelado para proteger seus dados.");
+   const marker="TESTE-JARVIS-"+crypto.randomUUID();
+   await send("PUT",{history:[{role:"user",content:marker}]});
+   const fetched=await send("GET");
+   if(fetched.history?.length!==1||fetched.history[0].content!==marker)throw new Error("Falha na verificação da leitura; revise o histórico antes de apagar.");
+   await send("DELETE");
+   const empty=await send("GET");
+   if((empty.history??[]).length)throw new Error("A exclusão não foi confirmada.");
+   setMessage("Teste concluído: gravação, leitura e exclusão verificadas, sem chamada à Abacus.");
+  }catch(e){setMessage(e instanceof Error?e.message:"Falha no teste de memória");}
+  finally{setBusy(false)}
+ }
  async function erase(){
   if(!window.confirm("Apagar definitivamente a cópia de conversas no servidor? Isso não apaga automaticamente o histórico neste dispositivo."))return;
   setBusy(true);
@@ -51,6 +69,7 @@ export default function MemorySyncSettings(){
   <p>Opcional. Cópia manual e criptografada de conversas recentes, quando o servidor for configurado. Não há sincronização automática ou novas cobranças ativadas.</p>
   <button className="subtle-button" type="button" disabled={busy} onClick={inspect}>Verificar disponibilidade</button>
   {state==="ready"?<div style={{display:"flex",flexWrap:"wrap",gap:8,marginTop:12}}>
+   <button className="subtle-button" disabled={busy} onClick={testMemory}>Testar com dados fictícios</button>
    <button className="subtle-button" disabled={busy} onClick={backup}>Guardar cópia no servidor</button>
    <button className="subtle-button" disabled={busy} onClick={restore}>Restaurar neste dispositivo</button>
    <button className="subtle-button" disabled={busy} onClick={erase}>Apagar cópia do servidor</button>
