@@ -726,7 +726,7 @@ export default function JarvisExperience() {
                 <span className="message-author">
                   {item.role === "user" ? "Você" : "Jarvis"}
                 </span>
-                <p>{item.text}</p>
+                <p>{item.text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1")}</p>
               </article>
             ))}
           </div>
