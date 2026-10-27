@@ -1,3 +1,4 @@
+import { answerResearch } from "../../../../lib/research/server";
 import { localVisualReference } from "../../../../lib/holo/orchestrator";
 import { answerNativeRequest } from "../../../../lib/connectors/server";
 import {
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     localReply: async (message, signal) =>
+      (await answerResearch(message, signal)) ||
       (await answerNativeRequest(message)) ||
       (await answerOperationalQuestion(message, signal)) ||
       localVisualReference(message),

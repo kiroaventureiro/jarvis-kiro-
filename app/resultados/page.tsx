@@ -1,11 +1,9 @@
 "use client";
+import HoloExportMenu from "../components/holo/HoloExportMenu";
 import { useState } from "react";
 import Link from "next/link";
 import { useHoloSession } from "../components/holo/HoloSession";
-import {
-  ScenePanels,
-  downloadHoloScene,
-} from "../components/holo/HoloResponseHUD";
+import { ScenePanels } from "../components/holo/HoloResponseHUD";
 export default function ResultsPage() {
   const session = useHoloSession(),
     [filter, setFilter] = useState("all"),
@@ -21,7 +19,9 @@ export default function ResultsPage() {
       <h1>Resultados projetados</h1>
       <p>
         Até seis resultados mantidos somente na memória desta página e durante a
-        navegação. Recarregar ou fechar apaga esta coleção. As prévias dos resultados ficam apenas nesta sessão e são liberadas ao limpar a coleção.
+        navegação. Recarregar ou fechar apaga esta coleção. As prévias dos
+        resultados ficam apenas nesta sessão e são liberadas ao limpar a
+        coleção.
       </p>
       <div className="holo-library-toolbar">
         <label>
@@ -68,9 +68,7 @@ export default function ResultsPage() {
               >
                 Selecionar para a home
               </button>
-              <button onClick={() => downloadHoloScene(scene)}>
-                Exportar resultado
-              </button>
+              <HoloExportMenu scene={scene} />
             </header>
             <ScenePanels
               key={scene.id}

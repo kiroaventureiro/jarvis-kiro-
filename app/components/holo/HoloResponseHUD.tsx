@@ -1,4 +1,6 @@
 "use client";
+import HoloExportMenu from "./HoloExportMenu";
+import CinematicPresentation from "./CinematicPresentation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useHoloSession } from "./HoloSession";
@@ -88,14 +90,20 @@ export function ScenePanels({
 }
 export default function HoloResponseHUD({
   local = [],
+  showNarration = false,
 }: {
+  showNarration?: boolean;
   local?: HoloLocalMedia[];
 }) {
   const { current: scene, close, media } = useHoloSession();
+  const [explore, setExplore] = useState(false);
+  useEffect(() => setExplore(false), [scene?.id]);
   if (!scene) return null;
   return (
     <aside
-      className="holo-response-layer"
+      className={
+        "holo-response-layer " + (!explore ? "is-cinematic" : "is-exploring")
+      }
       aria-label="Resultados holográficos"
       data-scene-mode={scene.mode}
     >
@@ -122,12 +130,7 @@ export default function HoloResponseHUD({
           </p>
         </div>
         <div className="holo-scene-actions">
-          <button
-            onClick={() => downloadHoloScene(scene)}
-            aria-label="Exportar resultado holográfico"
-          >
-            ↓
-          </button>
+          <HoloExportMenu scene={scene} />
           <Link href="/resultados" aria-label="Abrir resultados desta sessão">
             ▦
           </Link>
@@ -136,7 +139,26 @@ export default function HoloResponseHUD({
           </button>
         </div>
       </header>
-      <ScenePanels key={scene.id} scene={scene} local={[...media, ...local]} />
+      {explore ? (
+        <>
+          <button className="cinema-return" onClick={() => setExplore(false)}>
+            Voltar à demonstração
+          </button>
+          <ScenePanels
+            key={scene.id}
+            scene={scene}
+            local={[...media, ...local]}
+          />
+        </>
+      ) : (
+        <CinematicPresentation
+          key={scene.id}
+          showNarration={showNarration}
+          scene={scene}
+          local={[...media, ...local]}
+          onExplore={() => setExplore(true)}
+        />
+      )}
     </aside>
   );
 }

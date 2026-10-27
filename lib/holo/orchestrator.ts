@@ -1,3 +1,4 @@
+import { geographyScene } from "./geography";
 import type { HoloScene, HoloModule, HoloSource } from "./types";
 import { clean, normalizeScene, publicHref, mediaHref } from "./validation";
 type Reply = {
@@ -39,7 +40,7 @@ function scene(
 }
 export function responsePoints(text: string) {
   return text
-    .split(/\n+/)
+    .split(/\n+|(?<=[.!?])\s+(?=[A-ZÁ-Ú])/u)
     .map((x) =>
       x
         .replace(/^\s*(?:[-*•]|\d+[.)])\s*/, "")
@@ -192,8 +193,20 @@ export function localVisualReference(message: string) {
       visual: media,
     };
   const n = norm(message);
-  if (!/(historia|historico|mapa|territorio)/.test(n) || !/\bbrasil\b/.test(n))
+  if (!/(historia|historico)/.test(n) || !/brasil|brasileir/.test(n)) {
+    const geo = /mapa|mundi|geografia|territorio|localiz|onde fica/.test(n)
+      ? geographyScene(message)
+      : null;
+    if (geo)
+      return {
+        text: "Preparei um mapa-múndi interativo. Você pode selecionar países, aproximar e abrir uma localização no Google Maps. A cartografia é uma referência geográfica; dados e indicadores atuais precisam de uma fonte específica.",
+        model: "jk-geography",
+        provider: "local_operational" as const,
+        usage: null,
+        visual: geo,
+      };
     return null;
+  }
   return {
     text: "O território brasileiro já era habitado por diversos povos indígenas antes da chegada da expedição portuguesa, em 1500. Entre os marcos estão a independência, em 1822, a proclamação da República, em 1889, e a Constituição de 1988. Projetei um mapa e uma linha do tempo de referência. Você pode selecionar os estados e explorar cada período.",
     model: "jk-curated-reference",
@@ -297,10 +310,15 @@ export function planScene(value: unknown): HoloScene | null {
 }
 export function composeScene(message: string, reply: Reply): HoloScene | null {
   const explicit = normalizeScene(reply.visual);
-  if (explicit) return explicit;
+  if (explicit)
+    return {
+      ...explicit,
+      narration: explicit.narration || clean(reply.text, 12000),
+    };
   if (reply.operational) {
     const operational = operationalScene(reply.operational);
-    if (operational) return operational;
+    if (operational)
+      return { ...operational, narration: clean(reply.text, 12000) };
   }
   const text = clean(reply.text, 9000),
     n = norm(message),
@@ -328,8 +346,8 @@ export function composeScene(message: string, reply: Reply): HoloScene | null {
       ],
       String(result.id),
     );
-  if (/\bbrasil\b/.test(n) && /(historia|mapa|territorio)/.test(n))
-    return brazilReferenceScene();
+  if (/brasil|brasileir/.test(n) && /(historia|historico)/.test(n))
+    return { ...brazilReferenceScene(), narration: clean(reply.text, 12000) };
   if (
     text.length < 70 ||
     /^(oi|ola|bom dia|boa tarde|boa noite|obrigad[oa])(?:[\s,!?.]|$)/.test(n)
@@ -357,6 +375,8 @@ export function composeScene(message: string, reply: Reply): HoloScene | null {
       body: text,
     },
   ];
+  const geo = geographyScene(message);
+  if (geo) modules.unshift(geo.modules[0]);
   const dates = [
     ...text.matchAll(
       /(?:^|\n)\s*(\d{4}(?:\s*[-–]\s*\d{4})?)\s*[:—–-]\s*([^\n]+)/g,
@@ -391,7 +411,7 @@ export function composeScene(message: string, reply: Reply): HoloScene | null {
         points: [clean(m[2], 230)],
       })),
     });
-  return normalizeScene(
+  const composed = normalizeScene(
     scene(
       title,
       creative ? "creative" : technical ? "technical" : "explanation",
@@ -399,10 +419,11 @@ export function composeScene(message: string, reply: Reply): HoloScene | null {
         kind: "assistant",
         label: "Síntese da resposta · sem verificação externa adicional",
       },
-      modules.slice(0, 3),
+      modules.slice(0, 6),
       message + text,
     ),
   );
+  return composed ? { ...composed, narration: clean(reply.text, 12000) } : null;
 }
 export function attachmentScene(
   text: string,
@@ -432,8 +453,8 @@ export function attachmentScene(
         localId: f.id,
       })),
     });
-  return normalizeScene(
-    scene(
+  return normalizeScene({
+    ...scene(
       "Análise multimodal",
       "analysis",
       {
@@ -443,5 +464,6 @@ export function attachmentScene(
       modules,
       text + files.map((x) => x.id).join(),
     ),
-  );
+    narration: clean(text, 12000),
+  });
 }

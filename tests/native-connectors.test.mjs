@@ -6,6 +6,13 @@ import ts from "typescript";
 const cache = new Map();
 async function moduleUrl(file) {
   if (cache.has(file)) return cache.get(file);
+  if (file.endsWith(".json"))
+    return (
+      "data:text/javascript;base64," +
+      Buffer.from("export default " + fs.readFileSync(file, "utf8")).toString(
+        "base64",
+      )
+    );
   let code = ts
     .transpileModule(fs.readFileSync(file, "utf8"), {
       compilerOptions: {
@@ -19,7 +26,12 @@ async function moduleUrl(file) {
       m[0],
       "from " +
         JSON.stringify(
-          await moduleUrl(path.resolve(path.dirname(file), m[2] + ".ts")),
+          await moduleUrl(
+            path.resolve(
+              path.dirname(file),
+              m[2] + (m[2].endsWith(".json") ? "" : ".ts"),
+            ),
+          ),
         ),
     );
   const url =

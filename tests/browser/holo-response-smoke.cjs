@@ -210,6 +210,14 @@ const assets = [
         .getByRole("button", { name: "Enviar mensagem", exact: true })
         .click();
       await page.locator("main[data-state=idle]").waitFor();
+      if (
+        await page
+          .getByRole("button", { name: "Explorar quadros", exact: true })
+          .count()
+      )
+        await page
+          .getByRole("button", { name: "Explorar quadros", exact: true })
+          .click();
     }
     await send("JK, me fale da história do Brasil");
     const hud = page.getByRole("complementary", {
@@ -270,6 +278,9 @@ const assets = [
         name: "Exportar resultado holográfico",
         exact: true,
       })
+      .click();
+    await page
+      .getByRole("button", { name: "JSON · dados estruturados", exact: true })
       .click();
     const file = await download;
     await page.waitForFunction(() => !!window.__exportJSON);
@@ -507,6 +518,9 @@ const assets = [
       await p
         .getByRole("complementary", { name: "Resultados holográficos" })
         .waitFor();
+      await p
+        .getByRole("button", { name: "Explorar quadros", exact: true })
+        .click();
       assert.ok(
         await p.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -551,7 +565,12 @@ const assets = [
           await p.locator(".holo-panel[data-module=timeline]").count(),
           1,
         );
-      } else await p.locator(".response-hud").waitFor();
+      } else {
+        await p
+          .getByRole("button", { name: "Voltar à demonstração", exact: true })
+          .click();
+        await p.locator(".cinema-full-text").waitFor();
+      }
       await c.close();
       pass(name + " responsive output, motion preference and text fallback");
     }

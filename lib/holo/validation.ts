@@ -88,6 +88,7 @@ export function normalizeScene(value: unknown): HoloScene | null {
         "connector",
         "operational",
         "attachment",
+        "research",
       ].includes(String(source.kind)) ||
       !clean(source.label, 200) ||
       JSON.stringify(value).length > 42000
@@ -111,11 +112,15 @@ export function normalizeScene(value: unknown): HoloScene | null {
           tags: tags.map((x) => clean(x, 40)).filter(Boolean),
         });
       } else if (m.kind === "map") {
-        if (m.region !== "BR") return null;
+        if (m.region !== "BR" && m.region !== "WORLD") return null;
         items.push({
           ...base,
           kind: "map",
-          region: "BR",
+          region: m.region,
+          ...(typeof m.focusCountry === "string" &&
+          /^[A-Z0-9-]{2,12}$/.test(m.focusCountry)
+            ? { focusCountry: m.focusCountry }
+            : {}),
           caption: clean(m.caption, 200),
         });
       } else if (m.kind === "timeline") {
@@ -210,12 +215,17 @@ export function normalizeScene(value: unknown): HoloScene | null {
             if (
               typeof d.value !== "number" ||
               !Number.isFinite(d.value) ||
-              d.value < 0 ||
-              d.value > 1e12 ||
+              Math.abs(d.value) > 1e12 ||
               !clean(d.label, 60)
             )
               throw Error();
-            return { label: clean(d.label, 60), value: d.value };
+            return {
+              label: clean(d.label, 60),
+              value: d.value,
+              ...(typeof d.period === "string"
+                ? { period: clean(d.period, 40) }
+                : {}),
+            };
           }),
         });
       } else if (m.kind === "connections") {
@@ -263,6 +273,31 @@ export function normalizeScene(value: unknown): HoloScene | null {
           : {}),
       },
       modules: items,
+      ...(typeof v.narration === "string"
+        ? { narration: clean(v.narration, 12000) }
+        : {}),
+      ...(Array.isArray(v.sources) && v.sources.length <= 8
+        ? {
+            sources: v.sources.map((raw) => {
+              const r = object(raw),
+                href = publicHref(r.href),
+                checkedAt = date(r.checkedAt);
+              if (
+                !href ||
+                !checkedAt ||
+                !["ok", "unavailable", "mismatch"].includes(String(r.status))
+              )
+                throw Error();
+              return {
+                label: clean(r.label, 150),
+                href,
+                checkedAt,
+                status: r.status as "ok",
+                note: clean(r.note, 300),
+              };
+            }),
+          }
+        : {}),
     };
   } catch {
     return null;

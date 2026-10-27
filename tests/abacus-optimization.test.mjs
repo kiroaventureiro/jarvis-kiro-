@@ -6,6 +6,13 @@ import ts from "typescript";
 const urls = new Map();
 async function urlFor(file) {
   if (urls.has(file)) return urls.get(file);
+  if (file.endsWith(".json"))
+    return (
+      "data:text/javascript;base64," +
+      Buffer.from("export default " + fs.readFileSync(file, "utf8")).toString(
+        "base64",
+      )
+    );
   let code = ts.transpileModule(fs.readFileSync(file, "utf8"), {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -17,7 +24,12 @@ async function urlFor(file) {
       m[0],
       "from " +
         JSON.stringify(
-          await urlFor(path.resolve(path.dirname(file), m[2] + ".ts")),
+          await urlFor(
+            path.resolve(
+              path.dirname(file),
+              m[2] + (m[2].endsWith(".json") ? "" : ".ts"),
+            ),
+          ),
         ),
     );
   const u =

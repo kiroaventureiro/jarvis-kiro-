@@ -1,5 +1,11 @@
 export type HoloSource = {
-  kind: "assistant" | "reference" | "connector" | "operational" | "attachment";
+  kind:
+    | "assistant"
+    | "reference"
+    | "connector"
+    | "operational"
+    | "attachment"
+    | "research";
   label: string;
   href?: string;
   checkedAt?: string;
@@ -8,7 +14,12 @@ export type HoloPoint = { label: string; detail: string };
 type Base = { id: string; title: string };
 export type HoloModule =
   | (Base & { kind: "text"; text: string; tags: string[] })
-  | (Base & { kind: "map"; region: "BR"; caption: string })
+  | (Base & {
+      kind: "map";
+      region: "BR" | "WORLD";
+      caption: string;
+      focusCountry?: string;
+    })
   | (Base & {
       kind: "timeline";
       events: Array<{
@@ -44,7 +55,7 @@ export type HoloModule =
       kind: "metrics";
       unit: string;
       style: "bars" | "line" | "radar" | "rings";
-      values: Array<{ label: string; value: number }>;
+      values: Array<{ label: string; value: number; period?: string }>;
     })
   | (Base & {
       kind: "connections";
@@ -70,6 +81,14 @@ export type HoloScene = {
   createdAt: string;
   source: HoloSource;
   modules: HoloModule[];
+  narration?: string;
+  sources?: Array<{
+    label: string;
+    href: string;
+    checkedAt: string;
+    status: "ok" | "unavailable" | "mismatch";
+    note?: string;
+  }>;
 };
 export type HoloLocalMedia = {
   id: string;

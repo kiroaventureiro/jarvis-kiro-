@@ -1,3 +1,4 @@
+import { emitSpeechProgress } from "../holo/speech-progress";
 import type { SpeechOutput, VoicePreferences } from "./voice-types";
 import { readVoicePreferences, selectVoice } from "./voice-preferences";
 export interface SpeechAdapter {
@@ -71,6 +72,8 @@ export class BrowserSpeechOutput implements SpeechOutput {
       );
     if (signal.aborted) throw new DOMException("Cancelado", "AbortError");
     const parts = speechChunks(text);
+    const textLength = parts.reduce((n, p) => n + p.length + 1, 0);
+    let charOffset = 0;
     if (!parts.length) return;
     await new Promise<void>((resolve, reject) => {
       let index = 0,
@@ -85,8 +88,16 @@ export class BrowserSpeechOutput implements SpeechOutput {
         if (utterance) {
           utterance.onend = null;
           utterance.onerror = null;
+          utterance.onstart = null;
+          utterance.onboundary = null;
         }
         this.cancelCurrent = null;
+        emitSpeechProgress({
+          phase: error ? (signal.aborted ? "cancel" : "error") : "end",
+          fraction: error ? Math.min(1, charOffset / textLength) : 1,
+          textLength,
+          charIndex: error ? charOffset : textLength,
+        });
         error ? reject(error) : resolve();
       };
       const cancel = () => {
@@ -106,6 +117,26 @@ export class BrowserSpeechOutput implements SpeechOutput {
           return;
         }
         utterance = this.create(parts[index++]);
+        const offset = charOffset;
+        utterance.onstart = () =>
+          emitSpeechProgress({
+            phase: "start",
+            fraction: Math.min(1, offset / textLength),
+            textLength,
+            charIndex: offset,
+          });
+        utterance.onboundary = (event) => {
+          const position = Math.min(
+            textLength,
+            offset + Math.max(0, event.charIndex),
+          );
+          emitSpeechProgress({
+            phase: "boundary",
+            fraction: position / textLength,
+            textLength,
+            charIndex: position,
+          });
+        };
         utterance.lang = "pt-BR";
         utterance.voice = voice;
         utterance.rate = prefs.rate;
@@ -113,6 +144,7 @@ export class BrowserSpeechOutput implements SpeechOutput {
         utterance.volume = prefs.volume;
         utterance.onend = () => {
           if (timeout) clearTimeout(timeout);
+          charOffset += parts[index - 1].length + 1;
           next();
         };
         utterance.onerror = () =>

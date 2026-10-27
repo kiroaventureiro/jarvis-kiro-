@@ -70,6 +70,13 @@ export default function JarvisExperience() {
     useState<AudioVisualMode>("representative");
   const [remoteAudio, setRemoteAudio] = useState<MediaStream | null>(null);
   const holoSession = useHoloSession();
+  const [centerDemonstration, setCenterDemonstration] = useState(false);
+  useEffect(() => {
+    const focus = (event: Event) =>
+      setCenterDemonstration(!!(event as CustomEvent).detail?.center);
+    window.addEventListener("jk-core-focus", focus);
+    return () => window.removeEventListener("jk-core-focus", focus);
+  }, []);
   const lastUserText = useRef("");
   const operationalProjection = useRef(false);
   const visualFiles = useRef<
@@ -378,6 +385,13 @@ export default function JarvisExperience() {
       const statusTool = createOperationalVoiceTool({
         signal: controller.signal,
         isCurrent: () => attempt === generation.current,
+        onVisual: (value) => {
+          const reply = value as { visual?: unknown };
+          if (reply?.visual) {
+            operationalProjection.current = true;
+            holoSession.present(reply.visual);
+          }
+        },
         onSnapshot: (snapshot) => {
           operationalProjection.current = true;
           holoSession.present(operationalScene(snapshot));
@@ -812,7 +826,7 @@ export default function JarvisExperience() {
             workspace.busy,
             workspace.recording,
           )}
-          hidden={hidden}
+          hidden={hidden || centerDemonstration}
           inputStream={mic ? media.current : null}
           outputStream={remoteAudio}
           muted={muted}
@@ -849,6 +863,9 @@ export default function JarvisExperience() {
         </div>
       </section>
       <HoloResponseHUD
+        showNarration={
+          !!last && (!desktopVoice || muted || last.speechAvailable === false)
+        }
         local={workspace.files
           .filter((f) => !!f.preview)
           .map((f) => ({
@@ -865,7 +882,7 @@ export default function JarvisExperience() {
           sem estimativa de duração
         </div>
       ) : null}
-      {shown.length ? (
+      {shown.length && !holoSession.current ? (
         <section
           className={"response-hud glass " + (expanded ? "expanded" : "")}
           aria-label="Respostas do Jarvis"

@@ -6,6 +6,15 @@ import ts from "typescript";
 const cache = new Map();
 async function urlFor(file) {
   if (cache.has(file)) return cache.get(file);
+  if (file.endsWith(".json")) {
+    const u =
+      "data:text/javascript;base64," +
+      Buffer.from("export default " + fs.readFileSync(file, "utf8")).toString(
+        "base64",
+      );
+    cache.set(file, u);
+    return u;
+  }
   let code = ts.transpileModule(fs.readFileSync(file, "utf8"), {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -17,7 +26,12 @@ async function urlFor(file) {
       m[0],
       "from " +
         JSON.stringify(
-          await urlFor(path.resolve(path.dirname(file), m[2] + ".ts")),
+          await urlFor(
+            path.resolve(
+              path.dirname(file),
+              m[2].endsWith(".json") ? m[2] : m[2] + ".ts",
+            ),
+          ),
         ),
     );
   const url =
@@ -303,7 +317,7 @@ test("panel policy caps simultaneous projections and respects explicit hiding", 
   );
 });
 test("invalid metric values cannot claim successful measurement", () => {
-  for (const value of [NaN, Infinity, -1, 1e15])
+  for (const value of [NaN, Infinity, -1e15, 1e15])
     assert.equal(
       normalizeScene({
         ...base(),

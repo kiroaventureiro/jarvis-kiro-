@@ -1,0 +1,736 @@
+/* Directed, transient demonstrations. The result gallery remains the explicit reading surface. */
+.holo-response-layer.is-cinematic {
+  inset: 88px 32px 185px;
+  display: block;
+  pointer-events: none;
+}
+.is-cinematic > .holo-scene-heading {
+  position: relative;
+  z-index: 7;
+  max-width: min(720px, 70vw);
+}
+.cinema-root {
+  position: absolute;
+  inset: 90px 0 0;
+  pointer-events: none;
+}
+.cinema-director {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  pointer-events: auto;
+  color: #90d4e8;
+  z-index: 9;
+}
+.cinema-state {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #78eaff;
+}
+.cinema-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.cinema-controls button {
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  background: #041b2bcc;
+  border-color: #37bde74d;
+}
+.cinema-controls label {
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #7aa4b7;
+}
+.cinema-controls select {
+  padding: 5px 8px;
+  font-size: 10px;
+  border-radius: 4px;
+  background: #051425;
+  color: #b9eaff;
+  min-width: 85px;
+}
+.cinema-track {
+  width: 100%;
+  height: 2px;
+  background: #12426055;
+  overflow: hidden;
+}
+.cinema-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #087bff, #80faff);
+  box-shadow: 0 0 10px #23dfff;
+  transition: width 0.1s linear;
+}
+.cinema-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 63px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: #c8f7ff;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-shadow: 0 0 16px #13c6ff77;
+}
+.cinema-caption > span:first-child {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #4f98b7;
+}
+.cinema-primary {
+  position: absolute;
+  pointer-events: auto;
+  transition:
+    inset 0.8s ease,
+    width 0.8s ease;
+  animation: cinema-materialize 0.85s ease both;
+  min-height: 0;
+}
+.cinema-primary > .holo-panel {
+  height: 100%;
+  max-height: none;
+  grid-area: auto;
+  align-self: stretch;
+  width: 100%;
+}
+.cinema-primary .holo-panel-body {
+  flex: 1;
+  font-size: 14px;
+}
+.cinema-primary .holo-panel-heading h3 {
+  font-size: 17px;
+}
+.cinema-primary.placement-left {
+  left: 1%;
+  top: 108px;
+  bottom: 48px;
+  width: min(430px, 35vw);
+}
+.cinema-primary.placement-right {
+  right: 1%;
+  top: 108px;
+  bottom: 48px;
+  width: min(430px, 35vw);
+}
+.cinema-primary.placement-center {
+  left: 11%;
+  right: 11%;
+  top: 102px;
+  bottom: 44px;
+}
+.cinema-primary.placement-top {
+  left: 23%;
+  right: 23%;
+  top: 100px;
+  bottom: 33%;
+}
+.cinema-primary.placement-bottom {
+  left: 20%;
+  right: 20%;
+  top: 36%;
+  bottom: 44px;
+}
+.cinema-root:has(.cinema-support) .placement-center {
+  left: 25%;
+  right: 1%;
+}
+.cinema-support {
+  position: absolute;
+  left: 0;
+  top: 38%;
+  bottom: 52px;
+  width: 22%;
+  pointer-events: auto;
+  animation: cinema-echo 1s ease both;
+  opacity: 0.75;
+}
+.cinema-support > .holo-panel {
+  height: 100%;
+  max-height: 100%;
+  grid-area: auto;
+}
+.cinema-support .holo-map-tools,
+.cinema-support .holo-map-search,
+.cinema-support .holo-google-maps,
+.cinema-support .holo-country-options {
+  display: none;
+}
+.cinema-support .holo-world-viewport {
+  max-height: 130px;
+}
+.cinema-root[data-focus="center"] ~ .presence {
+  opacity: 0;
+}
+.jarvis-stage:has(.cinema-root[data-focus="center"]) .presence {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.8s,
+    scale 0.8s;
+  scale: 0.85;
+}
+.jarvis-stage:has(.cinema-root:not([data-focus="center"])) .presence {
+  transition:
+    opacity 0.8s,
+    scale 0.8s;
+  opacity: 0.8;
+}
+.cinema-scene-index {
+  position: absolute;
+  bottom: 4px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  pointer-events: auto;
+  z-index: 8;
+}
+.cinema-scene-index button {
+  font-size: 9px;
+  width: 27px;
+  height: 23px;
+  padding: 0;
+  border-radius: 3px;
+  background: #021b2dcc;
+  border-color: #1b719544;
+  color: #6aa6bd;
+}
+.cinema-scene-index button[aria-current="step"] {
+  color: #caffff;
+  border-color: #52dfff;
+  box-shadow: 0 0 12px #20caff33;
+}
+.cinema-text-access {
+  position: absolute;
+  right: 0;
+  bottom: -26px;
+  z-index: 10;
+  pointer-events: auto;
+}
+.cinema-text-access > button {
+  font-size: 9px;
+  padding: 4px 7px;
+  background: transparent;
+  color: #7eabbf;
+  border: 0;
+}
+.cinema-full-text {
+  position: absolute;
+  right: 0;
+  bottom: 35px;
+  max-height: 42dvh;
+  overflow: auto;
+  width: min(540px, 75vw);
+  padding: 20px;
+  white-space: pre-wrap;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.cinema-return {
+  pointer-events: auto;
+  font-size: 10px;
+  position: absolute;
+  right: 0;
+  top: 5px;
+}
+.holo-world-viewport {
+  position: relative;
+  aspect-ratio: 2;
+  min-height: 140px;
+  overflow: hidden;
+  border: 1px solid #35bdff33;
+  border-radius: 7px;
+  background: radial-gradient(ellipse at center, #06325a88, #020c1b);
+}
+.holo-world-viewport svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 140px;
+}
+.holo-world-viewport path[role="button"] {
+  fill: #064262aa;
+  stroke: #36c7ef;
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+  transition: fill 0.25s;
+  outline: none;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: cinema-map-draw 2.5s ease both;
+}
+.holo-world-viewport path[role="button"]:hover,
+.holo-world-viewport path[role="button"]:focus-visible {
+  fill: #43e3ff88;
+  stroke: #c7ffff;
+  stroke-width: 1.5;
+}
+.holo-world-viewport path.is-selected {
+  fill: #23cbe488;
+  stroke: #d8ffff;
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 3px #31cfff);
+}
+.holo-map-search {
+  display: grid;
+  gap: 5px;
+  font-size: 10px;
+  color: #8eb4c8;
+  margin: 10px 0;
+}
+.holo-map-search input {
+  background: #031120aa;
+  border-color: #38b7e94d;
+  color: #cef6ff;
+  font-size: 12px;
+  padding: 8px 10px;
+  width: 100%;
+}
+.holo-country-options {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-height: 100px;
+  overflow: auto;
+}
+.holo-country-options button {
+  padding: 4px 8px;
+  font-size: 10px;
+  border-color: #1c9fd244;
+  border-radius: 4px;
+}
+.holo-google-maps {
+  display: inline-block;
+  margin: 5px 0;
+  color: #a0ecff !important;
+  font-size: 11px !important;
+}
+.cinema-primary .holo-world-viewport {
+  min-height: 200px;
+  max-height: 38dvh;
+}
+.cinema-primary .holo-world-viewport svg {
+  min-height: 200px;
+}
+.cinema-primary .holo-report strong {
+  font-size: 17px;
+  color: #d8faff;
+  font-weight: 400;
+}
+.cinema-primary .holo-report li p {
+  font-size: 15px;
+  line-height: 1.75;
+  color: #95c4d5;
+  margin-top: 12px;
+}
+.cinema-primary .holo-summary {
+  font-size: 14px;
+  color: #6fb5cc;
+  max-width: 650px;
+}
+.cinema-primary .holo-report li {
+  padding: 18px 0;
+}
+.cinema-primary .holo-metrics .holo-chart {
+  min-height: 170px;
+  max-height: 30dvh;
+}
+.cinema-primary .holo-metrics dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px 20px;
+}
+.cinema-primary .holo-metric dd {
+  font-size: 18px;
+}
+.cinema-primary .holo-timeline-detail {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.cinema-primary .holo-timeline button {
+  font-size: 14px;
+}
+.cinema-root[data-playing="false"] .holo-world-viewport path,
+.cinema-root[data-playing="false"] .holo-metric-track i {
+  animation-play-state: paused;
+}
+.holo-export-menu {
+  position: relative;
+  pointer-events: auto;
+}
+.holo-export-options {
+  position: absolute;
+  z-index: 25;
+  right: 0;
+  top: 38px;
+  width: min(320px, 80vw);
+  padding: 14px;
+  background: #04182df5;
+  border: 1px solid #3acfff77;
+  border-radius: 10px;
+  box-shadow: 0 15px 50px #000a;
+  pointer-events: auto;
+}
+.holo-export-options button {
+  width: 100%;
+  font-size: 12px;
+  text-align: left;
+  margin: 4px 0;
+  padding: 9px;
+}
+.holo-export-options p,
+.holo-export-options small {
+  display: block;
+  font-size: 10px;
+  color: #92b9ce;
+  line-height: 1.6;
+}
+.holo-export-menu progress {
+  width: 100%;
+  accent-color: #24d9ff;
+}
+@keyframes cinema-materialize {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: perspective(900px) rotateY(-8deg) translateY(15px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: perspective(900px) rotateY(0) translateY(0) scale(1);
+  }
+}
+@keyframes cinema-echo {
+  from {
+    opacity: 0;
+    translate: -15px 0;
+  }
+  to {
+    opacity: 0.75;
+    translate: 0 0;
+  }
+}
+@keyframes cinema-map-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (max-width: 850px) {
+  .holo-response-layer.is-cinematic {
+    inset: 78px 12px 185px;
+  }
+  .is-cinematic > .holo-scene-heading {
+    max-width: none;
+    min-height: 65px;
+  }
+  .cinema-root {
+    inset: 90px 0 0;
+  }
+  .cinema-director {
+    top: -10px;
+    gap: 5px;
+  }
+  .cinema-state {
+    font-size: 8px;
+  }
+  .cinema-controls {
+    gap: 4px;
+  }
+  .cinema-controls button {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+  .cinema-controls label {
+    font-size: 9px;
+  }
+  .cinema-controls select {
+    font-size: 9px;
+    padding: 4px;
+    min-width: 65px;
+  }
+  .cinema-track {
+    margin-top: 2px;
+  }
+  .cinema-caption {
+    top: 73px;
+    gap: 8px;
+    font-size: 12px;
+    justify-content: flex-start;
+  }
+  .cinema-primary.placement-left,
+  .cinema-primary.placement-right,
+  .cinema-primary.placement-center,
+  .cinema-primary.placement-top,
+  .cinema-primary.placement-bottom,
+  .cinema-root:has(.cinema-support) .placement-center {
+    left: 0;
+    right: 0;
+    width: auto;
+    top: 110px;
+    bottom: 37px;
+  }
+  .cinema-primary .holo-panel-heading h3 {
+    font-size: 14px;
+  }
+  .cinema-primary .holo-panel-body {
+    padding: 12px;
+  }
+  .cinema-primary .holo-report strong {
+    font-size: 14px;
+  }
+  .cinema-primary .holo-report li p {
+    font-size: 12px;
+  }
+  .cinema-support {
+    display: none;
+  }
+  .cinema-primary .holo-world-viewport,
+  .cinema-primary .holo-world-viewport svg {
+    min-height: 140px;
+  }
+  .cinema-primary .holo-metrics .holo-chart {
+    min-height: 120px;
+  }
+  .cinema-full-text {
+    width: calc(100vw - 35px);
+    font-size: 12px;
+  }
+  .has-attachments .holo-response-layer.is-cinematic {
+    width: auto;
+    left: 12px;
+    right: 12px;
+    top: 285px;
+  }
+  .has-attachments .is-cinematic .cinema-root {
+    inset: 72px 0 0;
+  }
+  .has-attachments .cinema-primary {
+    top: 98px !important;
+  }
+  .cinema-primary .holo-panel.holo-expanded {
+    width: auto;
+    inset: 70px 12px 185px;
+  }
+  .cinema-scene-index {
+    gap: 4px;
+  }
+}
+@media (max-width: 850px) and (max-height: 720px) {
+  .holo-response-layer.is-cinematic {
+    top: 65px;
+    bottom: 180px;
+  }
+  .cinema-root {
+    top: 80px;
+  }
+  .cinema-director {
+    gap: 3px;
+  }
+  .cinema-controls button {
+    font-size: 9px;
+    padding: 4px 6px;
+  }
+  .cinema-state {
+    font-size: 7px;
+  }
+  .cinema-caption {
+    top: 63px;
+    font-size: 11px;
+  }
+  .cinema-primary.placement-left,
+  .cinema-primary.placement-right,
+  .cinema-primary.placement-center,
+  .cinema-primary.placement-top,
+  .cinema-primary.placement-bottom {
+    top: 92px;
+  }
+  .cinema-primary .holo-world-viewport,
+  .cinema-primary .holo-world-viewport svg {
+    min-height: 100px;
+  }
+  .cinema-primary .holo-panel-heading {
+    padding: 8px;
+  }
+  .cinema-primary .holo-panel-body {
+    padding: 9px;
+  }
+  .cinema-primary .holo-report li p {
+    font-size: 11px;
+  }
+}
+@media (min-width: 851px) and (max-height: 600px) {
+  .holo-response-layer.is-cinematic {
+    inset: 65px 20px 160px;
+  }
+  .cinema-root {
+    top: 65px;
+  }
+  .cinema-primary.placement-center {
+    left: 18%;
+    right: 1%;
+    top: 76px;
+    bottom: 27px;
+  }
+  .cinema-primary.placement-left,
+  .cinema-primary.placement-right {
+    top: 76px;
+    bottom: 27px;
+    width: 40vw;
+  }
+  .cinema-primary .holo-world-viewport,
+  .cinema-primary .holo-world-viewport svg {
+    min-height: 100px;
+    max-height: 23dvh;
+  }
+  .cinema-caption {
+    top: 49px;
+    font-size: 12px;
+  }
+  .cinema-state {
+    font-size: 8px;
+  }
+  .cinema-controls button {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+  .cinema-support {
+    top: 50%;
+    bottom: 40px;
+  }
+  .cinema-primary .holo-metrics .holo-chart {
+    min-height: 100px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cinema-primary,
+  .cinema-support,
+  .holo-world-viewport path {
+    animation: none !important;
+    transition: none !important;
+  }
+  .cinema-track i {
+    transition: none;
+  }
+  .cinema-primary {
+    transform: none;
+  }
+}
+
+.cinema-primary .holo-panel.holo-expanded {
+  position: fixed;
+  inset: 90px 10vw 170px;
+  width: auto;
+  height: auto;
+  z-index: 50;
+}
+
+.is-cinematic > .holo-scene-heading {
+  z-index: 30;
+}
+.holo-scene-actions .holo-export-menu > button {
+  width: auto;
+  min-width: 80px;
+  font-size: 10px;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.cinema-sources {
+  position: absolute;
+  left: 0;
+  bottom: -25px;
+  z-index: 12;
+  pointer-events: auto;
+  color: #83b8cd;
+  font-size: 10px;
+}
+.cinema-sources summary {
+  cursor: pointer;
+}
+.cinema-sources > div {
+  position: absolute;
+  left: 0;
+  bottom: 25px;
+  width: min(520px, 85vw);
+  max-height: 35dvh;
+  overflow: auto;
+  background: #031525f5;
+  border: 1px solid #42c9ed66;
+  padding: 15px;
+  border-radius: 8px;
+}
+.cinema-sources a {
+  display: block;
+  margin-bottom: 7px;
+  color: #b7efff;
+}
+.cinema-sources small {
+  display: block;
+  color: #89acbf;
+  line-height: 1.6;
+}
+@media (max-width: 850px) {
+  .holo-scene-actions .holo-export-menu > button {
+    min-width: 58px;
+    font-size: 9px;
+    padding: 5px;
+  }
+  .cinema-sources {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 850px) {
+  .jarvis-stage:has(.cinema-root) .presence {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@media (min-width: 851px) {
+  .has-attachments .holo-response-layer.is-cinematic {
+    left: 345px;
+    right: 24px;
+    top: 88px;
+    width: auto;
+  }
+  .has-attachments .cinema-primary {
+    width: auto;
+    left: 0;
+    right: 0;
+  }
+  .has-attachments .cinema-primary > .holo-panel {
+    max-height: none;
+  }
+  .has-attachments .cinema-root:has(.cinema-support) .placement-center {
+    left: 25%;
+    right: 0;
+  }
+  .has-attachments .cinema-support {
+    width: 22%;
+  }
+  .has-attachments .cinema-full-text {
+    max-width: calc(100vw - 400px);
+  }
+}

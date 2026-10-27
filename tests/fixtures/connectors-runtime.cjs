@@ -66,6 +66,57 @@ globalThis.fetch = async (input, options = {}) => {
     method = options.method || "GET";
   if (["localhost", "127.0.0.1"].includes(u.hostname))
     return original(input, options);
+  if (u.hostname === "api.bcb.gov.br") {
+    if (
+      process.env.JARVIS_RESEARCH_PUBLIC_NETWORK === "1" &&
+      method === "GET" &&
+      /^\/dados\/serie\/bcdata\.sgs\.(1|432|433)\/dados\/ultimos\/(12|20)$/.test(
+        u.pathname,
+      )
+    )
+      return original(input, options);
+    if (method !== "GET") throw Error("Research fixture is read-only");
+    const values = (p) => [
+      {
+        data: "01/08/2026",
+        valor: p === 433 ? "-0.32" : p === 432 ? "14.75" : "5.1",
+      },
+      {
+        data: "01/09/2026",
+        valor: p === 433 ? "0.82" : p === 432 ? "15" : "5.2",
+      },
+    ];
+    const match = u.pathname.match(/sgs\.(1|432|433)\//);
+    if (!match) throw Error("Unknown research series");
+    return response(values(Number(match[1])));
+  }
+  if (u.hostname === "servicodados.ibge.gov.br") {
+    if (
+      process.env.JARVIS_RESEARCH_PUBLIC_NETWORK === "1" &&
+      method === "GET" &&
+      u.pathname === "/api/v3/agregados/1737/periodos/-12/variaveis/63"
+    )
+      return original(input, options);
+    if (method !== "GET" || !u.pathname.includes("/1737/"))
+      throw Error("Unknown research fixture");
+    return response([
+      {
+        id: "63",
+        variavel: "IPCA - Variação mensal",
+        unidade: "%",
+        resultados: [
+          {
+            series: [
+              {
+                localidade: { id: "1" },
+                serie: { 202608: "-0.32", 202609: "0.82" },
+              },
+            ],
+          },
+        ],
+      },
+    ]);
+  }
   if (u.hostname === "fixture-connectors.supabase.co") {
     if (u.pathname != "/rest/v1/jarvis_connector_state")
       throw Error("Unknown fixture table");

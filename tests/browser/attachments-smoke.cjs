@@ -151,7 +151,7 @@ const png =
       await page.getByRole("button", { name: "Enviar mensagem" }).click();
       await page.getByText("Análise concluída", { exact: true }).waitFor();
       await page
-        .locator(".response-hud")
+        .locator(".cinema-full-text")
         .getByText(answer, { exact: true })
         .waitFor();
       assert.equal(submissions.length, 1);
@@ -167,7 +167,7 @@ const png =
         false,
       );
       const dock = await page.locator(".interaction-dock").boundingBox(),
-        hud = await page.locator(".response-hud").boundingBox(),
+        hud = await page.locator(".cinema-full-text").boundingBox(),
         attachment = await page.locator(".attachment-hud").boundingBox();
       assert.ok(dock && hud && attachment);
       if (width < 850) {
@@ -178,12 +178,19 @@ const png =
         path: path.join(out, name + "-analysis.png"),
         fullPage: true,
       });
-      await page.getByRole("button", { name: "Expandir", exact: true }).click();
       await page
-        .locator(".response-hud")
+        .getByRole("button", { name: "Recolher texto", exact: true })
+        .click();
+      await page
+        .getByRole("button", { name: "Ler resposta em texto", exact: true })
+        .click();
+      await page
+        .locator(".cinema-full-text")
         .getByText(answer, { exact: true })
         .waitFor();
-      await page.getByRole("button", { name: "Recolher", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Recolher texto", exact: true })
+        .click();
       await page
         .getByRole("button", { name: "Gravar orientação sobre os arquivos" })
         .click();
@@ -289,7 +296,7 @@ const png =
     await page.getByRole("button", { name: "Interromper análise" }).click();
     await page.getByText(/Análise interrompida. Os anexos/).waitFor();
     await new Promise((r) => setTimeout(r, 1500));
-    assert.equal(await page.locator(".response-hud").count(), 0);
+    assert.equal(await page.locator(".cinema-full-text").count(), 0);
     results.push({ scenario: "cancel ignores late response", passed: true });
     await context.close();
     await fs.writeFile(

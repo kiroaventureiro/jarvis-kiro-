@@ -1,10 +1,22 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
+import { chartRange, chartPosition } from "../../../lib/holo/presentation";
 import { connectionPresentation } from "../../../lib/holo/validation";
 import dynamic from "next/dynamic";
 import type { HoloModule, HoloLocalMedia } from "../../../lib/holo/types";
 type Of<K extends HoloModule["kind"]> = Extract<HoloModule, { kind: K }>;
+export const HoloPlaybackContext = createContext({
+  playing: true,
+  instant: false,
+});
 export function HoloTextStream({
   text,
   transient = false,
@@ -12,29 +24,37 @@ export function HoloTextStream({
   text: string;
   transient?: boolean;
 }) {
+  const playback = useContext(HoloPlaybackContext);
   const [count, setCount] = useState(0),
     [gone, setGone] = useState(false);
+  const countRef = useRef(0);
   useEffect(() => {
+    countRef.current = 0;
+    setCount(0);
     setGone(false);
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  }, [text]);
+  useEffect(() => {
+    if (
+      playback.instant ||
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ) {
+      countRef.current = text.length;
       setCount(text.length);
       return;
     }
-    setCount(0);
-    const timer = setInterval(
-      () =>
-        setCount((n) => {
-          if (n >= text.length) clearInterval(timer);
-          return Math.min(text.length, n + 2);
-        }),
-      28,
-    );
-    const fade = transient ? setTimeout(() => setGone(true), 9000) : null;
-    return () => {
-      clearInterval(timer);
-      if (fade) clearTimeout(fade);
-    };
-  }, [text, transient]);
+    if (!playback.playing) return;
+    const timer = setInterval(() => {
+      countRef.current = Math.min(text.length, countRef.current + 1);
+      setCount(countRef.current);
+      if (countRef.current >= text.length) clearInterval(timer);
+    }, 30);
+    return () => clearInterval(timer);
+  }, [text, playback.playing, playback.instant]);
+  useEffect(() => {
+    if (!transient || !playback.playing) return;
+    const timer = setTimeout(() => setGone(true), 9000);
+    return () => clearTimeout(timer);
+  }, [text, transient, playback.playing]);
   return (
     <span
       className={"holo-text-stream " + (gone ? "is-faded" : "")}
@@ -108,16 +128,30 @@ export function HoloPanel({
     </section>
   );
 }
+export const HoloWorldMap = dynamic(() => import("./HoloWorldMap"), {
+  ssr: false,
+  loading: () => <p role="status">Preparando mapa-múndi…</p>,
+});
 export const HoloMap = dynamic(() => import("./HoloMap"), {
   ssr: false,
   loading: () => <p role="status">Preparando malha cartográfica…</p>,
 });
-export function HoloTimeline({ module: m }: { module: Of<"timeline"> }) {
+export function HoloTimeline({
+  module: m,
+  progress,
+}: {
+  module: Of<"timeline">;
+  progress?: number;
+}) {
   const [active, setActive] = useState(0);
+  const shown =
+    progress === undefined
+      ? m.events
+      : m.events.slice(0, Math.max(1, Math.ceil(progress * m.events.length)));
   return (
     <div className="holo-timeline">
       <ol>
-        {m.events.map((e, i) => (
+        {shown.map((e, i) => (
           <li key={i} className={i === active ? "is-selected" : ""}>
             <button aria-pressed={active === i} onClick={() => setActive(i)}>
               <time>{e.when}</time>
@@ -125,7 +159,13 @@ export function HoloTimeline({ module: m }: { module: Of<"timeline"> }) {
             </button>
             {i === active ? (
               <div className="holo-timeline-detail">
-                <p>{e.detail}</p>
+                <p>
+                  {progress === undefined ? (
+                    e.detail
+                  ) : (
+                    <HoloTextStream text={e.detail} />
+                  )}
+                </p>
                 {e.href ? (
                   <a href={e.href} target="_blank" rel="noreferrer">
                     Consultar fonte ↗
@@ -139,24 +179,58 @@ export function HoloTimeline({ module: m }: { module: Of<"timeline"> }) {
     </div>
   );
 }
-export function HoloReport({ module: m }: { module: Of<"report"> }) {
+export function HoloReport({
+  module: m,
+  progress,
+  point,
+}: {
+  module: Of<"report">;
+  progress?: number;
+  point?: number;
+}) {
+  const items =
+    point === undefined
+      ? progress === undefined
+        ? m.items
+        : m.items.slice(0, Math.max(1, Math.ceil(progress * m.items.length)))
+      : m.items.slice(point, point + 1);
   return (
     <div className="holo-report">
-      <p className="holo-summary">{m.summary}</p>
+      <p className="holo-summary">
+        {progress === undefined ? (
+          m.summary
+        ) : (
+          <HoloTextStream text={m.summary} />
+        )}
+      </p>
       <ol>
-        {m.items.map((item, i) => (
-          <li key={i}>
+        {items.map((item, i) => (
+          <li key={(point ?? i) + item.label}>
             <span className="holo-item-number">
-              {String(i + 1).padStart(2, "0")}
+              {String((point ?? i) + 1).padStart(2, "0")}
             </span>
             <div>
-              <strong>{item.label}</strong>
-              {item.detail ? <p>{item.detail}</p> : null}
+              <strong>
+                {progress === undefined ? (
+                  item.label
+                ) : (
+                  <HoloTextStream text={item.label} />
+                )}
+              </strong>
+              {item.detail ? (
+                <p>
+                  {progress === undefined ? (
+                    item.detail
+                  ) : (
+                    <HoloTextStream text={item.detail} />
+                  )}
+                </p>
+              ) : null}
             </div>
           </li>
         ))}
       </ol>
-      {m.body ? (
+      {progress === undefined && m.body ? (
         <details>
           <summary>Texto completo do resultado</summary>
           <p className="holo-report-full">{m.body}</p>
@@ -260,20 +334,26 @@ export function HoloCompare({ module: m }: { module: Of<"compare"> }) {
     </div>
   );
 }
-export function HoloMetrics({ module: m }: { module: Of<"metrics"> }) {
-  const maximum = Math.max(1, ...m.values.map((v) => v.value));
-  const pct = (v: number) => (100 * v) / maximum;
-  const positions = m.values.map((v, i) => {
-    const a = (2 * Math.PI * i) / m.values.length - Math.PI / 2,
-      r = (42 * v.value) / maximum;
-    return [50 + Math.cos(a) * r, 50 + Math.sin(a) * r];
-  });
+export function HoloMetrics({
+  module: m,
+  progress = 1,
+}: {
+  module: Of<"metrics">;
+  progress?: number;
+}) {
+  const { low, high } = chartRange(m.values.map((v) => v.value)),
+    pos = (v: number) => chartPosition(v, low, high),
+    zero = pos(0);
+  const points = m.values.map((v, i) => [
+    16 + (i * 268) / Math.max(1, m.values.length - 1),
+    116 - pos(v.value) * 96,
+  ]);
   return (
     <div className={"holo-metrics style-" + m.style}>
       <p className="holo-caption">{m.unit}</p>
-      {m.style === "line" ? (
+      {m.style === "line" || m.style === "radar" ? (
         <svg
-          viewBox="0 0 240 95"
+          viewBox="0 0 320 150"
           className="holo-chart"
           role="img"
           aria-label={
@@ -282,63 +362,99 @@ export function HoloMetrics({ module: m }: { module: Of<"metrics"> }) {
             m.values.map((v) => v.label + ": " + v.value).join(", ")
           }
         >
-          <path d="M10 10V80H230" className="holo-chart-axis" />
-          <polyline
-            points={m.values
-              .map(
-                (v, i) =>
-                  10 +
-                  (i * 220) / Math.max(1, m.values.length - 1) +
-                  "," +
-                  (80 - (65 * v.value) / maximum),
-              )
-              .join(" ")}
-            className="holo-chart-line"
+          <path d="M16 10V116H290" className="holo-chart-axis" />
+          <path
+            d={"M16 " + (116 - zero * 96) + "H290"}
+            className="holo-chart-axis"
           />
-        </svg>
-      ) : m.style === "radar" ? (
-        <svg
-          viewBox="0 0 100 100"
-          className="holo-chart"
-          role="img"
-          aria-label={m.title + ". Escala relativa ao maior valor informado."}
-        >
-          <circle cx="50" cy="50" r="42" className="holo-chart-axis" />
-          <circle cx="50" cy="50" r="21" className="holo-chart-axis" />
-          <polygon
-            points={positions.map((p) => p.join(",")).join(" ")}
-            className="holo-chart-radar"
-          />
+          {m.style === "line" ? (
+            <polyline
+              points={points.map((p) => p.join(",")).join(" ")}
+              pathLength="1"
+              style={{ strokeDasharray: 1, strokeDashoffset: 1 - progress }}
+              className="holo-chart-line"
+            />
+          ) : (
+            <polygon
+              points={m.values
+                .map((v, i) => {
+                  const a = (2 * Math.PI * i) / m.values.length - Math.PI / 2,
+                    r = 45 * pos(v.value);
+                  return [160 + Math.cos(a) * r, 65 + Math.sin(a) * r].join(
+                    ",",
+                  );
+                })
+                .join(" ")}
+              className="holo-chart-radar"
+            />
+          )}
+          {points
+            .filter(
+              (_, i) => i % Math.max(1, Math.floor(points.length / 4)) === 0,
+            )
+            .map((p, i) => (
+              <text key={i} x={p[0]} y="137" fill="#83b7ce" fontSize="9">
+                {
+                  m.values[i * Math.max(1, Math.floor(points.length / 4))]
+                    ?.label
+                }
+              </text>
+            ))}
+          <text x="292" y="20" fill="#83b7ce" fontSize="9">
+            {high.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+          </text>
+          <text x="292" y="116" fill="#83b7ce" fontSize="9">
+            {low.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+          </text>
         </svg>
       ) : null}
       <dl>
-        {m.values.map((v, i) => (
-          <div key={i} className="holo-metric">
-            <dt>{v.label}</dt>
-            <dd>{v.value.toLocaleString("pt-BR")}</dd>
-            {m.style === "bars" ? (
-              <span className="holo-metric-track" aria-hidden="true">
-                <i style={{ width: pct(v.value) + "%" }} />
-              </span>
-            ) : m.style === "rings" ? (
-              <svg viewBox="0 0 40 40" aria-hidden="true">
-                <circle cx="20" cy="20" r="16" className="holo-chart-axis" />
-                <circle
-                  cx="20"
-                  cy="20"
-                  r="16"
-                  fill="none"
-                  stroke="currentColor"
-                  pathLength="100"
-                  strokeDasharray={pct(v.value) + " 100"}
-                />
-              </svg>
-            ) : null}
-          </div>
-        ))}
+        {m.values
+          .slice(
+            0,
+            progress < 1
+              ? Math.max(1, Math.ceil(progress * m.values.length))
+              : m.values.length,
+          )
+          .map((v, i) => (
+            <div key={i} className="holo-metric">
+              <dt>{v.label}</dt>
+              <dd>
+                {v.value.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
+              </dd>
+              {m.style === "bars" ? (
+                <span className="holo-metric-track" aria-hidden="true">
+                  <i
+                    style={{
+                      width:
+                        (Math.abs(v.value) /
+                          (Math.max(Math.abs(low), Math.abs(high)) || 1)) *
+                          100 +
+                        "%",
+                      background: v.value < 0 ? "#e9bb72" : undefined,
+                    }}
+                  />
+                </span>
+              ) : m.style === "rings" ? (
+                <svg viewBox="0 0 40 40" aria-hidden="true">
+                  <circle cx="20" cy="20" r="16" className="holo-chart-axis" />
+                  <circle
+                    cx="20"
+                    cy="20"
+                    r="16"
+                    fill="none"
+                    stroke="currentColor"
+                    pathLength="100"
+                    strokeDasharray={pos(v.value) * 100 + " 100"}
+                  />
+                </svg>
+              ) : null}
+            </div>
+          ))}
       </dl>
       <small>
-        Escala relativa aos valores recebidos. Sem estimativas automáticas.
+        Valores recebidos, datas e unidades identificados; sem projeção de
+        números ausentes.
       </small>
     </div>
   );
@@ -391,7 +507,11 @@ export function HoloConnections({ module: m }: { module: Of<"connections"> }) {
 export function HoloModuleView({
   module: m,
   local = [],
+  progress,
+  point,
 }: {
+  progress?: number;
+  point?: number;
   module: HoloModule;
   local?: HoloLocalMedia[];
 }) {
@@ -408,17 +528,21 @@ export function HoloModuleView({
         </div>
       );
     case "map":
-      return <HoloMap module={m} />;
+      return m.region === "WORLD" ? (
+        <HoloWorldMap module={m} />
+      ) : (
+        <HoloMap module={m} />
+      );
     case "timeline":
-      return <HoloTimeline module={m} />;
+      return <HoloTimeline module={m} progress={progress} />;
     case "report":
-      return <HoloReport module={m} />;
+      return <HoloReport module={m} progress={progress} point={point} />;
     case "media":
       return <HoloMedia module={m} local={local} />;
     case "compare":
       return <HoloCompare module={m} />;
     case "metrics":
-      return <HoloMetrics module={m} />;
+      return <HoloMetrics module={m} progress={progress} />;
     case "connections":
       return <HoloConnections module={m} />;
   }

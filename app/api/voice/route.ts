@@ -1,5 +1,8 @@
 import { jarvisOperationalContext } from "../../../lib/jarvis-operational-context";
-import { OPERATIONAL_VOICE_TOOL } from "../../../lib/operational/realtime-tool";
+import {
+  OPERATIONAL_VOICE_TOOL,
+  VISUAL_RESEARCH_VOICE_TOOL,
+} from "../../../lib/operational/realtime-tool";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../lib/auth";
 import {
@@ -34,7 +37,7 @@ async function buildVoiceInstructions() {
     `Você é ${profile.identity.name}, ${profile.identity.role}. Converse em ${profile.identity.language}.`,
     `Estilo de voz: ${profile.voice.style}. Respostas: ${profile.voice.responseLength}.`,
     ...profile.principles,
-    "Você pode conversar, explicar e propor ações. Esta sessão NÃO recebeu ferramentas externas de execução; só a consulta interna jarvis_operational_status, de leitura de metadados, é permitida. Antes de responder sobre conexões, capacidades ou memória, consulte essa função. Ela não restaura conversas nem autoriza gastos.",
+    "Você pode conversar, explicar e propor ações. Esta sessão NÃO recebeu ferramentas externas de execução; as consultas internas jarvis_operational_status (metadados) e jarvis_visual_research (fontes públicas BCB/IBGE e mapas) são permitidas. Para economia brasileira atual ou mapas, consulte jarvis_visual_research. Relate os períodos publicados e as limitações retornadas; não apresente esses indicadores como diagnóstico econômico completo ou cotação em tempo real. Antes de responder sobre conexões, capacidades ou memória, consulte essa função. Ela não restaura conversas nem autoriza gastos.",
     operational,
     "Não afirme que conectou, consultou, alterou ou salvou algo em serviços externos sem uma ferramenta real e resultado confirmado.",
     "Não prometa memória persistente ou acesso a arquivos e conversas não fornecidos nesta sessão.",
@@ -80,7 +83,7 @@ export async function POST() {
             model: "gpt-realtime",
             audio: { output: { voice: "marin" } },
             instructions: await buildVoiceInstructions(),
-            tools: [OPERATIONAL_VOICE_TOOL],
+            tools: [OPERATIONAL_VOICE_TOOL, VISUAL_RESEARCH_VOICE_TOOL],
           },
         }),
         cache: "no-store",
