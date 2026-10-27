@@ -12,7 +12,7 @@ async function urlFor(file) {
       target: ts.ScriptTarget.ES2022,
     },
   }).outputText;
-  for (const match of [...code.matchAll(/from\s+(["'])(\.\/[^"']+)\1/g)]) {
+  for (const match of [...code.matchAll(/from\s+(["'])(\.\.?\/[^"']+)\1/g)]) {
     const url = await urlFor(
       path.resolve(path.dirname(file), match[2] + ".ts"),
     );
@@ -415,7 +415,7 @@ test("paid providers are denied by default and limits count attempted calls", ()
   assert.equal(budget.admit("abacus", permission, 1).allowed, true);
   assert.equal(budget.admit("abacus", permission, 2).allowed, true);
   assert.equal(budget.admit("abacus", permission, 3).allowed, false);
-  assert.equal(budget.stats("abacus").calls, 2);
+  assert.equal(budget.stats("abacus", 3).calls, 2);
 });
 test("Abacus gateway never calls a paid API without explicit server authorization", async () => {
   let calls = 0;

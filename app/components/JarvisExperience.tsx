@@ -4,6 +4,7 @@ import Link from "next/link";
 import JarvisNavigation from "./JarvisNavigation";
 import AttachmentHUD from "./AttachmentHUD";
 import WakeListener from "./WakeListener";
+import { requestAbacus } from "../../lib/abacus/client";
 import {
   appendSpokenReply,
   speechUnavailable,
@@ -481,6 +482,7 @@ export default function JarvisExperience() {
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
+    if (typingAbort.current && !typingAbort.current.signal.aborted) return;
     if (!text || ["connecting", "processing", "responding"].includes(state))
       return;
     if (workspace.files.length) {
@@ -502,21 +504,26 @@ export default function JarvisExperience() {
     setError("");
     setState("processing");
     try {
-      const response = await fetch("/api/director/abacus", {
-        method: "POST",
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+      const voiceFirst =
+        desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
+      const result = await requestAbacus(text, {
+        history: messages.map(({ role, text }) => ({ role, content: text })),
         signal: requestController.signal,
+        onDelta: (partial) => {
+          if (requestController.signal.aborted) return;
+          setMessages((items) =>
+            voiceFirst
+              ? appendSpokenReply(items, assistantId, partial, true)
+              : appendTranscript(
+                  items,
+                  assistantId,
+                  "assistant",
+                  partial,
+                  true,
+                ),
+          );
+        },
       });
-      const result: { text?: unknown; error?: unknown } = await response.json();
-      if (!response.ok || typeof result.text !== "string")
-        throw new Error(
-          typeof result.error === "string"
-            ? result.error
-            : "Falha na resposta da Abacus",
-        );
       if (
         desktopVoice &&
         !muteRef.current &&
@@ -538,17 +545,21 @@ export default function JarvisExperience() {
         }
       } else {
         setMessages((items) =>
-          appendTranscript(
-            items,
-            assistantId,
-            "assistant",
-            result.text as string,
-            true,
+          speechUnavailable(
+            appendTranscript(
+              items,
+              assistantId,
+              "assistant",
+              result.text,
+              true,
+            ),
+            new Set([assistantId]),
           ),
         );
       }
       if (!requestController.signal.aborted) setState("idle");
     } catch (err) {
+      setMessages((items) => items.filter((item) => item.id !== assistantId));
       if (!requestController.signal.aborted) {
         setError(
           err instanceof Error ? err.message : "Falha na resposta da Abacus",
@@ -815,21 +826,13 @@ export default function JarvisExperience() {
                 throw new Error(
                   "O comando é longo demais. Use uma mensagem de até 1.500 caracteres.",
                 );
-              const response = await fetch("/api/director/abacus", {
-                method: "POST",
-                credentials: "same-origin",
-                cache: "no-store",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message: spoken }),
+              const data = await requestAbacus(spoken, {
+                history: messages.map(({ role, text }) => ({
+                  role,
+                  content: text,
+                })),
                 signal,
               });
-              const data = await response.json();
-              if (!response.ok || typeof data.text !== "string")
-                throw new Error(
-                  typeof data.error === "string"
-                    ? data.error
-                    : "Falha na resposta da Abacus",
-                );
               return { text: data.text, provider: "abacus" };
             }}
           />

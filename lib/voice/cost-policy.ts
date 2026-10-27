@@ -49,7 +49,9 @@ export class ProviderCallBudget {
     item.recent.push(now);
     return { allowed: true, reason: "" };
   }
-  stats(provider: MeteredProvider) {
+  stats(provider: MeteredProvider, now = Date.now()) {
+    const item = this.windows.get(provider);
+    if (item && now - item.since >= 3600000) this.windows.delete(provider);
     return {
       calls: this.windows.get(provider)?.calls || 0,
       scope: "server_instance",

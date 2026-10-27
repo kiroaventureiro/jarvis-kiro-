@@ -12,6 +12,8 @@ test("wake listener delegates lifecycle to a controller and requires initial con
 });
 test("spoken requests retain authenticated same-origin routing", () => {
   assert.match(hud, /<WakeListener/);
-  assert.match(hud, /fetch\(["']\/api\/director\/abacus["']/);
-  assert.match(hud, /credentials:\s*["']same-origin["']/);
+  assert.match(hud, /requestAbacus\(spoken/);
+  const client = fs.readFileSync("lib/abacus/client.ts", "utf8");
+  assert.match(client, /fetch\(["']\/api\/director\/abacus["']/);
+  assert.match(client, /credentials:\s*["']same-origin["']/);
 });

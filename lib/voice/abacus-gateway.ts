@@ -1,3 +1,10 @@
+import {
+  boundHistory,
+  publicAbacusError,
+  type AbacusInput,
+  type AbacusChunk,
+  type TaskKind,
+} from "../abacus/protocol";
 import type { CostPermission } from "./cost-policy";
 type Dependencies = {
   configured: () => boolean;
@@ -6,7 +13,13 @@ type Dependencies = {
   reply: (
     text: string,
     signal: AbortSignal,
+    input?: AbacusInput,
   ) => Promise<{ text: string; model: string; usage: unknown }>;
+  stream?: (
+    text: string,
+    signal: AbortSignal,
+    input: AbacusInput,
+  ) => AsyncGenerator<AbacusChunk>;
 };
 const headers = {
   "Cache-Control": "no-store",
@@ -38,7 +51,7 @@ export async function processAbacusRequest(
         const part = await reader.read();
         if (part.done) break;
         size += part.value.length;
-        if (size > 8192) {
+        if (size > 24576) {
           await reader.cancel();
           throw Error();
         }
@@ -54,13 +67,46 @@ export async function processAbacusRequest(
   }
   if (!data || typeof data !== "object" || Array.isArray(data))
     return error("Pedido inválido", 400);
-  const { message } = data as { message?: unknown };
+  const { message, history, task, stream } = data as {
+    message?: unknown;
+    history?: unknown;
+    task?: unknown;
+    stream?: unknown;
+  };
+  if (
+    (task !== undefined &&
+      !["chat", "code", "research"].includes(String(task))) ||
+    (stream !== undefined && typeof stream !== "boolean") ||
+    [
+      "model",
+      "tools",
+      "abacus_tools",
+      "apiKey",
+      "api_key",
+      "key",
+      "modalities",
+      "audio",
+    ].some((key) => key in data)
+  )
+    return error("Opção não autorizada neste endpoint de texto", 400);
   if (
     typeof message !== "string" ||
     message.trim().length < 1 ||
     message.length > 1500
   )
     return error("Mensagem inválida", 400);
+  let input: AbacusInput;
+  try {
+    input = {
+      history: boundHistory(history, message),
+      task: task as TaskKind | undefined,
+    };
+  } catch {
+    return error(
+      "Histórico inválido; somente mensagens de usuário e assistente são aceitas",
+      400,
+    );
+  }
   const permission = deps.permission();
   if (!permission.allowed)
     return error(
@@ -69,15 +115,87 @@ export async function processAbacusRequest(
     );
   const admitted = deps.admit(permission);
   if (!admitted.allowed) return error(admitted.reason, 429);
-  try {
-    const reply = await deps.reply(message, request.signal);
-    return Response.json(reply, { headers });
-  } catch {
-    return error(
-      request.signal.aborted
-        ? "Pedido interrompido"
-        : "Falha na solicitação à Abacus",
-      502,
+  const failure = (caught: unknown) => {
+    const safe = publicAbacusError(caught);
+    return Response.json(
+      {
+        error: safe.message,
+        code: safe.code,
+        retryAfterSeconds: safe.retryAfterSeconds,
+      },
+      {
+        status: safe.status,
+        headers: {
+          ...headers,
+          ...(safe.retryAfterSeconds
+            ? { "Retry-After": String(safe.retryAfterSeconds) }
+            : {}),
+        },
+      },
     );
+  };
+  try {
+    if (stream === true && deps.stream) {
+      const cancelled = new AbortController();
+      const signal = AbortSignal.any([request.signal, cancelled.signal]);
+      const iterator = deps.stream(message, signal, input);
+      let next = await iterator.next(),
+        terminal = false;
+      const encoder = new TextEncoder();
+      const frame = (value: unknown) =>
+        encoder.encode("data: " + JSON.stringify(value) + "\n\n");
+      const body = new ReadableStream<Uint8Array>({
+        async pull(controller) {
+          try {
+            if (next.done) {
+              if (!terminal)
+                controller.enqueue(
+                  frame({ type: "error", ...publicAbacusError(new Error()) }),
+                );
+              controller.close();
+              return;
+            }
+            const value = next.value;
+            controller.enqueue(
+              frame(
+                value.type === "done"
+                  ? { type: "done", ...value.reply }
+                  : value,
+              ),
+            );
+            if (value.type === "done") {
+              terminal = true;
+              await iterator.return(undefined);
+              controller.close();
+              return;
+            }
+            next = await iterator.next();
+          } catch (caught) {
+            if (!cancelled.signal.aborted) {
+              controller.enqueue(
+                frame({ type: "error", ...publicAbacusError(caught) }),
+              );
+              controller.close();
+            }
+          }
+        },
+        async cancel() {
+          cancelled.abort();
+          await iterator.return(undefined);
+        },
+      });
+      return new Response(body, {
+        headers: {
+          ...headers,
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "private, no-store, no-transform",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+    const reply = await deps.reply(message, request.signal, input);
+    return Response.json(reply, { headers });
+  } catch (caught) {
+    return failure(caught);
   }
 }

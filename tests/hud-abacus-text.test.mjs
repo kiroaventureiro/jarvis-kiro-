@@ -7,7 +7,11 @@ test("typed chat retains RouteLLM and attachment routing without creating Realti
     ui.indexOf("async function send("),
     ui.indexOf("function toggleAudio()"),
   );
-  assert.match(send, /fetch\(["']\/api\/director\/abacus["']/);
+  assert.match(send, /requestAbacus\(text/);
+  assert.match(
+    fs.readFileSync("lib/abacus/client.ts", "utf8"),
+    /fetch\(["']\/api\/director\/abacus["']/,
+  );
   assert.doesNotMatch(send, /await start\(false\)/);
   assert.match(send, /workspace\.analyze\(text\)/);
   assert.match(

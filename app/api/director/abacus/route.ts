@@ -1,6 +1,8 @@
+import { abacusUsage, tokenLimit } from "../../../../lib/abacus/usage";
+import { ABACUS_CAPABILITIES } from "../../../../lib/abacus/capabilities";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
-import { askAbacus } from "../../../../lib/abacus-routellm";
+import { askAbacus, streamAbacus } from "../../../../lib/abacus-routellm";
 import {
   costPermission,
   providerCallBudget,
@@ -20,6 +22,9 @@ export async function GET() {
       paidCallsAllowed: permission.allowed,
       callsPerHour: permission.callsPerHour,
       usage: providerCallBudget.stats("abacus"),
+      telemetry: abacusUsage.stats(),
+      tokenLimitPerHour: tokenLimit(process.env),
+      capabilities: ABACUS_CAPABILITIES,
       note: "Sem chamada externa de status; os limites são temporários por instância, não uma garantia financeira distribuída.",
     },
     { headers: { "Cache-Control": "no-store" } },
@@ -33,5 +38,6 @@ export async function POST(request: Request) {
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     reply: askAbacus,
+    stream: streamAbacus,
   });
 }

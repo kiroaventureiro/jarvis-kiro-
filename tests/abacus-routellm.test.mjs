@@ -6,9 +6,11 @@ const client = fs.readFileSync("lib/abacus-routellm.ts", "utf8"),
   gateway = fs.readFileSync("lib/voice/abacus-gateway.ts", "utf8");
 test("Abacus key remains server-only and requests are capped", () => {
   assert.match(client, /process\.env\.ABACUS_API_KEY/);
-  assert.match(client, /routellm\.abacus\.ai\/v1\/chat\/completions/);
-  assert.match(client, /max_tokens:\s*350/);
-  assert.match(client, /AbortController/);
+  const transport = fs.readFileSync("lib/abacus/transport.ts", "utf8"),
+    protocol = fs.readFileSync("lib/abacus/protocol.ts", "utf8");
+  assert.match(transport, /routellm\.abacus\.ai\/v1\/chat\/completions/);
+  assert.match(protocol, /max_tokens:\s*350/);
+  assert.match(transport, /AbortController/);
   assert.doesNotMatch(client, /NEXT_PUBLIC_ABACUS/);
 });
 test("Abacus endpoint retains authentication and gateway rejects missing keys and oversized text", () => {
