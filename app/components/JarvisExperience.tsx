@@ -5,6 +5,7 @@ import JarvisNavigation from "./JarvisNavigation";
 import AttachmentHUD from "./AttachmentHUD";
 import WakeListener from "./WakeListener";
 import { requestAbacus } from "../../lib/abacus/client";
+import { historyConsent, setHistoryConsent, saveDeviceHistory, loadDeviceHistory } from "../../lib/device-history";
 import {
   appendSpokenReply,
   speechUnavailable,
@@ -48,6 +49,17 @@ export default function JarvisExperience() {
     microphoneActive: false,
     message: "",
   });
+  const [retainHistory, setRetainHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  useEffect(() => {
+    const consent = historyConsent();
+    setRetainHistory(consent);
+    if (consent) setMessages(items => items.length ? items : loadDeviceHistory());
+    setHistoryLoaded(true);
+  }, []);
+  useEffect(() => {
+    if (historyLoaded && retainHistory) saveDeviceHistory(messages.map(({id,role,text})=>({id,role,text})));
+  }, [messages,retainHistory,historyLoaded]);
   const [typingRequest, setTypingRequest] = useState(false);
   const [desktopVoice, setDesktopVoice] = useState(false);
   const browserReplyId = useRef<string | null>(null);
@@ -687,6 +699,19 @@ export default function JarvisExperience() {
           <div className="hud-heading">
             <span>{history ? "Conversa desta sessão" : "JARVIS"}</span>
             <div>
+              <button
+                className="subtle-button"
+                type="button"
+                onClick={() => {
+                  const next = !retainHistory;
+                  setHistoryConsent(next);
+                  setRetainHistory(next);
+                }}
+                aria-pressed={retainHistory}
+                title="Armazenamento local não criptografado neste navegador; evite dados sensíveis. Desligar apaga o histórico guardado."
+              >
+                {retainHistory ? "Não guardar" : "Guardar neste dispositivo"}
+              </button>
               <button
                 className="subtle-button"
                 onClick={() => setHistory(!history)}
