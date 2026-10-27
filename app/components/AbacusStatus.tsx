@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import type { OperationalSnapshot } from "../../lib/operational/state";
 type Status = {
   configured: boolean;
   paidCallsAllowed: boolean;
@@ -21,6 +22,28 @@ export default function AbacusStatus() {
   const [status, setStatus] = useState<Status | null>(null),
     [error, setError] = useState(""),
     [loading, setLoading] = useState(false);
+  const [operational, setOperational] = useState<OperationalSnapshot | null>(
+    null,
+  );
+  async function verify() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await fetch(
+        "/api/director/operational-status?verify=1",
+        { credentials: "same-origin", cache: "no-store" },
+      );
+      if (!response.ok)
+        throw new Error("Entre como proprietário para verificar o estado.");
+      setOperational(await response.json());
+    } catch {
+      setError(
+        "Não foi possível consultar o estado operacional. Nenhuma conexão foi presumida.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
   async function inspect() {
     setLoading(true);
     setError("");
@@ -49,6 +72,47 @@ export default function AbacusStatus() {
       <button type="button" onClick={inspect} disabled={loading}>
         {loading ? "Consultando…" : "Consultar estado da Abacus"}
       </button>
+      <button type="button" onClick={verify} disabled={loading}>
+        Verificar estado operacional
+      </button>
+      {operational ? (
+        <div role="status">
+          <h3>Estado do ambiente {operational.environment}</h3>
+          <p>
+            Consulta de leitura, sem gerar resposta de modelo ou gravar
+            conversas. O catálogo mantém {operational.catalog.total}{" "}
+            plataformas.
+          </p>
+          {operational.integrations
+            .filter(
+              (item) =>
+                item.configured ||
+                ["abacus", "supabase-memory"].includes(item.id),
+            )
+            .map((item) => (
+              <p key={item.id}>
+                <strong>
+                  {item.name}: {item.label}.
+                </strong>{" "}
+                {item.checkedAt
+                  ? "Última verificação em " +
+                    new Date(item.checkedAt).toLocaleString("pt-BR") +
+                    ". "
+                  : "Sem verificação recente. "}
+                {item.id === "supabase-memory"
+                  ? item.checks.includes("encrypted_read")
+                    ? "Leitura e descriptografia verificadas; gravação é uma ação manual."
+                    : "Não há confirmação atual de leitura criptografada."
+                  : item.checks.includes("conversation")
+                    ? "Conversa concluída com sucesso."
+                    : item.checks.includes("api_catalog")
+                      ? "Catálogo autenticado respondeu; geração não testada nesta consulta."
+                      : ""}{" "}
+                {item.note}
+              </p>
+            ))}
+        </div>
+      ) : null}
       {error ? <p role="alert">{error}</p> : null}
       {status ? (
         <div role="status">

@@ -49,6 +49,20 @@ export class ProviderCallBudget {
     item.recent.push(now);
     return { allowed: true, reason: "" };
   }
+  available(
+    provider: MeteredProvider,
+    permission: CostPermission,
+    now = Date.now(),
+  ) {
+    if (!permission.allowed) return false;
+    const item = this.windows.get(provider);
+    return (
+      !item ||
+      now - item.since >= 3600000 ||
+      (item.calls < permission.callsPerHour &&
+        item.recent.filter((at) => now - at < 60000).length < 6)
+    );
+  }
   stats(provider: MeteredProvider, now = Date.now()) {
     const item = this.windows.get(provider);
     if (item && now - item.since >= 3600000) this.windows.delete(provider);

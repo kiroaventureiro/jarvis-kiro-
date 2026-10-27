@@ -4,8 +4,14 @@ import Link from "next/link";
 import JarvisNavigation from "./JarvisNavigation";
 import AttachmentHUD from "./AttachmentHUD";
 import WakeListener from "./WakeListener";
+import { createOperationalVoiceTool } from "../../lib/operational/realtime-tool";
 import { requestAbacus } from "../../lib/abacus/client";
-import { historyConsent, setHistoryConsent, saveDeviceHistory, loadDeviceHistory } from "../../lib/device-history";
+import {
+  historyConsent,
+  setHistoryConsent,
+  saveDeviceHistory,
+  loadDeviceHistory,
+} from "../../lib/device-history";
 import {
   appendSpokenReply,
   speechUnavailable,
@@ -54,12 +60,16 @@ export default function JarvisExperience() {
   useEffect(() => {
     const consent = historyConsent();
     setRetainHistory(consent);
-    if (consent) setMessages(items => items.length ? items : loadDeviceHistory());
+    if (consent)
+      setMessages((items) => (items.length ? items : loadDeviceHistory()));
     setHistoryLoaded(true);
   }, []);
   useEffect(() => {
-    if (historyLoaded && retainHistory) saveDeviceHistory(messages.map(({id,role,text})=>({id,role,text})));
-  }, [messages,retainHistory,historyLoaded]);
+    if (historyLoaded && retainHistory)
+      saveDeviceHistory(
+        messages.map(({ id, role, text }) => ({ id, role, text })),
+      );
+  }, [messages, retainHistory, historyLoaded]);
   const [typingRequest, setTypingRequest] = useState(false);
   const [desktopVoice, setDesktopVoice] = useState(false);
   const browserReplyId = useRef<string | null>(null);
@@ -298,12 +308,37 @@ export default function JarvisExperience() {
       }
       const dc = pc.createDataChannel("oai-events");
       channel.current = dc;
+      const statusTool = createOperationalVoiceTool({
+        signal: controller.signal,
+        isCurrent: () => attempt === generation.current,
+        send: (event) => {
+          if (dc.readyState === "open") dc.send(JSON.stringify(event));
+        },
+      });
       dc.onmessage = (message) => {
         if (attempt !== generation.current) return;
         let event: RealtimeEvent;
         try {
           event = JSON.parse(message.data);
         } catch {
+          return;
+        }
+        if (event.type === "input_audio_buffer.speech_started")
+          statusTool.resetTurn();
+        if (
+          event.type === "response.done" &&
+          event.response?.status === "completed" &&
+          event.response?.output?.some((item) => item.type === "function_call")
+        ) {
+          setState("processing");
+          void statusTool.handle(event).catch(() => {
+            if (attempt === generation.current) {
+              setError(
+                "Não foi possível atualizar o estado operacional. Nenhuma conexão foi presumida.",
+              );
+              setState("error");
+            }
+          });
           return;
         }
         if (event.type === "response.created") {
@@ -726,7 +761,11 @@ export default function JarvisExperience() {
                 <span className="message-author">
                   {item.role === "user" ? "Você" : "Jarvis"}
                 </span>
-                <p>{item.text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1")}</p>
+                <p>
+                  {item.text
+                    .replace(/\*\*([^*]+)\*\*/g, "$1")
+                    .replace(/\*([^*]+)\*/g, "$1")}
+                </p>
               </article>
             ))}
           </div>
@@ -757,7 +796,9 @@ export default function JarvisExperience() {
           aria-pressed={retainHistory}
           title="Armazenamento local não criptografado. Desativar apaga a cópia local."
         >
-          {retainHistory ? "Não guardar neste dispositivo" : "Guardar neste dispositivo"}
+          {retainHistory
+            ? "Não guardar neste dispositivo"
+            : "Guardar neste dispositivo"}
         </button>
         {typing ? (
           <form onSubmit={send} className="text-composer glass">
@@ -858,7 +899,7 @@ export default function JarvisExperience() {
                 })),
                 signal,
               });
-              return { text: data.text, provider: "abacus" };
+              return { text: data.text, provider: data.provider || "abacus" };
             }}
           />
           <button

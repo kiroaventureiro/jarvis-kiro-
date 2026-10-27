@@ -1,4 +1,8 @@
 import "server-only";
+import {
+  recordOperationalSuccess,
+  recordOperationalFailure,
+} from "./operational/server";
 import { jarvisOperationalContext } from "./jarvis-operational-context";
 import { lookupJarvisMemory } from "./jarvis-memory";
 import {
@@ -34,7 +38,7 @@ export async function* streamAbacus(
     message,
     input,
     lookupJarvisMemory(contextQuery, 2),
-    jarvisOperationalContext(),
+    await jarvisOperationalContext(message, signal),
   );
   const reservation = plan.messages.reduce(
     (n, x) => n + new TextEncoder().encode(x.content).length + 12,
@@ -48,11 +52,25 @@ export async function* streamAbacus(
     for await (const chunk of runAbacus(plan, { key, signal, stream })) {
       if (chunk.type === "done") {
         completed = true;
+        recordOperationalSuccess("abacus", ["conversation"]);
         usage = chunk.reply.usage;
         model = chunk.reply.model;
       }
       yield chunk;
     }
+  } catch (error) {
+    if (
+      !signal?.aborted &&
+      error instanceof AbacusError &&
+      [
+        "ABACUS_AUTH",
+        "ABACUS_TIMEOUT",
+        "ABACUS_UNAVAILABLE",
+        "ABACUS_RATE_LIMIT",
+      ].includes(error.code)
+    )
+      recordOperationalFailure("abacus");
+    throw error;
   } finally {
     abacusUsage.finish(
       ticket,

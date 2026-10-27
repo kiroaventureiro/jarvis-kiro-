@@ -1,3 +1,5 @@
+import { jarvisOperationalContext } from "../../../lib/jarvis-operational-context";
+import { OPERATIONAL_VOICE_TOOL } from "../../../lib/operational/realtime-tool";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../lib/auth";
 import {
@@ -12,12 +14,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
-function buildVoiceInstructions() {
+async function buildVoiceInstructions() {
   const profile = getJarvisProfile();
   const connections = getIntegrationStatus();
-  const unavailable = connections
-    .filter((item) => !item.connected)
-    .map((item) => item.name);
+  const operational = await jarvisOperationalContext(
+    "Quais sistemas estão configurados?",
+  );
   const curated = lookupJarvisMemory(
     "Jarvis Kiro Sistema Origem Supabase arquitetura",
     3,
@@ -32,10 +34,11 @@ function buildVoiceInstructions() {
     `Você é ${profile.identity.name}, ${profile.identity.role}. Converse em ${profile.identity.language}.`,
     `Estilo de voz: ${profile.voice.style}. Respostas: ${profile.voice.responseLength}.`,
     ...profile.principles,
-    "Você pode conversar, explicar e propor ações. Esta sessão de voz NÃO recebeu ferramentas externas.",
+    "Você pode conversar, explicar e propor ações. Esta sessão NÃO recebeu ferramentas externas de execução; só a consulta interna jarvis_operational_status, de leitura de metadados, é permitida. Antes de responder sobre conexões, capacidades ou memória, consulte essa função. Ela não restaura conversas nem autoriza gastos.",
+    operational,
     "Não afirme que conectou, consultou, alterou ou salvou algo em serviços externos sem uma ferramenta real e resultado confirmado.",
     "Não prometa memória persistente ou acesso a arquivos e conversas não fornecidos nesta sessão.",
-    `Catálogo de serviços ainda NÃO conectados nesta sessão: ${unavailable.join(", ")}.`,
+    `Catálogo descritivo de serviços: ${connections.map((item) => item.name).join(", ")}. O registro operacional prevalece sobre o catálogo e sobre respostas antigas.`,
     `Ações que exigem aprovação específica: ${profile.authority.approvalRequired.join("; ")}.`,
     `Se houver bloqueio: ${profile.interaction.ifBlocked}`,
     `Se houver incerteza: ${profile.interaction.ifUncertain}`,
@@ -76,7 +79,8 @@ export async function POST() {
             type: "realtime",
             model: "gpt-realtime",
             audio: { output: { voice: "marin" } },
-            instructions: buildVoiceInstructions(),
+            instructions: await buildVoiceInstructions(),
+            tools: [OPERATIONAL_VOICE_TOOL],
           },
         }),
         cache: "no-store",

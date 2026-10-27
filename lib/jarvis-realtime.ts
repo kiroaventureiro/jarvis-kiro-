@@ -20,6 +20,12 @@ export type RealtimeEvent = {
   transcript?: string;
   error?: { message?: string };
   response?: {
+    output?: Array<{
+      type?: string;
+      name?: string;
+      call_id?: string;
+      arguments?: string;
+    }>;
     status?: string;
     status_details?: { error?: { message?: string } };
   };

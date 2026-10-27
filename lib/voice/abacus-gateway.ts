@@ -8,6 +8,10 @@ import {
 import type { CostPermission } from "./cost-policy";
 type Dependencies = {
   configured: () => boolean;
+  localReply?: (
+    message: string,
+    signal: AbortSignal,
+  ) => Promise<{ text: string; model: string; usage: unknown } | null>;
   permission: () => CostPermission;
   admit: (permission: CostPermission) => { allowed: boolean; reason: string };
   reply: (
@@ -31,8 +35,6 @@ export async function processAbacusRequest(
 ) {
   const error = (message: string, status: number) =>
     Response.json({ error: message }, { status, headers });
-  if (!deps.configured())
-    return error("Chave Abacus não configurada no servidor", 503);
   const origin = request.headers.get("Origin");
   if (
     (origin && origin !== new URL(request.url).origin) ||
@@ -107,6 +109,12 @@ export async function processAbacusRequest(
       400,
     );
   }
+  if (deps.localReply) {
+    const local = await deps.localReply(message, request.signal);
+    if (local) return Response.json(local, { headers });
+  }
+  if (!deps.configured())
+    return error("Chave Abacus não configurada no servidor", 503);
   const permission = deps.permission();
   if (!permission.allowed)
     return error(

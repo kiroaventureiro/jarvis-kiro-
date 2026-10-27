@@ -1,3 +1,7 @@
+import {
+  answerOperationalQuestion,
+  operationalSnapshot,
+} from "../../../../lib/operational/server";
 import { abacusUsage, tokenLimit } from "../../../../lib/abacus/usage";
 import { ABACUS_CAPABILITIES } from "../../../../lib/abacus/capabilities";
 import { NextResponse } from "next/server";
@@ -17,7 +21,12 @@ export async function GET() {
     {
       provider: "abacus",
       configured: !!process.env.ABACUS_API_KEY,
-      active: false,
+      active:
+        operationalSnapshot().integrations.find((x) => x.id === "abacus")
+          ?.state === "operational_authorized",
+      operational: operationalSnapshot().integrations.find(
+        (x) => x.id === "abacus",
+      ),
       model: "route-llm",
       paidCallsAllowed: permission.allowed,
       callsPerHour: permission.callsPerHour,
@@ -37,6 +46,7 @@ export async function POST(request: Request) {
     configured: () => !!process.env.ABACUS_API_KEY,
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
+    localReply: answerOperationalQuestion,
     reply: askAbacus,
     stream: streamAbacus,
   });
