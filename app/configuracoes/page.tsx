@@ -2,6 +2,7 @@ import InternalPage from "../components/InternalPage";
 import Link from "next/link";
 import DeviceAccess from "../components/DeviceAccess";
 import OwnerLogin from "../components/OwnerLogin";
+import MemorySyncSettings from "../components/MemorySyncSettings";
 import VoiceSettings from "../components/VoiceSettings";
 export default function SettingsPage() {
   return (
@@ -11,6 +12,7 @@ export default function SettingsPage() {
         <DeviceAccess />
       </section>
       <section className="glass notice"><h2>Central de Conexões</h2><p>Explore o catálogo de IAs, redes sociais, voz, vídeos e ferramentas para integrar futuramente ao Jarvis.</p><Link href="/conexoes">Abrir Central de Conexões →</Link></section>
+      <MemorySyncSettings />
       <VoiceSettings />
       <div className="card-grid">
         <article className="glass card">
