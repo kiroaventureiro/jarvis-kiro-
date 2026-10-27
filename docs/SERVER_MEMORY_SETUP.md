@@ -24,8 +24,8 @@ Somente backend service role pode acessar a tabela. **A chave de serviço nunca 
 A ausência de qualquer variável mantém a API em modo não configurado; não cria serviço nem inicia cobranças. Rotacionar a chave requer migração criptográfica prévia.
 
 ## Operações
-- `GET /api/director/memory` consulta status e até 20 últimas mensagens.
-- `PUT /api/director/memory` grava somente até 20 mensagens, no máximo 800 caracteres cada.
-- `DELETE /api/director/memory` esvazia o histórico criptografado.
+- `GET /api/director/memory-history` consulta status e até 20 últimas mensagens.
+- `PUT /api/director/memory-history` grava somente até 20 mensagens, no máximo 800 caracteres cada.
+- `DELETE /api/director/memory-history` esvazia o histórico criptografado.
 
 Todas as rotas exigem sessão de proprietário. **Não há sincronização automática do HUD ainda.** A implementação está pronta para integração opt-in posterior, após confirmação do backend e política de retenção. Sem backup automático, sem consulta de saldo Abacus, sem execução de modelo pago.
