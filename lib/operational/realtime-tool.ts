@@ -15,6 +15,7 @@ export function createOperationalVoiceTool(options: {
   signal: AbortSignal;
   send: (event: object) => void;
   isCurrent: () => boolean;
+  onSnapshot?: (value: unknown) => void;
   fetcher?: typeof fetch;
 }) {
   let lastResponse = "",
@@ -89,6 +90,7 @@ export function createOperationalVoiceTool(options: {
           turn !== turnEpoch
         )
           return true;
+        options.onSnapshot?.(result);
         options.send({
           type: "conversation.item.create",
           item: {

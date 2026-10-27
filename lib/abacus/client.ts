@@ -1,6 +1,8 @@
+import { composeScene } from "../holo/orchestrator";
 import { boundHistory, type ChatTurn, type AbacusResult } from "./protocol";
 import { readSSE } from "./sse";
-function complete(reply: AbacusResult): AbacusResult {
+function complete(raw: AbacusResult, message: string): AbacusResult {
+  const reply = { ...raw, visual: composeScene(message, raw) || undefined };
   return reply.truncated
     ? {
         ...reply,
@@ -53,7 +55,7 @@ export async function requestAbacus(
     )
       throw new Error("Resposta inválida da Abacus");
     options.onDelta?.(data.text);
-    return complete(data);
+    return complete(data, message);
   }
   if (!response.body) throw new Error("Resposta vazia da Abacus");
   let aggregate = "",
@@ -87,5 +89,5 @@ export async function requestAbacus(
   if (options.signal.aborted) throw new DOMException("Cancelled", "AbortError");
   if (!reply)
     throw new Error("A resposta foi interrompida antes da conclusão.");
-  return complete(reply);
+  return complete(reply, message);
 }

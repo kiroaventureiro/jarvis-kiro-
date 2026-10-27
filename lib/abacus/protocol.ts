@@ -1,3 +1,4 @@
+import type { HoloScene } from "../holo/types";
 import type { ConnectorResultLink } from "../connectors/result";
 import { kiroChatContext } from "../kiro-context-for-chat";
 export type ChatTurn = { role: "user" | "assistant"; content: string };
@@ -11,6 +12,7 @@ export type TokenUsage = {
 };
 export type AbacusResult = {
   result?: ConnectorResultLink;
+  visual?: HoloScene;
   provider?: "abacus" | "local_operational";
   text: string;
   model: string;

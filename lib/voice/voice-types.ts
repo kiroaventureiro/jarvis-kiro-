@@ -1,3 +1,4 @@
+import type { HoloScene } from "../holo/types";
 import type { ConnectorResultLink } from "../connectors/result";
 export type VoicePhase =
   | "off"
@@ -51,4 +52,5 @@ export type VoiceReply = {
   navigate?: string;
   provider?: string;
   result?: ConnectorResultLink;
+  visual?: HoloScene;
 };

@@ -218,7 +218,7 @@ const out = process.env.TEST_OUTPUT_DIR || "work/ui-evidence";
       await page.getByRole("button", { name: "Encerrar sessão" }).click();
       assert.ok(await page.evaluate(() => window.__stopped >= 1));
       await page.getByRole("button", { name: "Abrir navegação" }).click();
-      assert.equal(await page.locator("nav a").count(), 7);
+      assert.equal(await page.locator("nav a").count(), 9);
       await page.getByRole("link", { name: "Integrações" }).click();
       await page
         .getByRole("heading", { name: "Central de conexões" })

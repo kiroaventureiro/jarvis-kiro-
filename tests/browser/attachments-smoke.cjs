@@ -140,7 +140,7 @@ const png =
         "dropping files must not send them automatically",
       );
       assert.equal(await page.locator(".drop-hologram").count(), 0);
-      assert.equal(await page.locator("input[type=file]").count(), 0);
+      assert.equal(await page.locator("input[type=file]").isVisible(), false);
       await page
         .getByRole("textbox", { name: "Mensagem para o Jarvis" })
         .fill("Compare os arquivos e prepare um resumo");
@@ -150,7 +150,10 @@ const png =
       });
       await page.getByRole("button", { name: "Enviar mensagem" }).click();
       await page.getByText("Análise concluída", { exact: true }).waitFor();
-      await page.getByText(answer, { exact: true }).waitFor();
+      await page
+        .locator(".response-hud")
+        .getByText(answer, { exact: true })
+        .waitFor();
       assert.equal(submissions.length, 1);
       assert.ok(
         submissions[0].includes("relatorio.txt") &&
@@ -176,7 +179,10 @@ const png =
         fullPage: true,
       });
       await page.getByRole("button", { name: "Expandir", exact: true }).click();
-      await page.getByText(answer, { exact: true }).waitFor();
+      await page
+        .locator(".response-hud")
+        .getByText(answer, { exact: true })
+        .waitFor();
       await page.getByRole("button", { name: "Recolher", exact: true }).click();
       await page
         .getByRole("button", { name: "Gravar orientação sobre os arquivos" })
@@ -217,15 +223,13 @@ const png =
       });
       await page.evaluate(
         (data) =>
-          document
-            .querySelector("main")
-            .dispatchEvent(
-              new ClipboardEvent("paste", {
-                bubbles: true,
-                cancelable: true,
-                clipboardData: data,
-              }),
-            ),
+          document.querySelector("main").dispatchEvent(
+            new ClipboardEvent("paste", {
+              bubbles: true,
+              cancelable: true,
+              clipboardData: data,
+            }),
+          ),
         paste,
       );
       await paste.dispose();

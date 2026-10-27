@@ -289,12 +289,12 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
       .getByRole("textbox", { name: "Mensagem para o Jarvis" })
       .fill("Jarvis, verifique o site Guardiões da Origem");
     await page.getByRole("button", { name: "Enviar mensagem" }).click();
-    const resultPanel = page.getByRole("region", {
-      name: "Resultado de desenvolvimento",
+    const resultPanel = page.getByRole("complementary", {
+      name: "Resultados holográficos",
     });
     await resultPanel.waitFor();
     await resultPanel
-      .getByRole("link", { name: "Ver diagnóstico e plano" })
+      .getByRole("link", { name: "Abrir relatório e plano" })
       .waitFor();
     assert.equal(await page.locator(".native-connectors").count(), 0);
     await page.screenshot({

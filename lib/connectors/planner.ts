@@ -1,3 +1,4 @@
+import { planScene } from "../holo/orchestrator";
 import { randomUUID } from "node:crypto";
 import { ConnectorError, type Plan, type Action } from "./types";
 import { ConnectorService } from "./service";
@@ -227,6 +228,7 @@ export class DevelopmentPlanner {
         model: "jk-connectors",
         provider: "local_operational" as const,
         usage: null,
+        visual: planScene(result) || undefined,
         result: {
           kind: "connector_plan" as const,
           id: result.id,

@@ -4,6 +4,8 @@ import { useRef, useState } from "react";
 export const areas = [
   ["/", "Jarvis"],
   ["/integracoes", "Integrações"],
+  ["/conexoes", "Conexões"],
+  ["/resultados", "Resultados"],
   ["/memoria", "Memória"],
   ["/projetos", "Projetos"],
   ["/controle", "Controle"],

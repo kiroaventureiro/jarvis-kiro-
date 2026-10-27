@@ -1,5 +1,7 @@
 import "./style.css";
 import "./hologram.css";
+import "./holo-response.css";
+import { HoloSessionProvider } from "./components/holo/HoloSession";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Jarvis Kiro | Central Pessoal",
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <HoloSessionProvider>{children}</HoloSessionProvider>
+      </body>
     </html>
   );
 }

@@ -1,3 +1,4 @@
+import { localVisualReference } from "../../../../lib/holo/orchestrator";
 import { answerNativeRequest } from "../../../../lib/connectors/server";
 import {
   answerOperationalQuestion,
@@ -49,7 +50,8 @@ export async function POST(request: Request) {
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     localReply: async (message, signal) =>
       (await answerNativeRequest(message)) ||
-      answerOperationalQuestion(message, signal),
+      (await answerOperationalQuestion(message, signal)) ||
+      localVisualReference(message),
     reply: askAbacus,
     stream: streamAbacus,
   });

@@ -1,10 +1,14 @@
 "use client";
+import HoloResponseHUD from "./holo/HoloResponseHUD";
+import { useHoloSession } from "./holo/HoloSession";
+import {
+  composeScene,
+  attachmentScene,
+  operationalScene,
+} from "../../lib/holo/orchestrator";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  connectorResultLink,
-  type ConnectorResultLink,
-} from "../../lib/connectors/result";
+import { connectorResultLink } from "../../lib/connectors/result";
 import JarvisNavigation from "./JarvisNavigation";
 import HolographicCore from "./HolographicCore";
 import HologramBackdrop from "./HologramBackdrop";
@@ -65,8 +69,13 @@ export default function JarvisExperience() {
   const [audioVisual, setAudioVisual] =
     useState<AudioVisualMode>("representative");
   const [remoteAudio, setRemoteAudio] = useState<MediaStream | null>(null);
-  const [connectorResult, setConnectorResult] =
-    useState<ConnectorResultLink | null>(null);
+  const holoSession = useHoloSession();
+  const lastUserText = useRef("");
+  const operationalProjection = useRef(false);
+  const visualFiles = useRef<
+    Array<{ id: string; name: string; image: boolean; file: File }>
+  >([]);
+  const mediaPicker = useRef<HTMLInputElement>(null);
   const [retainHistory, setRetainHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   useEffect(() => {
@@ -105,6 +114,7 @@ export default function JarvisExperience() {
   const wakeWasActive = useRef(false);
   const wakeStop = useRef<() => void>(() => {});
   const typingAbort = useRef<AbortController | null>(null);
+  const fileSpeech = useRef<AbortController | null>(null);
   const registerWakeStop = useCallback((stop: () => void) => {
     wakeStop.current = stop;
   }, []);
@@ -126,6 +136,8 @@ export default function JarvisExperience() {
   const cleanup = useCallback(() => {
     generation.current++;
     typingAbort.current?.abort();
+    fileSpeech.current?.abort();
+    fileSpeech.current = null;
     abort.current?.abort();
     abort.current = null;
     if (deadline.current) clearTimeout(deadline.current);
@@ -179,17 +191,58 @@ export default function JarvisExperience() {
     onUser: (id, text) =>
       setMessages((items) => [...items, { id, role: "user", text }]),
     onDelta: (id, text) =>
-      setMessages((items) => appendTranscript(items, id, "assistant", text)),
+      setMessages((items) =>
+        desktopVoice && !muteRef.current && readVoicePreferences().volume > 0
+          ? appendSpokenReply(items, id, text, false, true)
+          : appendTranscript(items, id, "assistant", text),
+      ),
     onComplete: (id, text) => {
       setMessages((items) =>
-        appendTranscript(items, id, "assistant", text, true),
+        desktopVoice && !muteRef.current && readVoicePreferences().volume > 0
+          ? appendSpokenReply(items, id, text, true, true)
+          : appendTranscript(items, id, "assistant", text, true),
       );
       analysisContext.current = text.slice(0, 12000);
+      holoSession.rememberMedia(
+        visualFiles.current
+          .filter((f) => f.image)
+          .map((f) => ({ id: f.id, label: f.name, file: f.file })),
+      );
+      holoSession.present(attachmentScene(text, visualFiles.current));
+      if (
+        desktopVoice &&
+        !muteRef.current &&
+        readVoicePreferences().volume > 0
+      ) {
+        fileSpeech.current?.abort();
+        const controller = new AbortController();
+        fileSpeech.current = controller;
+        setState("responding");
+        void getVoiceManager()
+          .speak(text, controller.signal)
+          .catch(() =>
+            setMessages((items) => speechUnavailable(items, new Set([id]))),
+          )
+          .finally(() => {
+            if (fileSpeech.current === controller) {
+              fileSpeech.current = null;
+              setState("idle");
+            }
+          });
+      }
     },
-    onState: setState,
+    onState: (next) => {
+      if (!fileSpeech.current) setState(next);
+    },
     history: () => messages.map(({ role, text }) => ({ role, text })),
   });
   useEffect(() => {
+    visualFiles.current = workspace.files.map((f) => ({
+      id: f.id,
+      name: f.file.name,
+      image: !!f.preview,
+      file: f.file,
+    }));
     if (workspace.files.length) setTyping(true);
   }, [workspace.files.length]);
   useEffect(() => {
@@ -325,6 +378,10 @@ export default function JarvisExperience() {
       const statusTool = createOperationalVoiceTool({
         signal: controller.signal,
         isCurrent: () => attempt === generation.current,
+        onSnapshot: (snapshot) => {
+          operationalProjection.current = true;
+          holoSession.present(operationalScene(snapshot));
+        },
         send: (event) => {
           if (dc.readyState === "open") dc.send(JSON.stringify(event));
         },
@@ -337,8 +394,11 @@ export default function JarvisExperience() {
         } catch {
           return;
         }
-        if (event.type === "input_audio_buffer.speech_started")
+        if (event.type === "input_audio_buffer.speech_started") {
           statusTool.resetTurn();
+          operationalProjection.current = false;
+          holoSession.close();
+        }
         if (
           event.type === "response.done" &&
           event.response?.status === "completed" &&
@@ -406,6 +466,11 @@ export default function JarvisExperience() {
           typeof event.transcript === "string"
         ) {
           realtimeReplyIds.current.add(id);
+          const visual = composeScene(lastUserText.current, {
+            text: event.transcript!,
+          });
+          if (visual && !operationalProjection.current)
+            holoSession.present(visual);
           setMessages((items) =>
             appendSpokenReply(
               items,
@@ -416,6 +481,12 @@ export default function JarvisExperience() {
             ),
           );
         }
+        if (
+          event.type ===
+            "conversation.item.input_audio_transcription.completed" &&
+          event.transcript
+        )
+          lastUserText.current = event.transcript;
         if (
           event.type ===
             "conversation.item.input_audio_transcription.completed" &&
@@ -521,6 +592,11 @@ export default function JarvisExperience() {
   }
   async function microphone() {
     wakeStop.current();
+    if (fileSpeech.current) {
+      fileSpeech.current.abort();
+      fileSpeech.current = null;
+      setState("idle");
+    }
     if (workspace.files.length) {
       await workspace.voiceInstruction();
       return;
@@ -548,6 +624,7 @@ export default function JarvisExperience() {
       return;
     if (workspace.files.length) {
       if (workspace.recording) return;
+      holoSession.close();
       const success = await workspace.analyze(text);
       if (success) setDraft("");
       return;
@@ -564,6 +641,8 @@ export default function JarvisExperience() {
     setDraft("");
     setError("");
     setState("processing");
+    lastUserText.current = text;
+    holoSession.close();
     try {
       const voiceFirst =
         desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
@@ -585,8 +664,9 @@ export default function JarvisExperience() {
           );
         },
       });
-      const taskResult = connectorResultLink(result.result);
-      if (taskResult) setConnectorResult(taskResult);
+      if (requestController.signal.aborted) return;
+      const visual = composeScene(text, result);
+      if (visual) holoSession.present(visual);
       if (
         desktopVoice &&
         !muteRef.current &&
@@ -640,7 +720,8 @@ export default function JarvisExperience() {
     const next = !muted;
     muteRef.current = next;
     setMuted(next);
-    if (next && typingAbort.current) getVoiceManager().cancel();
+    if (next && (typingAbort.current || fileSpeech.current))
+      getVoiceManager().cancel();
     if (audio.current) {
       audio.current.muted = next;
       if (!next)
@@ -659,10 +740,27 @@ export default function JarvisExperience() {
       className={
         "jarvis-stage " +
         (hidden ? "is-hidden " : "") +
+        (holoSession.current ? "has-holo " : "") +
         (workspace.files.length ? "has-attachments " : "") +
         (dragging ? "is-dragging" : "")
       }
       data-state={state}
+      data-holo-scene={holoSession.current?.mode || "none"}
+      data-holo-state={
+        state === "error"
+          ? "error"
+          : workspace.busy
+            ? "executing"
+            : state === "responding"
+              ? "responding"
+              : state === "processing"
+                ? "thinking"
+                : state === "listening"
+                  ? "listening"
+                  : holoSession.current?.modules.some((m) => m.kind === "media")
+                    ? "media"
+                    : "idle"
+      }
       data-voice-phase={voiceSnapshot.phase}
       data-audio-visual={audioVisual}
       data-speech-presentation={desktopVoice ? "voice-first" : "transcript"}
@@ -671,6 +769,12 @@ export default function JarvisExperience() {
       onDragLeave={dragLeave}
       onDrop={dropFiles}
       onPaste={pasteFiles}
+      onPlayCapture={(event) => {
+        if (event.target instanceof HTMLVideoElement) {
+          wakeStop.current();
+          stop();
+        }
+      }}
       aria-label="Jarvis: solte arquivos em qualquer parte da tela"
     >
       <h1 className="sr-only">Jarvis Kiro, assistente pessoal</h1>
@@ -740,25 +844,26 @@ export default function JarvisExperience() {
                     ? mic
                       ? "Microfone ativo"
                       : "Microfone desligado"
-                    : "Desconectado"}
+                    : "Sessão neural desligada"}
           </span>
         </div>
       </section>
-      {connectorResult ? (
-        <section
-          className="connector-result-hud glass"
-          aria-label="Resultado de desenvolvimento"
-        >
-          <h2>{connectorResult.title}</h2>
-          <Link href={connectorResult.href}>Ver diagnóstico e plano →</Link>
-          <button
-            className="subtle-button"
-            onClick={() => setConnectorResult(null)}
-            aria-label="Fechar resultado de desenvolvimento"
-          >
-            Fechar
-          </button>
-        </section>
+      <HoloResponseHUD
+        local={workspace.files
+          .filter((f) => !!f.preview)
+          .map((f) => ({
+            id: f.id,
+            label: f.file.name,
+            url: f.preview!,
+            type: "image" as const,
+          }))}
+      />
+      {state === "processing" || workspace.busy ? (
+        <div className="holo-task-state" role="status">
+          <span />{" "}
+          {workspace.busy ? "Analisando arquivos" : "Organizando resposta"} ·
+          sem estimativa de duração
+        </div>
       ) : null}
       {shown.length ? (
         <section
@@ -881,14 +986,16 @@ export default function JarvisExperience() {
             }}
             onUser={(spoken) => {
               browserReplyId.current = null;
+              lastUserText.current = spoken;
+              holoSession.close();
               setMessages((items) => [
                 ...items,
                 { id: crypto.randomUUID(), role: "user", text: spoken },
               ]);
             }}
             onReply={(reply) => {
-              const taskResult = connectorResultLink(reply.result);
-              if (taskResult) setConnectorResult(taskResult);
+              const visual = composeScene(lastUserText.current, reply);
+              if (visual) holoSession.present(visual);
               const id = crypto.randomUUID();
               browserReplyId.current = id;
               setMessages((items) =>
@@ -939,6 +1046,7 @@ export default function JarvisExperience() {
                 text: data.text,
                 provider: data.provider || "abacus",
                 result: connectorResultLink(data.result) || undefined,
+                visual: data.visual,
               };
             }}
           />
@@ -982,6 +1090,48 @@ export default function JarvisExperience() {
           >
             ⌨
           </button>
+          <input
+            ref={mediaPicker}
+            className="sr-only"
+            hidden
+            type="file"
+            multiple
+            tabIndex={-1}
+            aria-label="Escolher arquivos para análise"
+            onChange={(e) => {
+              workspace.ingest(Array.from(e.target.files || []));
+              e.target.value = "";
+            }}
+          />
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Escolher mídia ou documento"
+            disabled={workspace.busy}
+            onClick={() => mediaPicker.current?.click()}
+          >
+            ▧
+          </button>
+          <Link
+            className="icon-button"
+            href="/conexoes"
+            aria-label="Abrir conexões e ferramentas"
+          >
+            ⚙
+          </Link>
+          {holoSession.scenes.length &&
+          !holoSession.current &&
+          !connected &&
+          state !== "connecting" ? (
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Reabrir último resultado holográfico"
+              onClick={() => holoSession.select(holoSession.scenes[0].id)}
+            >
+              ▦
+            </button>
+          ) : null}
           <button
             className="icon-button"
             onClick={toggleAudio}
