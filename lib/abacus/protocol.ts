@@ -127,6 +127,7 @@ export function buildAbacusPlan(
   message: string,
   input: AbacusInput = {},
   context: CuratedContext[] = [],
+  operationalContext = "",
 ) {
   const task = chooseTask(message, input.task),
     history = boundHistory(input.history, message);
@@ -154,7 +155,7 @@ export function buildAbacusPlan(
     {
       role: "system",
       content:
-        system + kiroChatContext(message) +
+        system + kiroChatContext(message) + operationalContext +
         (records.length
           ? " Contexto curado, limitado e datado (não é consulta ao vivo): " +
             JSON.stringify(records)
