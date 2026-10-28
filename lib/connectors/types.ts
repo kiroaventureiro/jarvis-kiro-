@@ -84,7 +84,21 @@ export type OAuthPending = {
   expiresAt: number;
   sessionExpires: number;
 };
+export type PersistentProject = {
+  id: string;
+  name: string;
+  provider: string;
+  externalRef?: string;
+  objective: string;
+  status: "planned" | "active" | "paused" | "completed";
+  nextStep: string;
+  notes: string[];
+  createdAt: string;
+  updatedAt: string;
+};
 export type VaultState = {
+  persistentProjects?: Record<string, PersistentProject>;
+
   abacusObservation?: import("../abacus/hub").AccountObservation;
   cognitive?: Record<
     string,
