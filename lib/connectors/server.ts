@@ -76,6 +76,9 @@ export async function answerNativeRequest(message: string) {
     const reply = await planner.intent(message);
     if (reply) return reply;
   }
+  const { conversationalConnectorRead } = await import("./conversation");
+  const conversational = await conversationalConnectorRead(message);
+  if (conversational) return conversational;
   const n = message
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
