@@ -1,3 +1,4 @@
+import { answerAbacusPlatformQuestion } from "../../../../lib/abacus/platform-read";
 import {
   answerAbacusHub,
   answerMediaRequest,
@@ -70,6 +71,7 @@ export async function POST(request: Request) {
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     localReply: async (message, signal) =>
+      (await answerAbacusPlatformQuestion(message, signal)) ||
       (await answerAbacusHub(message, signal)) ||
       (await answerMediaRequest(message, signal)) ||
       (await answerPublicLibrary(message, signal)) ||
