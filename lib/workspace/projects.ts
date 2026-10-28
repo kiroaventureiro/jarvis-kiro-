@@ -22,6 +22,17 @@ export async function savePersistentProject(input: unknown) {
   const nextStep = stringField(v.nextStep, 500);
   const externalRef = v.externalRef === undefined ? undefined : stringField(v.externalRef, 200);
   const status = v.status === undefined ? "planned" : v.status;
+  const rawTask = v.externalTask;
+  let externalTask: PersistentProject["externalTask"] | undefined;
+  if (rawTask !== undefined) {
+    if (!rawTask || typeof rawTask !== "object" || Array.isArray(rawTask)) throw Error("INVALID_EXTERNAL_TASK");
+    const task = rawTask as Record<string, unknown>;
+    if (task.provider !== "abacus" || !["agent", "task", "workflow", "media"].includes(String(task.kind)) ||
+        typeof task.id !== "string" || !/^[a-zA-Z0-9_-]{1,160}$/.test(task.id) ||
+        task.verification !== undefined && task.verification !== "unverified")
+      throw Error("INVALID_EXTERNAL_TASK");
+    externalTask = {provider:"abacus",kind:task.kind as "agent" | "task" | "workflow" | "media",id:task.id,verification:"unverified"};
+  }
   if (!name || !objective || !provider || !nextStep || (v.externalRef !== undefined && !externalRef) ||
       !["planned","active","paused","completed"].includes(String(status)) ||
       (v.id !== undefined && !stringField(v.id, 80)) ||
@@ -36,6 +47,7 @@ export async function savePersistentProject(input: unknown) {
     const project: PersistentProject = {
       id, name, objective, provider, nextStep, status: status as PersistentProject["status"],
       ...(externalRef ? {externalRef} : previous?.externalRef ? {externalRef: previous.externalRef} : {}),
+      ...(externalTask ? { externalTask } : previous?.externalTask ? { externalTask: previous.externalTask } : {}),
       notes: Array.isArray(v.notes) ? v.notes as string[] : previous?.notes || [],
       createdAt: previous?.createdAt || now, updatedAt: now,
     };
