@@ -39,7 +39,7 @@ export async function conversationalConnectorRead(message: string) {
         const op = provider === "github" ? "repo" : provider === "vercel" ? "deployments" : "schemas";
         try {
           const checked = await connectors.readAuthorized(provider, resource.id, op);
-          const result = JSON.stringify(checked.data).slice(0, 1400);
+          const result = JSON.stringify(checked.data).slice(0, 320);
           results.push("- " + resource.name + " | consulta real " + op + " em " + checked.checkedAt + " | " + result);
           panels.push({label: provider.toUpperCase() + " · " + resource.name, detail: "Consulta " + op + " concluída em " + checked.checkedAt});
         } catch {
