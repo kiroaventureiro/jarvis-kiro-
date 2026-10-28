@@ -95,7 +95,7 @@ export default function WakeListener(props: Props) {
   }, [props.externalBusy]);
   function activate() {
     if (snapshot.enabled) {
-      engine.current?.stop();
+      engine.current?.disableListening();
       return;
     }
     if (!authorized) {
