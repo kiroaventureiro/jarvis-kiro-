@@ -4,7 +4,24 @@ import { listPersistentProjects, savePersistentProject } from "./projects";
 const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export async function answerWorkspaceQuestion(message: string) {
   const n = normalize(message);
-  const attach = /^(?:jarvis[, ]*)?(?:associe|vincule) (?:a )?tarefa (?:da )?abacus\\s+([a-zA-Z0-9_-]{1,160})\\s+(?:ao|a|no) projeto\\s+(.{1,100})$/i.exec(message.trim());
+  const checkpoint = /^(?:jarvis[, ]*)?(?:atualize|atualizar|salve|registre) (?:a )?(?:proxima etapa|proximo passo) (?:do |no )?projeto\\s+(.+?)\\s*:\\s*(.+)$/i.exec(message.trim());
+  if (checkpoint) {
+    if (!connectorStore.configured())
+      return {text:"O cofre da memória contínua está indisponível.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    try {
+      const name = checkpoint[1].trim(), nextStep = checkpoint[2].trim();
+      const matches = (await listPersistentProjects()).filter(p => normalize(p.name) === normalize(name));
+      if (matches.length !== 1 || nextStep.length > 500)
+        return {text:"Não consegui identificar exatamente o projeto ou a próxima etapa. Nenhum registro foi alterado.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+      const p = matches[0];
+      const updated = await savePersistentProject({id:p.id,name:p.name,objective:p.objective,provider:p.provider,
+        status:"paused",nextStep,notes:p.notes});
+      return {text:"Atualizei a próxima etapa de "+updated.name+" na memória contínua: "+updated.nextStep+". O projeto ficou registrado como pausado, pronto para consulta futura. Nenhuma operação externa foi executada.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    } catch {
+      return {text:"Não consegui confirmar a atualização da memória. Nenhuma gravação foi confirmada.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    }
+  }
+  const attach = /^(?:jarvis[, ]*)?(?:associe|vincule) (?:a )?tarefa (?:da )?abacus\s+([a-zA-Z0-9_-]{1,160})\s+(?:ao|a|no) projeto\s+(.{1,100})$/i.exec(message.trim());
   if (attach) {
     if (!connectorStore.configured())
       return {text:"A memória persistente não está configurada neste ambiente.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
