@@ -73,7 +73,7 @@ export async function conversationalConnectorRead(message: string) {
     const panels: Array<{label: string; detail: string}> = [];
     const namedResources = providers.flatMap(p => state.connections[p]?.resources.map(r => r.name) || []);
     const namedTarget = requestedProject(n, namedResources);
-    const explicitProject = /(?:projeto|sobre|do|da|no|na)\s+([\\p{L}0-9 -]{5,70})/u.test(n) && !all;
+    const explicitProject = /(?:projeto|sobre|do|da|no|na)\s+([a-z0-9 -]{5,70})/.test(n) && !all;
     for (const provider of providers) {
       const c = state.connections[provider];
       if (!c || c.status !== "connected") { results.push(provider + ": sem conexão ativa."); panels.push({label: provider.toUpperCase(), detail: "Sem conexão ativa"}); continue; }
