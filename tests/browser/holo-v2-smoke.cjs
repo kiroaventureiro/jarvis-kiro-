@@ -143,6 +143,7 @@ const longReport = () =>
     });
     pass("Approved JK identity and home controls remain available");
     await page.clock.install();
+    await page.clock.pauseAt(new Date(Date.now() + 100));
     let responseVisual = null;
     await page.route("**/api/director/abacus", (r) =>
       r.request().method() === "POST" && responseVisual
@@ -498,6 +499,14 @@ const longReport = () =>
       if ((await root.getAttribute("data-complete")) === "true") break;
     }
     assert.deepEqual([...countries], ["BRA", "FRA", "JPN"]);
+    const cartography = await page
+      .locator('.cinema-primary path[data-country="BRA"]')
+      .evaluate((el) => ({
+        fill: getComputedStyle(el).fill,
+        stroke: getComputedStyle(el).stroke,
+      }));
+    assert.notEqual(cartography.fill, "rgb(0, 0, 0)");
+    assert.notEqual(cartography.stroke, "none");
     await screenshot("desktop-context-map.png");
     pass("Geographic references receive progressive contextual country focus");
     await explore();

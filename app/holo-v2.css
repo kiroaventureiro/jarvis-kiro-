@@ -413,6 +413,13 @@ textarea {
 .is-automatic-map path[aria-hidden="true"] {
   cursor: default;
 }
+.is-automatic-map .holo-world-viewport path[data-country] {
+  fill: #064262aa;
+  stroke: #36c7ef;
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+  outline: none;
+}
 .is-automatic-map .holo-world-viewport path.is-selected {
   fill: #226b8f;
   stroke: #c1e5ff;
