@@ -27,6 +27,8 @@ export async function conversationalConnectorRead(message: string) {
   try {
     const state = await connectorStore.read();
     const results: string[] = [];
+    let successful = 0;
+    let failed = 0;
     const panels: Array<{label: string; detail: string}> = [];
     for (const provider of providers) {
       const c = state.connections[provider];
@@ -39,10 +41,11 @@ export async function conversationalConnectorRead(message: string) {
         const op = provider === "github" ? "repo" : provider === "vercel" ? "deployments" : "schemas";
         try {
           const checked = await connectors.readAuthorized(provider, resource.id, op);
-          const result = JSON.stringify(checked.data).slice(0, 320);
-          results.push("- " + resource.name + " | consulta real " + op + " em " + checked.checkedAt + " | " + result);
+          successful++;
+          results.push("- " + resource.name + ": consulta de " + (provider === "github" ? "repositório" : provider === "vercel" ? "publicações" : "estrutura do banco") + " concluída.");
           panels.push({label: provider.toUpperCase() + " · " + resource.name, detail: "Consulta " + op + " concluída em " + checked.checkedAt});
         } catch {
+          failed++;
           results.push("- " + resource.name + " | não foi possível consultar agora; não afirmar que o projeto foi verificado.");
           panels.push({label: provider.toUpperCase() + " · " + resource.name, detail: "Consulta indisponível; nenhum resultado confirmado"});
         }
@@ -50,7 +53,7 @@ export async function conversationalConnectorRead(message: string) {
       if (c.resources.length > targets.length)
         results.push("Outros " + (c.resources.length - targets.length) + " projetos autorizados não foram consultados nesta resposta para limitar tempo e volume. Solicite uma consulta específica.");
     }
-    const text = "Diagnóstico operacional de leitura. Fontes: consultas realizadas aos conectores nativos autorizados.\\n" + results.join("\\n") + "\\nNenhuma alteração foi executada. Resultados externos não comprovam ausência de erros; para auditoria profunda é necessário ler arquivos e testes específicos.";
+    const text = "Concluí " + successful + " consultas de leitura aos projetos autorizados." + (failed ? " Outras " + failed + " consultas não puderam ser concluídas." : "") + " Consultei informações de GitHub, Vercel ou Supabase conforme os acessos disponíveis. Não fiz nenhuma alteração. Os resultados mostram o estado das consultas, mas ainda não representam uma auditoria completa da qualidade dos projetos.";
     const visual: HoloScene = {
       version: 1, id: "jk-connected-projects-" + Date.now(),
       title: "Diagnóstico dos sistemas conectados", mode: "technical",
