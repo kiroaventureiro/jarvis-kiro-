@@ -1,5 +1,6 @@
 import { depthFor, normalized } from "./intent";
-export const COGNITIVE_PROTOCOL_VERSION = "jk-cognitive-4.1";
+import { humanizerGuidance } from "./humanizer";
+export const COGNITIVE_PROTOCOL_VERSION = "jk-cognitive-4.2";
 export type ResponsePurpose = "answer" | "decision" | "creative" | "code";
 export function responseProfile(message: string) {
   const n = normalized(message);
@@ -39,6 +40,7 @@ export function cognitiveProtocol(
       "Nesta etapa, retorne somente o contrato de classificação solicitado; não produza resposta final, Markdown, plano executável ou argumentos de ferramenta.",
     ].join(" ");
   shared.push(
+    humanizerGuidance(channel),
     channel === "voice"
       ? "Narre naturalmente, sem Markdown, JSON, identificadores extensos, código bruto ou URLs. Referências técnicas ficam no resultado visual. Não alegue ferramentas de outra modalidade; utilize apenas as funções declaradas nesta sessão de voz."
       : "Quando ajudar a leitura, use negrito, listas curtas ou tabelas. A fala usa roteiro próprio; dados técnicos e resultados visuais permanecem separados.",
