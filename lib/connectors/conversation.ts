@@ -18,7 +18,7 @@ export async function conversationalConnectorRead(message: string) {
   const mentioned = (Object.keys(READ_PROVIDERS) as Provider[]).filter(p =>
     READ_PROVIDERS[p].aliases.some(alias => n.includes(alias))
   );
-  const all = /\b(todos|todas|tudo|conexoes|integracoes|plataformas)\b/.test(n);
+  const all = /\b(todos|todas|tudo|conexoes|integracoes|plataformas)\b/.test(n) || /meus projetos|minhas conexoes/.test(n);
   const providers = mentioned.length ? (all ? (Object.keys(READ_PROVIDERS) as Provider[]) : mentioned) : all ? (Object.keys(READ_PROVIDERS) as Provider[]) : [];
   if (!providers.length) return null;
   if (!connectorStore.configured())
