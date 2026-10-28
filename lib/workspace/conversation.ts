@@ -1,9 +1,23 @@
 import "server-only";
 import { connectorStore } from "../connectors/server";
-import { listPersistentProjects } from "./projects";
+import { listPersistentProjects, savePersistentProject } from "./projects";
 const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export async function answerWorkspaceQuestion(message: string) {
   const n = normalize(message);
+  const save = /^(?:jarvis[, ]*)?(?:salve|salvar|registre|registrar) (?:na memoria )?(?:o )?projeto\s+(.+?)\s*;\s*objetivo\s*:\s*(.+?)\s*;\s*(?:proxima etapa|proximo passo)\s*:\s*(.+)$/i.exec(message.trim());
+  if (save) {
+    if (!connectorStore.configured())
+      return {text:"O cofre de memória não está configurado.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    try {
+      const name = save[1].trim(), objective = save[2].trim(), nextStep = save[3].trim();
+      if (name.length > 100 || objective.length > 1000 || nextStep.length > 500) throw Error("INVALID_PROJECT");
+      const existing = (await listPersistentProjects()).find(p => normalize(p.name) === normalize(name));
+      const project = await savePersistentProject({...(existing ? {id:existing.id} : {}),name, objective,nextStep,provider:existing?.provider || "abacus",status: "paused"});
+      return {text:"Registrei "+project.name+" na memória contínua. Objetivo: "+project.objective+". Próxima etapa: "+project.nextStep+". Posso recuperar esse ponto depois, mas ainda não executei nenhuma ação na Abacus.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    } catch {
+      return {text:"Não consegui salvar o projeto no cofre. Nenhuma gravação foi confirmada.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    }
+  }
   if (!/(projetos? (?:salvos?|em andamento|pausados?)|retom|continuar (?:meu |o )?projeto|onde paramos|onde parei|memoria (?:dos |de )?projetos)/.test(n)) return null;
   if (!connectorStore.configured())
     return {text:"O armazenamento de projetos não está configurado neste ambiente.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
