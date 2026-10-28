@@ -1,4 +1,5 @@
 import { answerVoiceUsageQuestion } from "../../../../lib/voice/usage-answer";
+import { answerVoiceStudioQuestion } from "../../../../lib/voice/voicestudio-server";
 import { answerAbacusAgentQuestion } from "../../../../lib/abacus/agent-read";
 import { answerDesignRequest } from "../../../../lib/design/intent";
 import { answerAbacusPlatformQuestion } from "../../../../lib/abacus/platform-read";
@@ -76,6 +77,7 @@ export async function POST(request: Request) {
     localReply: async (message, signal) =>
       (await answerVoiceUsageQuestion(message)) ||
       (await answerAbacusAgentQuestion(message, signal)) ||
+      (await answerVoiceStudioQuestion(message, signal)) ||
       answerDesignRequest(message) ||
       (await answerAbacusPlatformQuestion(message, signal)) ||
       (await answerAbacusHub(message, signal)) ||

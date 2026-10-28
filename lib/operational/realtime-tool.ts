@@ -1,4 +1,5 @@
 import { voiceUsageIntent } from "../voice/ledger";
+import { voiceStudioIntent } from "../voice/voicestudio";
 import { abacusPlatformIntent } from "../abacus/platform-intent";
 import type { RealtimeEvent } from "../jarvis-realtime";
 export const OPERATIONAL_VOICE_TOOL = {
@@ -103,7 +104,9 @@ export function createOperationalVoiceTool(options: {
         const researchQuery =
           call.name === "jarvis_visual_research"
             ? (args as { query: string }).query
-            : abacusPlatformIntent(question) || voiceUsageIntent(question)
+            : abacusPlatformIntent(question) ||
+                voiceUsageIntent(question) ||
+                voiceStudioIntent(question)
               ? question
               : null;
         const researchCall = researchQuery !== null;

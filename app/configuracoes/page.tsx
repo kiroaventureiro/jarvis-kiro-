@@ -5,6 +5,7 @@ import OwnerLogin from "../components/OwnerLogin";
 import MemorySyncSettings from "../components/MemorySyncSettings";
 import AbacusBudgetSettings from "../components/AbacusBudgetSettings";
 import VoiceSettings from "../components/VoiceSettings";
+import VoiceStudioSettings from "../components/VoiceStudioSettings";
 import HologramSettings from "../components/HologramSettings";
 export default function SettingsPage() {
   return (
@@ -24,6 +25,7 @@ export default function SettingsPage() {
       <MemorySyncSettings />
       <AbacusBudgetSettings />
       <VoiceSettings />
+      <VoiceStudioSettings />
       <div className="card-grid">
         <article className="glass card">
           <h2>Voz e áudio</h2>
