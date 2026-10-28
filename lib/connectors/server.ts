@@ -76,6 +76,9 @@ export async function answerNativeRequest(
   message: string,
   signal?: AbortSignal,
 ) {
+  const { answerAbacusPlatformQuestion } = await import("../abacus/platform-read");
+  const platform = await answerAbacusPlatformQuestion(message, signal);
+  if (platform) return platform;
   const { answerWorkspaceQuestion } = await import("../workspace/conversation");
   const workspace = await answerWorkspaceQuestion(message);
   if (workspace) return workspace;
