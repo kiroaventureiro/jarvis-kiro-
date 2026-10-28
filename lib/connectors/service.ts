@@ -373,6 +373,21 @@ export class ConnectorService {
       throw new ConnectorError("PRODUCTION_BLOCKED", 403);
     return resource;
   }
+  /** Read-only conversational tool. Shares the exact scope and provider checks with the Central. */
+  async readAuthorized(provider: Provider, resourceId: string, operationId: string, args: Record<string, unknown> = {}) {
+    const definition = operation(provider, operationId);
+    if (!definition || definition.grant !== "read")
+      throw new ConnectorError("OPERATION_BLOCKED", 403);
+    const action = normalizeAction({ provider, resource: resourceId, operation: operationId, args });
+    const connection = await this.connection(provider);
+    const resource = this.allow(action, connection);
+    const result = await this.run(action, connection.credentials!, resource);
+    return {
+      provider, resource: resource.id, operation: operationId,
+      checkedAt: new Date(this.now()).toISOString(),
+      data: redact(result, [connection.credentials!.accessToken, connection.credentials!.refreshToken || ""]),
+    };
+  }
   async plan(title: unknown, rawActions: unknown) {
     if (
       !Array.isArray(rawActions) ||
