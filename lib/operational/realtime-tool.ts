@@ -3,7 +3,7 @@ export const OPERATIONAL_VOICE_TOOL = {
   type: "function",
   name: "jarvis_operational_status",
   description:
-    "Consulta somente metadados confiáveis e recentes das integrações e projetos do Jarvis. Use antes de responder sobre capacidades, conexões, Abacus ou memória Supabase. Não lê conteúdo de conversas nem executa modelos, gravações ou ações.",
+    "Consulta metadados das integrações, projetos e o campo abacus com catálogo real de modelos, ferramentas publicadas e observação privada datada de plano, créditos, conectores, tarefas e agentes. Use antes de responder sobre capacidades, conexões, Abacus ou memória Supabase. Não lê conteúdo de conversas nem executa modelos, gravações ou ações.",
   parameters: {
     type: "object",
     properties: {},
@@ -28,6 +28,7 @@ export function createOperationalVoiceTool(options: {
   send: (event: object) => void;
   isCurrent: () => boolean;
   onSnapshot?: (value: unknown) => void;
+  allowPrivateAbacus?: () => boolean;
   onVisual?: (value: unknown) => void;
   fetcher?: typeof fetch;
 }) {
@@ -132,7 +133,12 @@ export function createOperationalVoiceTool(options: {
           item: {
             type: "function_call_output",
             call_id: call.call_id,
-            output: JSON.stringify(result),
+            output: JSON.stringify(
+              neuralOperationalOutput(
+                result,
+                options.allowPrivateAbacus?.() === true,
+              ),
+            ),
           },
         });
         options.send({ type: "response.create", response: { tools: [] } });
@@ -140,4 +146,48 @@ export function createOperationalVoiceTool(options: {
       return true;
     },
   };
+}
+/** Only a user-requested Abacus account turn may forward the owner-approved fields. */
+export function neuralOperationalOutput(
+  value: unknown,
+  allowPrivate = false,
+): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const raw = value as Record<string, unknown>;
+  const source = (
+    raw.abacus && typeof raw.abacus === "object" ? raw.abacus : raw.publicAbacus
+  ) as Record<string, unknown> | undefined;
+  const o = source?.observation as Record<string, unknown> | null | undefined;
+  const observation =
+    allowPrivate && o
+      ? {
+          plan: o.plan,
+          remainingCredits: o.remainingCredits,
+          observedAt: o.observedAt,
+          connectedServices: o.connectedServices,
+          activeTasks: o.activeTasks,
+          personalAgents: o.personalAgents,
+        }
+      : null;
+  const abacus = source
+    ? {
+        ...source,
+        observation,
+        privateObservationAvailable: !!o,
+        privateAccountForwarded: !!observation,
+      }
+    : undefined;
+  if (raw.model === "jk-abacus-hub") {
+    return {
+      available: true,
+      model: "jk-abacus-hub",
+      abacus,
+      text:
+        "A estrutura Abacus tem catálogo de modelos e adaptadores de imagem, áudio e análise visual. Use os metadados anexos. " +
+        (observation
+          ? "O proprietário autorizou os campos da observação da conta somente para esta pergunta. Informe que são datados."
+          : "Dados privados da conta permanecem no JK e não foram enviados nesta consulta. Isso não significa ausência de integração."),
+    };
+  }
+  return abacus ? { ...raw, abacus } : value;
 }

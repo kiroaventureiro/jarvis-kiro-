@@ -1,6 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import {
+  readAbacusVoiceSharing,
+  setAbacusVoiceSharing,
+} from "../../lib/abacus/voice-sharing";
+import {
   ABACUS_SURFACES,
   type AccountObservation,
   type ModelEntry,
@@ -45,6 +49,8 @@ export default function AbacusHub() {
   const controller = useRef<AbortController | null>(null),
     objectUrl = useRef<string | null>(null);
   const [assetUrl, setAssetUrl] = useState("");
+  const [voiceSharing, setVoiceSharing] = useState(false);
+  useEffect(() => setVoiceSharing(readAbacusVoiceSharing()), []);
   useEffect(() => {
     const ac = new AbortController();
     fetch("/api/director/abacus/hub", { cache: "no-store", signal: ac.signal })
@@ -189,6 +195,24 @@ export default function AbacusHub() {
       style={{ margin: "1.5rem 0", padding: 20 }}
     >
       <h2>Abacus: recursos e laboratório</h2>
+      <label>
+        <input
+          type="checkbox"
+          checked={voiceSharing}
+          onChange={(e) => {
+            setVoiceSharing(e.target.checked);
+            setAbacusVoiceSharing(e.target.checked);
+          }}
+        />{" "}
+        Compartilhar dados da conta com a voz neural OpenAI somente quando eu
+        perguntar sobre minha conta Abacus
+      </label>
+      <p>
+        Autorização neste navegador: plano, saldo observado e data, serviços
+        cadastrados como Gmail, nomes de tarefas e agentes. Não inclui conteúdo
+        de e-mails, senhas, chaves ou pagamentos. Os dados não são enviados ao
+        iniciar a voz. Desmarque para interromper o compartilhamento.
+      </p>
       <p>
         Modelos, ferramentas e recursos da conta em um só lugar. Consultar
         catálogos não executa gerações.

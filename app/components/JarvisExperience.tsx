@@ -1,4 +1,11 @@
 "use client";
+import { narrationCoordinator } from "../../lib/holo/narration";
+import { complementaryScene } from "../../lib/holo/complementary";
+import {
+  abacusAccountQuestion,
+  readAbacusVoiceSharing,
+} from "../../lib/abacus/voice-sharing";
+import { abacusEvidenceScene } from "../../lib/abacus/voice-evidence";
 import { conversationAction } from "../../lib/holo/conversation-actions";
 import HoloResponseHUD from "./holo/HoloResponseHUD";
 import { useHoloSession } from "./holo/HoloSession";
@@ -78,8 +85,20 @@ export default function JarvisExperience() {
     window.addEventListener("jk-core-focus", focus);
     return () => window.removeEventListener("jk-core-focus", focus);
   }, []);
+  useEffect(
+    () =>
+      narrationCoordinator.subscribe(() => {
+        if (narrationCoordinator.state.phase !== "error") return;
+        setMessages((items) => {
+          const last = items.filter((x) => x.role === "assistant").at(-1);
+          return last ? speechUnavailable(items, new Set([last.id])) : items;
+        });
+      }),
+    [],
+  );
   const lastUserText = useRef("");
   const operationalProjection = useRef(false);
+  const operationalVisual = useRef<ReturnType<typeof composeScene>>(null);
   const visualFiles = useRef<
     Array<{ id: string; name: string; image: boolean; file: File }>
   >([]);
@@ -223,7 +242,10 @@ export default function JarvisExperience() {
           .filter((f) => f.image)
           .map((f) => ({ id: f.id, label: f.name, file: f.file })),
       );
-      const visual = attachmentScene(text, visualFiles.current);
+      const rawVisual = attachmentScene(text, visualFiles.current);
+      const visual = desktopVoice
+        ? complementaryScene(rawVisual, text)
+        : rawVisual;
       holoSession.present(visual);
       if (
         desktopVoice &&
@@ -395,16 +417,37 @@ export default function JarvisExperience() {
       const statusTool = createOperationalVoiceTool({
         signal: controller.signal,
         isCurrent: () => attempt === generation.current,
+        allowPrivateAbacus: () =>
+          readAbacusVoiceSharing() &&
+          abacusAccountQuestion(lastUserText.current),
         onVisual: (value) => {
           const reply = value as { visual?: unknown };
           if (reply?.visual) {
             operationalProjection.current = true;
-            holoSession.present(reply.visual);
+            const visual = composeScene(lastUserText.current, {
+              text: "",
+              visual: reply.visual,
+            });
+            if (visual) {
+              operationalVisual.current = visual;
+              holoSession.present(
+                desktopVoice
+                  ? complementaryScene(visual, visual.narration || "")
+                  : visual,
+              );
+            }
           }
         },
         onSnapshot: (snapshot) => {
           operationalProjection.current = true;
-          holoSession.present(operationalScene(snapshot));
+          const data = snapshot as { abacus?: unknown };
+          const visual = /abacus|routellm|chatllm/i.test(lastUserText.current)
+            ? abacusEvidenceScene(data.abacus)
+            : operationalScene(snapshot);
+          if (visual) {
+            operationalVisual.current = visual;
+            holoSession.present(visual);
+          }
         },
         send: (event) => {
           if (dc.readyState === "open") dc.send(JSON.stringify(event));
@@ -421,6 +464,7 @@ export default function JarvisExperience() {
         if (event.type === "input_audio_buffer.speech_started") {
           statusTool.resetTurn();
           operationalProjection.current = false;
+          operationalVisual.current = null;
           holoSession.close();
         }
         if (
@@ -469,9 +513,9 @@ export default function JarvisExperience() {
           typeof event.delta === "string"
         ) {
           const spoken = event.type.includes("audio_transcript");
-          if (spoken) realtimeReplyIds.current.add(id);
+          realtimeReplyIds.current.add(id);
           setMessages((items) =>
-            spoken
+            spoken || (realtimeSpeechAvailable.current && !muteRef.current)
               ? appendSpokenReply(
                   items,
                   id,
@@ -494,7 +538,22 @@ export default function JarvisExperience() {
             text: event.transcript!,
           });
           if (visual && !operationalProjection.current)
-            holoSession.present(visual);
+            holoSession.present(
+              desktopVoice
+                ? complementaryScene(visual, event.transcript!)
+                : visual,
+            );
+          if (operationalProjection.current && operationalVisual.current) {
+            const scene = {
+              ...operationalVisual.current,
+              narration: event.transcript!,
+            };
+            holoSession.present(
+              desktopVoice
+                ? complementaryScene(scene, event.transcript!)
+                : scene,
+            );
+          }
           setMessages((items) =>
             appendSpokenReply(
               items,
@@ -725,7 +784,10 @@ export default function JarvisExperience() {
           },
         }));
       if (requestController.signal.aborted) return;
-      const visual = local ? null : composeScene(text, result);
+      const rawVisual = local ? null : composeScene(text, result);
+      const visual = desktopVoice
+        ? complementaryScene(rawVisual, result.text)
+        : rawVisual;
       if (visual) holoSession.present(visual);
       if (
         desktopVoice &&
@@ -1068,8 +1130,11 @@ export default function JarvisExperience() {
                 reply.provider === "local_action"
                   ? null
                   : composeScene(lastUserText.current, reply);
-              if (visual) holoSession.present(visual);
-              const prepared = { ...reply, visual: visual || undefined };
+              const projection = desktopVoice
+                ? complementaryScene(visual, reply.text)
+                : visual;
+              if (projection) holoSession.present(projection);
+              const prepared = { ...reply, visual: projection || undefined };
               const id = crypto.randomUUID();
               browserReplyId.current = id;
               setMessages((items) =>

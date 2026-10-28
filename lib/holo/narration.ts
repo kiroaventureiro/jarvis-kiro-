@@ -66,78 +66,35 @@ export function visualExplanation(m: HoloModule): string {
         .join(" ");
   }
 }
-const words = (s: string) =>
-  new Set(
-    s
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .match(/[a-z0-9]{4,}/g) || [],
-  );
+function narrationSentences(full: string) {
+  return typeof Intl.Segmenter === "function"
+    ? [
+        ...new Intl.Segmenter("pt-BR", { granularity: "sentence" }).segment(
+          full,
+        ),
+      ]
+        .map((x) => x.segment.trim())
+        .filter(Boolean)
+    : full.split(/(?<=[.!?])\s+/u).filter(Boolean);
+}
 export function narrationScript(
   scene: HoloScene,
   plan: DemonstrationStep[],
   text: string,
 ) {
-  const full = (
-    scene.narration && scene.narration.length > text.length
-      ? scene.narration
-      : text
-  ).trim();
-  const sentences =
-    typeof Intl.Segmenter === "function"
-      ? [
-          ...new Intl.Segmenter("pt-BR", { granularity: "sentence" }).segment(
-            full,
-          ),
-        ]
-          .map((x) => x.segment.trim())
-          .filter(Boolean)
-      : full.split(/(?<=[.!?])\s+(?=[\p{Lu}])/u);
-  const assigned = plan.map(() => [] as string[]),
-    keys = plan.map((s) =>
-      words(s.content.title + " " + visualExplanation(s.content)),
-    );
-  for (let i = 0; i < sentences.length; i++) {
-    const ws = words(sentences[i]);
-    let best = -1,
-      score = 0;
-    keys.forEach((k, j) => {
-      const overlap = [...ws].filter((w) => k.has(w)).length;
-      if (overlap > score) {
-        score = overlap;
-        best = j;
-      }
-    });
-    if (plan.length)
-      assigned[
-        best >= 0
-          ? best
-          : Math.min(
-              plan.length - 1,
-              Math.floor((i * plan.length) / Math.max(1, sentences.length)),
-            )
-      ].push(sentences[i]);
-  }
-  return plan.map((step, i) => {
-    const explanation = visualExplanation(step.content),
-      supplied = assigned[i].join(" "),
-      normalized = supplied.toLocaleLowerCase("pt-BR");
-    return {
-      id: step.id,
-      text: [
-        step.content.title + ".",
-        supplied,
-        explanation &&
-        !normalized.includes(explanation.toLocaleLowerCase("pt-BR"))
-          ? explanation
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" "),
-    };
-  });
+  const full = (text.trim() || scene.narration || "").trim();
+  const sentences = narrationSentences(full);
+  return plan.map((step, i) => ({
+    id: step.id,
+    text: sentences
+      .slice(
+        Math.ceil((i * sentences.length) / plan.length),
+        Math.ceil(((i + 1) * sentences.length) / plan.length),
+      )
+      .join(" "),
+  }));
 }
+
 type Run = {
   scene: HoloScene;
   text: string;
@@ -147,6 +104,7 @@ type Run = {
   reject: (e: Error) => void;
   abort: () => void;
   spoken: Set<string>;
+  spokenSentences: Set<string>;
   generation: number;
   silent: boolean;
   nativePaused?: boolean;
@@ -203,6 +161,7 @@ export class NarrationCoordinator {
         reject,
         abort,
         spoken: new Set(),
+        spokenSentences: new Set(),
         generation: 0,
         silent: false,
       };
@@ -237,6 +196,7 @@ export class NarrationCoordinator {
       ["speaking", "waiting"].includes(this.state.phase)
     )
       return;
+    if (this.state.phase === "speaking") return;
     if (run.spoken.has(stepId)) {
       this.emit({ stepId, phase: "waiting" });
       return;
@@ -245,14 +205,25 @@ export class NarrationCoordinator {
       (x) => x.id === stepId,
     );
     if (!chapter) return;
+    const sentences = narrationSentences(chapter.text).filter(
+      (x) => !run.spokenSentences.has(x),
+    );
+    if (!sentences.length) {
+      run.spoken.add(stepId);
+      this.emit({ stepId, phase: "waiting" });
+      return;
+    }
     if (run.timer) clearTimeout(run.timer);
     const generation = ++run.generation;
     this.emit({ stepId, phase: "speaking", message: "" });
-    void run.speaker.speak(chapter.text, run.signal).then(
+    void run.speaker.speak(sentences.join(" "), run.signal).then(
       () => {
         if (this.run !== run || run.generation !== generation) return;
+        sentences.forEach((x) => run.spokenSentences.add(x));
         run.spoken.add(stepId);
-        this.emit({ phase: "waiting" });
+        const current = this.views.get(sceneId)?.stepId || stepId;
+        run.spoken.add(current);
+        this.emit({ stepId: current, phase: "waiting" });
       },
       (e) => {
         if (this.run !== run || run.generation !== generation) return;
@@ -328,6 +299,26 @@ export class NarrationCoordinator {
       !["waiting", "silent"].includes(this.state.phase)
     )
       return;
+    const missing = narrationSentences(
+      run.text.trim() || run.scene.narration || "",
+    ).filter((x) => !run.spokenSentences.has(x));
+    if (!run.silent && missing.length) {
+      const generation = ++run.generation;
+      this.emit({ phase: "speaking" });
+      void run.speaker.speak(missing.join(" "), run.signal).then(
+        () => {
+          if (this.run !== run || run.generation !== generation) return;
+          missing.forEach((x) => run.spokenSentences.add(x));
+          this.emit({ phase: "waiting" });
+          this.finish(sceneId);
+        },
+        () => {
+          if (this.run === run)
+            this.fail("A fala foi interrompida. Retome ou continue sem áudio.");
+        },
+      );
+      return;
+    }
     const complete = () => {
       if (this.run !== run) return;
       this.clear(run);

@@ -148,7 +148,7 @@ function start(s = scene()) {
     s,
   };
 }
-test("shared script preserves every supplied sentence and gives every visual a spoken explanation", () => {
+test("shared script preserves the supplied answer without adding visual narration", () => {
   const s = scene(),
     p = planContent(s),
     text =
@@ -161,7 +161,13 @@ test("shared script preserves every supplied sentence and gives every visual a s
     "FINAL INTEGRAL DA EXPLICAÇÃO.",
   ])
     assert.ok(script.some((x) => x.text.includes(sentence)));
-  for (const x of script) assert.ok(x.text.length > 20);
+  assert.equal(
+    script
+      .map((x) => x.text)
+      .filter(Boolean)
+      .join(" "),
+    text,
+  );
 });
 test("speech chunks do not silently truncate long explanations or split Unicode units", () => {
   const text =

@@ -38,6 +38,7 @@ export default function CinematicPresentation({
     [keepOpen, setKeepOpen] = useState(false),
     [closing, setClosing] = useState(false),
     [exportHeld, setExportHeld] = useState(false);
+  useEffect(() => setTextOpen(showNarration), [showNarration]);
   const director = useDemonstration(scene, space),
     step = director.step,
     instant = director.instant || reduced;

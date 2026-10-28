@@ -1,3 +1,4 @@
+import { abacusVoiceEvidence } from "./voice-evidence";
 import "server-only";
 import {
   ABACUS_SURFACES,
@@ -114,6 +115,7 @@ export async function answerAbacusHub(message: string, signal?: AbortSignal) {
   return {
     text,
     model: "jk-abacus-hub",
+    abacus: abacusVoiceEvidence(h),
     usage: null,
     provider: "local_operational" as const,
     visual: {

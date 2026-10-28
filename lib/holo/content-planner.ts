@@ -235,10 +235,7 @@ export function planContent(
           ? [{ label: m.title, detail: m.body }]
           : [];
       points.forEach((p, i) =>
-        chunkText(
-          (p.label ? p.label + ". " : "") + p.detail,
-          budget.characters,
-        ).forEach((part, n) =>
+        chunkText(p.detail || p.label, budget.characters).forEach((part, n) =>
           add(
             m,
             {
@@ -258,7 +255,7 @@ export function planContent(
     } else if (m.kind === "timeline") {
       m.events.forEach((e, i) =>
         chunkText(
-          e.label + ". " + e.detail,
+          e.detail || e.label,
           Math.max(80, budget.characters - 30),
         ).forEach((part, n) =>
           add(
