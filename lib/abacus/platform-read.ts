@@ -39,3 +39,26 @@ export async function probeAbacusPlatform(
   };
   return Promise.all(METHODS.map(probe));
 }
+
+/** Never confuse developer-platform access with ChatLLM sessions. */
+export async function answerAbacusPlatformQuestion(message: string, signal?: AbortSignal) {
+  const n = message.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
+  if (!/\\b(abacus|abaqus)\\b/.test(n) ||
+      !/\\b(projetos|deployments|implantacoes|acesso|conexao|permissao)\\b/.test(n) ||
+      !/\\b(verifique|verificar|consulte|consultar|liste|listar|quais|status|tenho|conectad[oa])\\b/.test(n))
+    return null;
+  const checks = await probeAbacusPlatform(process.env.ABACUS_PLATFORM_API_KEY || process.env.ABACUS_API_KEY, signal);
+  const project = checks.find(c=>c.method==="listProjects")!;
+  const deployment = checks.find(c=>c.method==="listDeployments")!;
+  const describe = (label: string, c: AbacusPlatformProbe) =>
+    label + ": " + (c.state==="verified" ? "consulta autenticada confirmada, "+c.count+" registros na resposta" :
+      c.state==="unauthorized" ? "acesso negado ou credencial ausente" :
+      c.state==="invalid_response" ? "resposta não reconhecida; não posso confirmar acesso" :
+      "consulta não confirmada") + ".";
+  return {
+    text:"Verifiquei a API principal da Abacus, separada da RouteLLM. "+
+      describe("Projetos",project)+" "+describe("Deployments",deployment)+
+      " Isso não autoriza acesso às conversas ou aos agentes da interface ChatLLM. Nenhuma operação paga ou alteração foi realizada.",
+    model:"jk-abacus-platform",provider:"local_operational" as const,usage:null,
+  };
+}
