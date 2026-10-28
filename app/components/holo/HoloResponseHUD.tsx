@@ -157,6 +157,7 @@ export default function HoloResponseHUD({
           scene={scene}
           local={[...media, ...local]}
           onExplore={() => setExplore(true)}
+          onStop={close}
         />
       )}
     </aside>

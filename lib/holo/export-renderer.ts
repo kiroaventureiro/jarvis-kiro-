@@ -617,7 +617,7 @@ export async function videoExport(
         position = fraction * plan.length,
         index = Math.min(plan.length - 1, Math.floor(position)),
         step = plan[index],
-        module = scene.modules.find((m) => m.id === step.moduleId)!;
+        module = step.content;
       const cached = mapFrames.get(module.id);
       if (module.kind === "map" && cached) ctx.drawImage(cached, 0, 0);
       else {

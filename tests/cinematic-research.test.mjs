@@ -126,10 +126,10 @@ const samples = async (url) =>
   Response.json(String(url).includes("ibge") ? ibge : bcb);
 test("director plans multiple transient stages, center focus, support and final report", () => {
   const p = presentationPlan(scene());
-  assert.equal(p.length, 4);
+  assert.ok(p.length >= 4);
   assert.equal(p[0].focus, "center");
   assert.equal(p[1].supportId, "map");
-  assert.equal(p.at(-1).id, "conclusion");
+  assert.equal(p.at(-1).content.kind, "report");
   assert.equal(stepAt(p, 0).progress, 0);
   assert.equal(stepAt(p, p[0].duration).index, 1);
   assert.equal(stepAt(p, planDuration(p)).finished, true);
@@ -151,7 +151,7 @@ test("plain answer points move across left, right, center and bottom rather than
     ["left", "right", "center", "bottom"],
   );
   assert.deepEqual(
-    p.slice(0, 4).map((x) => x.point),
+    [...new Set(p.filter((x) => x.point >= 0).map((x) => x.point))],
     [0, 1, 2, 3],
   );
 });
@@ -438,6 +438,9 @@ test("WebM muxer retains explicit duration, VP8 track and ordered timestamps", a
   assert.throws(() => muxVp8([], 1, 1, 2000, 12));
 });
 
-test("official BCB requests respect the verified maximum of twenty observations",()=>{
- for(const source of ECONOMY_SOURCES.filter(s=>s.id!=="ibge"))assert.ok(Number(new URL(source.base).pathname.match(/ultimos\/(\d+)/)[1])<=20);
+test("official BCB requests respect the verified maximum of twenty observations", () => {
+  for (const source of ECONOMY_SOURCES.filter((s) => s.id !== "ibge"))
+    assert.ok(
+      Number(new URL(source.base).pathname.match(/ultimos\/(\d+)/)[1]) <= 20,
+    );
 });

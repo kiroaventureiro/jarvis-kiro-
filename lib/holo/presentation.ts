@@ -1,3 +1,5 @@
+import { planContent, type PresentationSpace } from "./content-planner";
+import type { Highlight } from "./reveal";
 import type { HoloScene, HoloModule } from "./types";
 export type Layout = "left" | "right" | "top" | "bottom" | "center";
 export type DemonstrationStep = {
@@ -8,61 +10,29 @@ export type DemonstrationStep = {
   cue: string;
   duration: number;
   point?: number;
+  content: HoloModule;
+  origin: { item: number; part: number };
+  message: string;
+  highlights: Highlight[];
+  source: HoloScene["source"];
+  minimumMs: number;
+  reveal: {
+    titleMs: number;
+    subtitleStart?: number;
+    bodyStart: number;
+    completeAt: number;
+  };
+  completion: { readMs: number; timeoutMs: number; voiceEnd: number };
+  summarized: boolean;
+  metricTone: string;
+  metricView?: "chart" | "observation" | "combined" | "categories";
+  metricDomain?: { low: number; high: number };
 };
-export function presentationPlan(scene: HoloScene): DemonstrationStep[] {
-  const out: DemonstrationStep[] = [];
-  const modules = scene.modules;
-  for (const m of modules) {
-    if (m.kind === "report" && modules.length === 1 && m.items.length > 1) {
-      for (const [i, p] of m.items.slice(0, 4).entries())
-        out.push({
-          id: m.id + "-" + i,
-          moduleId: m.id,
-          focus: (["left", "right", "center", "bottom"] as Layout[])[i % 4],
-          cue: p.label,
-          duration: Math.max(
-            5500,
-            Math.min(11000, (p.label + p.detail).length * 42),
-          ),
-          point: i,
-        });
-    } else
-      out.push({
-        id: m.id,
-        moduleId: m.id,
-        supportId:
-          m.kind === "metrics"
-            ? modules.find((x) => x.kind === "map")?.id
-            : undefined,
-        focus:
-          m.kind === "map" || m.kind === "metrics" || m.kind === "compare"
-            ? "center"
-            : m.kind === "timeline"
-              ? "right"
-              : out.length % 2
-                ? "right"
-                : "left",
-        cue: m.title,
-        duration:
-          m.kind === "map"
-            ? 8500
-            : m.kind === "metrics"
-              ? 10000
-              : m.kind === "timeline"
-                ? 11000
-                : 7500,
-      });
-  }
-  const report = modules.find((m) => m.kind === "report");
-  if (report && (out.length > 1 || out[0]?.point !== undefined))
-    out.push({
-      id: "conclusion",
-      moduleId: report.id,
-      focus: "center",
-      cue: "Síntese e relatório completo",
-      duration: 8000,
-    });
-  return out.slice(0, 12);
+export function presentationPlan(
+  scene: HoloScene,
+  space?: PresentationSpace,
+): DemonstrationStep[] {
+  return planContent(scene, space);
 }
 export function planDuration(plan: DemonstrationStep[]) {
   return plan.reduce((s, x) => s + x.duration, 0);

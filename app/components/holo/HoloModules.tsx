@@ -1,72 +1,15 @@
 "use client";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
+import HoloTypewriter from "./HoloTypewriter";
+import { HoloPlaybackContext } from "./HoloPlaybackContext";
 import { chartRange, chartPosition } from "../../../lib/holo/presentation";
 import { connectionPresentation } from "../../../lib/holo/validation";
 import dynamic from "next/dynamic";
 import type { HoloModule, HoloLocalMedia } from "../../../lib/holo/types";
 type Of<K extends HoloModule["kind"]> = Extract<HoloModule, { kind: K }>;
-export const HoloPlaybackContext = createContext({
-  playing: true,
-  instant: false,
-});
-export function HoloTextStream({
-  text,
-  transient = false,
-}: {
-  text: string;
-  transient?: boolean;
-}) {
-  const playback = useContext(HoloPlaybackContext);
-  const [count, setCount] = useState(0),
-    [gone, setGone] = useState(false);
-  const countRef = useRef(0);
-  useEffect(() => {
-    countRef.current = 0;
-    setCount(0);
-    setGone(false);
-  }, [text]);
-  useEffect(() => {
-    if (
-      playback.instant ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
-      countRef.current = text.length;
-      setCount(text.length);
-      return;
-    }
-    if (!playback.playing) return;
-    const timer = setInterval(() => {
-      countRef.current = Math.min(text.length, countRef.current + 1);
-      setCount(countRef.current);
-      if (countRef.current >= text.length) clearInterval(timer);
-    }, 30);
-    return () => clearInterval(timer);
-  }, [text, playback.playing, playback.instant]);
-  useEffect(() => {
-    if (!transient || !playback.playing) return;
-    const timer = setTimeout(() => setGone(true), 9000);
-    return () => clearTimeout(timer);
-  }, [text, transient, playback.playing]);
-  return (
-    <span
-      className={"holo-text-stream " + (gone ? "is-faded" : "")}
-      aria-label={text}
-    >
-      <span aria-hidden="true">
-        {text.slice(0, count)}
-        <i className={count < text.length ? "holo-caret" : ""} />
-      </span>
-    </span>
-  );
-}
+export { HoloPlaybackContext } from "./HoloPlaybackContext";
+export const HoloTextStream = HoloTypewriter;
 export function HoloPanel({
   id,
   title,
@@ -74,6 +17,7 @@ export function HoloPanel({
   children,
   onClose,
   library = false,
+  note,
 }: {
   id: string;
   title: string;
@@ -81,7 +25,9 @@ export function HoloPanel({
   children: ReactNode;
   onClose: () => void;
   library?: boolean;
+  note?: string;
 }) {
+  const playback = useContext(HoloPlaybackContext);
   const [expanded, setExpanded] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
   return (
@@ -99,8 +45,16 @@ export function HoloPanel({
     >
       <header className="holo-panel-heading">
         <div>
-          <span className="holo-module-code">JK / {kind.toUpperCase()}</span>
-          <h3 id={id + "-heading"}>{title}</h3>
+          <span className="holo-module-code">
+            {note || "JK / " + kind.toUpperCase()}
+          </span>
+          <h3 id={id + "-heading"}>
+            {playback.automatic ? (
+              <HoloTextStream text={title} role="title" />
+            ) : (
+              title
+            )}
+          </h3>
         </div>
         <div className="holo-panel-controls">
           <button
@@ -130,11 +84,19 @@ export function HoloPanel({
 }
 export const HoloWorldMap = dynamic(() => import("./HoloWorldMap"), {
   ssr: false,
-  loading: () => <p role="status">Preparando mapa-múndi…</p>,
+  loading: () => (
+    <p role="status" data-holo-pending>
+      Preparando mapa-múndi…
+    </p>
+  ),
 });
 export const HoloMap = dynamic(() => import("./HoloMap"), {
   ssr: false,
-  loading: () => <p role="status">Preparando malha cartográfica…</p>,
+  loading: () => (
+    <p role="status" data-holo-pending>
+      Preparando malha cartográfica…
+    </p>
+  ),
 });
 export function HoloTimeline({
   module: m,
@@ -337,23 +299,42 @@ export function HoloCompare({ module: m }: { module: Of<"compare"> }) {
 export function HoloMetrics({
   module: m,
   progress = 1,
+  automatic = false,
+  view = "combined",
+  domain,
 }: {
+  view?: "chart" | "observation" | "combined" | "categories";
+  domain?: { low: number; high: number };
+  automatic?: boolean;
   module: Of<"metrics">;
   progress?: number;
 }) {
-  const { low, high } = chartRange(m.values.map((v) => v.value)),
+  const { low, high } = domain || chartRange(m.values.map((v) => v.value)),
     pos = (v: number) => chartPosition(v, low, high),
     zero = pos(0);
   const points = m.values.map((v, i) => [
-    16 + (i * 268) / Math.max(1, m.values.length - 1),
-    116 - pos(v.value) * 96,
+    24 + (i * 238) / Math.max(1, m.values.length - 1),
+    132 - pos(v.value) * 104,
   ]);
   return (
-    <div className={"holo-metrics style-" + m.style}>
-      <p className="holo-caption">{m.unit}</p>
-      {m.style === "line" || m.style === "radar" ? (
+    <div
+      className={"holo-metrics style-" + m.style}
+      data-holo-chart-ready={view === "observation" || progress >= 1}
+    >
+      {!automatic || view === "chart" || view === "categories" ? (
+        <p className="holo-caption">
+          {automatic ? (
+            <HoloTextStream text={m.unit} role="metadata" />
+          ) : (
+            m.unit
+          )}
+        </p>
+      ) : null}
+      {view !== "observation" &&
+      view !== "categories" &&
+      (m.style === "line" || m.style === "radar") ? (
         <svg
-          viewBox="0 0 320 150"
+          viewBox="0 0 340 175"
           className="holo-chart"
           role="img"
           aria-label={
@@ -362,9 +343,9 @@ export function HoloMetrics({
             m.values.map((v) => v.label + ": " + v.value).join(", ")
           }
         >
-          <path d="M16 10V116H290" className="holo-chart-axis" />
+          <path d="M24 20V132H267" className="holo-chart-axis" />
           <path
-            d={"M16 " + (116 - zero * 96) + "H290"}
+            d={"M24 " + (132 - zero * 104) + "H267"}
             className="holo-chart-axis"
           />
           {m.style === "line" ? (
@@ -389,73 +370,158 @@ export function HoloMetrics({
             />
           )}
           {points
+            .map((p, index) => ({ p, index }))
             .filter(
-              (_, i) => i % Math.max(1, Math.floor(points.length / 4)) === 0,
+              ({ index }) =>
+                index === 0 ||
+                index === points.length - 1 ||
+                index % Math.max(1, Math.floor(points.length / 4)) === 0,
             )
-            .map((p, i) => (
-              <text key={i} x={p[0]} y="137" fill="#83b7ce" fontSize="9">
-                {
-                  m.values[i * Math.max(1, Math.floor(points.length / 4))]
-                    ?.label
-                }
+            .map(({ p, index }) => (
+              <text
+                key={index}
+                x={p[0]}
+                y="158"
+                textAnchor={index === points.length - 1 ? "end" : "start"}
+                fill="#b9d1df"
+                fontSize={automatic ? 12 : 10}
+              >
+                {m.values[index]?.label}
               </text>
             ))}
-          <text x="292" y="20" fill="#83b7ce" fontSize="9">
-            {high.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+          <text x="273" y="28" fill="#b9d1df" fontSize={automatic ? 12 : 10}>
+            {high.toLocaleString("pt-BR", {
+              maximumFractionDigits: 2,
+              notation: "compact",
+            })}
           </text>
-          <text x="292" y="116" fill="#83b7ce" fontSize="9">
-            {low.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}
+          <text x="273" y="132" fill="#b9d1df" fontSize={automatic ? 12 : 10}>
+            {low.toLocaleString("pt-BR", {
+              maximumFractionDigits: 2,
+              notation: "compact",
+            })}
           </text>
         </svg>
       ) : null}
-      <dl>
-        {m.values
-          .slice(
-            0,
-            progress < 1
-              ? Math.max(1, Math.ceil(progress * m.values.length))
-              : m.values.length,
-          )
-          .map((v, i) => (
-            <div key={i} className="holo-metric">
-              <dt>{v.label}</dt>
-              <dd>
-                {v.value.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
-              </dd>
-              {m.style === "bars" ? (
+      {automatic ? (
+        view === "categories" ? (
+          <dl className="holo-metric-categories">
+            {m.values.map((v, i) => (
+              <div className="holo-metric" key={i}>
+                <dt>
+                  <HoloTextStream text={v.label} />
+                </dt>
+                <dd>
+                  <HoloTextStream
+                    text={v.value.toLocaleString("pt-BR", {
+                      maximumFractionDigits: 4,
+                    })}
+                  />
+                </dd>
                 <span className="holo-metric-track" aria-hidden="true">
                   <i
                     style={{
                       width:
-                        (Math.abs(v.value) /
+                        ((progress * Math.abs(v.value)) /
                           (Math.max(Math.abs(low), Math.abs(high)) || 1)) *
                           100 +
                         "%",
-                      background: v.value < 0 ? "#e9bb72" : undefined,
                     }}
                   />
                 </span>
-              ) : m.style === "rings" ? (
-                <svg viewBox="0 0 40 40" aria-hidden="true">
-                  <circle cx="20" cy="20" r="16" className="holo-chart-axis" />
-                  <circle
-                    cx="20"
-                    cy="20"
-                    r="16"
-                    fill="none"
-                    stroke="currentColor"
-                    pathLength="100"
-                    strokeDasharray={pos(v.value) * 100 + " 100"}
-                  />
-                </svg>
-              ) : null}
-            </div>
-          ))}
-      </dl>
-      <small>
-        Valores recebidos, datas e unidades identificados; sem projeção de
-        números ausentes.
-      </small>
+              </div>
+            ))}
+          </dl>
+        ) : view === "chart" ? (
+          <p className="holo-chart-note">
+            Faixa observada:{" "}
+            {low.toLocaleString("pt-BR", { maximumFractionDigits: 4 })} a{" "}
+            {high.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}.<br />
+            {m.values.some((v) => v.period) ? "Período" : "Rótulos"}:{" "}
+            {m.values[0]?.period || m.values[0]?.label} a{" "}
+            {m.values.at(-1)?.period || m.values.at(-1)?.label}.
+          </p>
+        ) : (
+          <div className="holo-metric-focus">
+            <span>
+              Última observação ·{" "}
+              {m.values.at(-1)?.period || m.values.at(-1)?.label}
+            </span>
+            <strong>
+              <HoloTextStream
+                text={m.values
+                  .at(-1)!
+                  .value.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
+              />
+            </strong>
+            <span className="holo-metric-unit">
+              <HoloTextStream text={m.unit} role="metadata" />
+            </span>
+            <small>
+              Período da série: {m.values[0]?.period || m.values[0]?.label} a{" "}
+              {m.values.at(-1)?.period || m.values.at(-1)?.label}.
+            </small>
+          </div>
+        )
+      ) : (
+        <dl>
+          {m.values
+            .slice(
+              0,
+              progress < 1
+                ? Math.max(1, Math.ceil(progress * m.values.length))
+                : m.values.length,
+            )
+            .map((v, i) => (
+              <div key={i} className="holo-metric">
+                <dt>{v.label}</dt>
+                <dd>
+                  {v.value.toLocaleString("pt-BR", {
+                    maximumFractionDigits: 4,
+                  })}
+                </dd>
+                {m.style === "bars" ? (
+                  <span className="holo-metric-track" aria-hidden="true">
+                    <i
+                      style={{
+                        width:
+                          (Math.abs(v.value) /
+                            (Math.max(Math.abs(low), Math.abs(high)) || 1)) *
+                            100 +
+                          "%",
+                        background: v.value < 0 ? "#e9bb72" : undefined,
+                      }}
+                    />
+                  </span>
+                ) : m.style === "rings" ? (
+                  <svg viewBox="0 0 40 40" aria-hidden="true">
+                    <circle
+                      cx="20"
+                      cy="20"
+                      r="16"
+                      className="holo-chart-axis"
+                    />
+                    <circle
+                      cx="20"
+                      cy="20"
+                      r="16"
+                      fill="none"
+                      stroke="currentColor"
+                      pathLength="100"
+                      strokeDasharray={pos(v.value) * 100 + " 100"}
+                    />
+                  </svg>
+                ) : null}
+              </div>
+            ))}
+        </dl>
+      )}
+      {!automatic ? (
+        <small>
+          Valores recebidos, datas e unidades identificados; sem projeção de
+          números ausentes.
+        </small>
+      ) : null}
     </div>
   );
 }

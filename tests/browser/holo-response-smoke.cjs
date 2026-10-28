@@ -210,14 +210,12 @@ const assets = [
         .getByRole("button", { name: "Enviar mensagem", exact: true })
         .click();
       await page.locator("main[data-state=idle]").waitFor();
-      if (
-        await page
-          .getByRole("button", { name: "Explorar quadros", exact: true })
-          .count()
-      )
-        await page
-          .getByRole("button", { name: "Explorar quadros", exact: true })
-          .click();
+      await page.locator(".cinema-options>summary").waitFor();
+      await page.locator(".cinema-options>summary").click();
+      await page
+        .getByRole("button", { name: "Explorar quadros", exact: true })
+        .click();
+      await page.locator(".holo-panel-grid").waitFor();
     }
     await send("JK, me fale da história do Brasil");
     const hud = page.getByRole("complementary", {
@@ -518,9 +516,11 @@ const assets = [
       await p
         .getByRole("complementary", { name: "Resultados holográficos" })
         .waitFor();
+      await p.locator(".cinema-options>summary").click();
       await p
         .getByRole("button", { name: "Explorar quadros", exact: true })
         .click();
+      await p.locator(".holo-panel-grid").waitFor();
       assert.ok(
         await p.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -568,6 +568,9 @@ const assets = [
       } else {
         await p
           .getByRole("button", { name: "Voltar à demonstração", exact: true })
+          .click();
+        await p
+          .getByRole("button", { name: "Ler resposta em texto", exact: true })
           .click();
         await p.locator(".cinema-full-text").waitFor();
       }

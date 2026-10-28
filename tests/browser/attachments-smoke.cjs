@@ -151,6 +151,9 @@ const png =
       await page.getByRole("button", { name: "Enviar mensagem" }).click();
       await page.getByText("Análise concluída", { exact: true }).waitFor();
       await page
+        .getByRole("button", { name: "Ler resposta em texto", exact: true })
+        .click();
+      await page
         .locator(".cinema-full-text")
         .getByText(answer, { exact: true })
         .waitFor();

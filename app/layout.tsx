@@ -2,6 +2,7 @@ import "./style.css";
 import "./hologram.css";
 import "./holo-response.css";
 import "./cinematic.css";
+import "./holo-v2.css";
 import { HoloSessionProvider } from "./components/holo/HoloSession";
 import type { Metadata } from "next";
 export const metadata: Metadata = {

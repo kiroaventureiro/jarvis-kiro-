@@ -1,0 +1,720 @@
+@font-face {
+  font-family: "JK Inter";
+  src: url("/fonts/InterVariable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+:root {
+  --holo-font:
+    "JK Inter", Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --holo-ink: #e7f2fc;
+  --holo-secondary: #a7bacd;
+  --holo-cyan: #71ddf4;
+  --holo-blue: #9bc1ff;
+  --holo-positive: #7ae1c1;
+  --holo-amber: #f2ce86;
+  --holo-coral: #ffab9b;
+  --holo-violet: #d2b7ff;
+}
+body {
+  font-family: var(--holo-font);
+  font-optical-sizing: auto;
+}
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+.holo-response-layer,
+.holo-library {
+  font-family: var(--holo-font);
+  color: var(--holo-ink);
+  font-synthesis: none;
+}
+.holo-scene-heading h2 {
+  font-size: clamp(20px, 2vw, 28px);
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  text-shadow: none;
+}
+.holo-scene-heading p,
+.holo-eyebrow {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #a6c5d5;
+}
+.is-cinematic > .holo-scene-heading {
+  max-width: min(900px, 82vw);
+}
+.holo-experience-v2.cinema-root {
+  inset: 98px 0 0;
+}
+.holo-experience-v2 .cinema-director {
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+  max-width: none;
+  min-height: 36px;
+  z-index: 14;
+}
+.holo-experience-v2 .cinema-state {
+  font-size: 12px;
+  letter-spacing: 0.015em;
+  text-transform: none;
+  color: var(--holo-secondary);
+  font-weight: 450;
+}
+.cinema-essential-controls {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  pointer-events: auto;
+}
+.cinema-essential-controls > button {
+  width: 36px;
+  min-height: 36px;
+  padding: 6px;
+  border-radius: 8px;
+  font-size: 15px;
+  background: #061b2bdf;
+  border: 1px solid #5dcfe84d;
+  color: #d9f6ff;
+}
+.cinema-options {
+  position: relative;
+  pointer-events: auto;
+  font-size: 12px;
+}
+.cinema-options > summary {
+  cursor: pointer;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: #cae3ee;
+  border-radius: 8px;
+  border: 1px solid #78d9f533;
+  background: #061b2bdf;
+}
+.cinema-options > div {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  min-width: 235px;
+  background: #041526f5;
+  border: 1px solid #54c9ee66;
+  box-shadow: 0 15px 35px #0009;
+  padding: 16px;
+  display: grid;
+  gap: 14px;
+  z-index: 40;
+}
+.cinema-options label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  color: #d5e7f4;
+  font-size: 13px;
+}
+.cinema-options select {
+  min-width: 96px;
+  border-radius: 5px;
+  padding: 6px 8px;
+  background: #071e31;
+  color: #e7f2fc;
+  font-size: 13px;
+}
+.cinema-options .cinema-motion-choice {
+  justify-content: flex-start;
+}
+.cinema-motion-choice input {
+  accent-color: #50e6f1;
+  width: 17px;
+  height: 17px;
+}
+.cinema-options button {
+  padding: 8px 10px;
+  font-size: 13px;
+  text-align: left;
+  border-radius: 6px;
+  background: #073046;
+  color: #dcf8ff;
+}
+.holo-experience-v2 .cinema-primary {
+  top: 64px;
+  bottom: 50px;
+  min-height: 0;
+  transition: none;
+}
+.holo-experience-v2 .cinema-primary.placement-left {
+  left: 1%;
+  width: min(580px, 48vw);
+}
+.holo-experience-v2 .cinema-primary.placement-right {
+  right: 1%;
+  width: min(580px, 48vw);
+}
+.holo-experience-v2 .cinema-primary.placement-center {
+  left: 10%;
+  right: 10%;
+}
+.holo-experience-v2 .cinema-primary.placement-top {
+  left: 20%;
+  right: 20%;
+  top: 56px;
+  bottom: 24%;
+}
+.holo-experience-v2 .cinema-primary.placement-bottom {
+  left: 18%;
+  right: 18%;
+  top: 22%;
+  bottom: 46px;
+}
+.holo-experience-v2:has(.cinema-support) .placement-center {
+  left: 26%;
+  right: 1%;
+}
+.holo-experience-v2 .holo-panel-heading {
+  padding: 18px 20px 15px;
+  flex-shrink: 0;
+}
+.holo-experience-v2 .holo-module-code {
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  color: #9cb7cb;
+  font-weight: 500;
+}
+.holo-experience-v2 .holo-panel-heading h3 {
+  font-size: clamp(21px, 1.75vw, 27px);
+  line-height: 1.3;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  color: #eaf6ff;
+  margin-top: 7px;
+  text-shadow: none;
+  overflow-wrap: anywhere;
+}
+.holo-experience-v2 .holo-panel-body {
+  font-size: 17px;
+  line-height: 1.7;
+  padding: 22px;
+  overflow: hidden !important;
+  scrollbar-width: none;
+  min-height: 0;
+  color: #d6e4ef;
+  text-shadow: none;
+}
+.holo-experience-v2 .holo-panel-body::-webkit-scrollbar {
+  display: none;
+}
+.holo-auto-content {
+  min-width: 0;
+  padding-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.holo-auto-message {
+  font-size: clamp(17px, 1.35vw, 20px);
+  line-height: 1.7;
+  font-weight: 440;
+  margin: 0;
+  white-space: pre-line;
+  color: #dbeaf3;
+  text-shadow: none;
+}
+.holo-auto-content h4 {
+  font-size: 19px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: #e7f2fc;
+  margin: 0 0 14px;
+}
+.holo-auto-content a,
+.holo-experience-v2 .holo-action-link,
+.is-automatic-map > a {
+  font-size: 12px;
+  line-height: 1.6;
+  margin-top: 18px;
+  color: #9bcfff;
+  display: inline-block;
+}
+.holo-period {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 15px;
+  color: var(--holo-violet);
+  font-variant-numeric: tabular-nums;
+}
+.holo-timeline-auto article {
+  border-left: 2px solid #8fc8f677;
+  padding-left: 20px;
+}
+.holo-status-label {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 8px 0 18px;
+  color: var(--holo-amber);
+}
+[data-connection-state="operational_authorized"] .holo-status-label {
+  color: var(--holo-positive);
+}
+[data-connection-state="temporarily_unavailable"] .holo-status-label {
+  color: var(--holo-coral);
+}
+.holo-auto-content time {
+  display: block;
+  font-size: 12px;
+  color: #aac0d0;
+  line-height: 1.6;
+  margin-top: 18px;
+}
+.cinema-summary-note {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 6px 4px;
+  color: #a4bccc;
+  text-shadow: none;
+}
+.holo-highlight {
+  background: none;
+  color: inherit;
+  font-weight: 650;
+  padding: 0;
+  border: 0;
+  text-shadow: none;
+}
+.holo-highlight.is-region {
+  color: var(--holo-blue);
+}
+.holo-highlight.is-date,
+.holo-highlight.is-reference {
+  color: var(--holo-violet);
+}
+.holo-highlight.is-number,
+.holo-highlight.is-attention {
+  color: var(--holo-amber);
+}
+.holo-highlight.is-metric {
+  color: var(--holo-cyan);
+}
+.holo-highlight.is-positive {
+  color: var(--holo-positive);
+}
+.holo-highlight.is-critical {
+  color: var(--holo-coral);
+}
+.holo-role-title .holo-caret {
+  height: 0.9em;
+}
+.holo-sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.holo-experience-v2 .holo-caption {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #b8cedd;
+  margin-bottom: 12px;
+}
+.holo-experience-v2 .holo-metrics {
+  --series-color: var(--holo-cyan);
+  font-variant-numeric: tabular-nums;
+}
+.holo-experience-v2[data-tone="amber"] .holo-metrics {
+  --series-color: var(--holo-amber);
+}
+.holo-experience-v2[data-tone="violet"] .holo-metrics {
+  --series-color: var(--holo-violet);
+}
+.holo-experience-v2[data-tone="turquoise"] .holo-metrics {
+  --series-color: var(--holo-positive);
+}
+.holo-experience-v2 .holo-chart-line {
+  stroke: var(--series-color);
+  stroke-width: 2;
+  transition: stroke-dashoffset 0.1s linear;
+  filter: drop-shadow(
+    0 0 3px color-mix(in srgb, var(--series-color), transparent 65%)
+  );
+}
+.holo-experience-v2[data-mentioned="true"] .holo-chart-line {
+  stroke-width: 2.8;
+  filter: drop-shadow(0 0 6px var(--series-color));
+}
+.holo-experience-v2 .holo-chart-axis {
+  stroke: #47728b;
+  stroke-width: 0.75;
+}
+.holo-experience-v2 .holo-chart text {
+  font-family: var(--holo-font);
+  font-weight: 500;
+  fill: #b9d1df;
+}
+.holo-experience-v2 .holo-metrics .holo-chart {
+  min-height: 140px;
+  max-height: 27dvh;
+  width: 100%;
+  margin: 5px 0 14px;
+}
+.holo-metric-focus {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 18px;
+}
+.holo-metric-focus > span {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #bbcfdd;
+}
+.holo-metric-focus > strong {
+  font-size: clamp(22px, 2.2vw, 32px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  color: var(--series-color);
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+.holo-metric-focus > small,
+.holo-experience-v2 .holo-metrics > small {
+  font-size: 12px;
+  line-height: 1.65;
+  color: #acbfce;
+}
+.is-automatic-map .holo-map-selection {
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 600;
+  color: var(--holo-blue);
+  margin: 14px 0 12px;
+}
+.holo-experience-v2 .is-automatic-map .holo-world-viewport {
+  aspect-ratio: 2;
+  min-height: 130px;
+  max-height: 31dvh;
+}
+.holo-experience-v2 .is-automatic-map .holo-world-viewport svg {
+  min-height: 130px;
+}
+.is-automatic-map .holo-world-viewport g {
+  transition: transform 1.1s ease;
+  transform-origin: 0 0;
+}
+.is-automatic-map path[aria-hidden="true"] {
+  cursor: default;
+}
+.is-automatic-map .holo-world-viewport path.is-selected {
+  fill: #226b8f;
+  stroke: #c1e5ff;
+  stroke-width: 1.4;
+}
+.holo-experience-v2 .cinema-support {
+  top: 38%;
+  bottom: 62px;
+  width: 23%;
+  opacity: 0.85;
+}
+.holo-experience-v2 .cinema-support .holo-panel-heading {
+  padding: 12px;
+}
+.holo-experience-v2 .cinema-support .holo-panel-heading h3 {
+  font-size: 17px;
+}
+.holo-experience-v2 .cinema-support .holo-panel-body {
+  font-size: 12px;
+  padding: 12px;
+}
+.holo-experience-v2 .cinema-support .holo-caption,
+.holo-experience-v2 .cinema-support .is-automatic-map > a {
+  display: none;
+}
+.holo-experience-v2 .cinema-support .holo-map-selection {
+  font-size: 15px;
+}
+.holo-experience-v2 .cinema-text-access {
+  bottom: -20px;
+}
+.holo-experience-v2 .cinema-text-access > button,
+.holo-experience-v2 .cinema-sources {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.cinema-text-access > small {
+  display: block;
+  font-size: 11px;
+  color: #a7bacd;
+}
+.holo-experience-v2 .cinema-sources > div {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.holo-experience-v2 .cinema-full-text {
+  font-size: 16px;
+  line-height: 1.75;
+  max-height: 50dvh;
+  padding: 22px;
+}
+.cinema-flow-notice {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 39px;
+  font-size: 12px;
+  color: #f2ce86;
+  z-index: 20;
+  background: #15202be6;
+  padding: 8px 12px;
+  border-radius: 6px;
+  pointer-events: auto;
+}
+.holo-experience-v2[data-motion="static"] *,
+.holo-experience-v2[data-playing="false"] .holo-world-viewport path {
+  animation-play-state: paused !important;
+}
+.holo-experience-v2[data-motion="static"] .cinema-primary,
+.holo-experience-v2[data-motion="static"] .cinema-support,
+.holo-experience-v2[data-motion="static"] .holo-world-viewport g {
+  animation: none !important;
+  transition: none !important;
+}
+@media (max-width: 850px) {
+  .is-cinematic > .holo-scene-heading {
+    max-width: none;
+    min-height: 58px;
+  }
+  .holo-scene-heading h2 {
+    font-size: 21px;
+    max-width: 75%;
+    line-height: 1.3;
+  }
+  .holo-scene-heading p,
+  .holo-eyebrow {
+    font-size: 11px;
+  }
+  .holo-experience-v2.cinema-root {
+    inset: 98px 0 0;
+  }
+  .holo-experience-v2 .cinema-state {
+    font-size: 11px;
+    max-width: 50%;
+  }
+  .cinema-essential-controls {
+    gap: 5px;
+  }
+  .cinema-essential-controls > button {
+    width: 34px;
+    min-height: 34px;
+  }
+  .cinema-options > summary {
+    min-height: 34px;
+    font-size: 11px;
+    padding: 0 9px;
+  }
+  .holo-experience-v2 .cinema-primary.placement-left,
+  .holo-experience-v2 .cinema-primary.placement-right,
+  .holo-experience-v2 .cinema-primary.placement-center,
+  .holo-experience-v2 .cinema-primary.placement-top,
+  .holo-experience-v2 .cinema-primary.placement-bottom,
+  .holo-experience-v2:has(.cinema-support) .placement-center {
+    left: 0;
+    right: 0;
+    width: auto;
+    top: 52px;
+    bottom: 43px;
+  }
+  .holo-experience-v2 .holo-panel-heading {
+    padding: 15px;
+  }
+  .holo-experience-v2 .holo-panel-heading h3 {
+    font-size: 21px;
+    line-height: 1.3;
+  }
+  .holo-experience-v2 .holo-panel-body {
+    font-size: 17px;
+    line-height: 1.65;
+    padding: 17px;
+  }
+  .holo-auto-message {
+    font-size: 17px;
+    line-height: 1.65;
+  }
+  .holo-experience-v2 .holo-module-code {
+    font-size: 10px;
+  }
+  .holo-experience-v2 .holo-metrics .holo-chart {
+    min-height: 105px;
+    max-height: 22dvh;
+  }
+  .holo-experience-v2 .is-automatic-map .holo-world-viewport,
+  .holo-experience-v2 .is-automatic-map .holo-world-viewport svg {
+    min-height: 110px;
+  }
+  .holo-experience-v2 .is-automatic-map .holo-map-selection {
+    font-size: 18px;
+  }
+  .holo-experience-v2 .cinema-text-access > button,
+  .holo-experience-v2 .cinema-sources {
+    font-size: 11px;
+  }
+  .cinema-summary-note {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .has-attachments .is-cinematic > .holo-scene-heading {
+    display: none;
+  }
+  .has-attachments .holo-experience-v2.cinema-root {
+    inset: 0;
+  }
+  .has-attachments .holo-experience-v2 .cinema-primary {
+    top: 52px !important;
+  }
+}
+@media (max-height: 600px) {
+  .holo-response-layer.is-cinematic {
+    top: 60px;
+    bottom: 115px;
+  }
+  .is-cinematic > .holo-scene-heading {
+    min-height: 34px;
+  }
+  .is-cinematic > .holo-scene-heading > div:first-child {
+    display: none;
+  }
+  .holo-experience-v2.cinema-root {
+    inset: 40px 0 0;
+  }
+  .holo-experience-v2 .cinema-primary.placement-left,
+  .holo-experience-v2 .cinema-primary.placement-right,
+  .holo-experience-v2 .cinema-primary.placement-center,
+  .holo-experience-v2 .cinema-primary.placement-top,
+  .holo-experience-v2 .cinema-primary.placement-bottom {
+    top: 47px;
+    bottom: 28px;
+  }
+  .holo-experience-v2 .holo-panel-heading {
+    padding: 10px 14px;
+  }
+  .holo-experience-v2 .holo-panel-heading h3 {
+    font-size: 20px;
+  }
+  .holo-experience-v2 .holo-panel-body {
+    padding: 14px;
+  }
+  .holo-experience-v2 .holo-metrics .holo-chart {
+    min-height: 80px;
+    max-height: 20dvh;
+  }
+  .holo-experience-v2 .cinema-support {
+    display: none;
+  }
+  .holo-experience-v2:has(.cinema-support) .placement-center {
+    left: 0;
+    right: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-experience-v2 *,
+  .holo-experience-v2 .holo-world-viewport g {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Keep complete plots in view; compact screens separate chart and observation. */
+.holo-experience-v2 .holo-combined-unit {
+  display: none;
+}
+.holo-experience-v2 .holo-metrics .holo-chart {
+  height: clamp(110px, 20dvh, 220px);
+  min-height: 110px;
+  max-height: 220px;
+}
+.holo-experience-v2 .holo-metric-focus {
+  gap: 6px;
+  margin: 4px 0 0;
+}
+.holo-experience-v2 .holo-metric-unit {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #c2d5e2;
+}
+.holo-chart-note {
+  font-size: 13px;
+  line-height: 1.65;
+  color: #bdd0df;
+  margin: 8px 0;
+}
+@media (max-width: 850px) {
+  .jarvis-stage:has(.holo-experience-v2) .presence {
+    opacity: 0 !important;
+    pointer-events: none;
+  }
+  .is-cinematic > .holo-scene-heading {
+    display: block;
+    min-height: 88px;
+  }
+  .is-cinematic > .holo-scene-heading > div:first-child {
+    padding-top: 34px;
+    width: 100%;
+  }
+  .is-cinematic > .holo-scene-heading .holo-eyebrow,
+  .is-cinematic > .holo-scene-heading p {
+    display: none;
+  }
+  .is-cinematic > .holo-scene-heading h2 {
+    font-size: 20px;
+    line-height: 1.3;
+    width: 100%;
+    max-width: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-top: 4px;
+  }
+  .is-cinematic > .holo-scene-heading .holo-scene-actions {
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+  .holo-experience-v2 .cinema-text-access,
+  .holo-experience-v2 .cinema-sources {
+    bottom: 10px;
+  }
+  .cinema-text-access > small,
+  .holo-experience-v2 .cinema-summary-note {
+    display: none;
+  }
+  .holo-experience-v2 .holo-metrics .holo-chart {
+    height: 110px;
+    min-height: 110px;
+    max-height: 110px;
+  }
+}
+
+@media (max-width: 850px) {
+  .is-cinematic:has(.cinema-root[data-kind="metrics"])
+    > .holo-scene-heading
+    > div:first-child {
+    display: none;
+  }
+  .holo-experience-v2.cinema-root[data-kind="metrics"] {
+    top: 40px;
+  }
+}
+
+.holo-highlight.is-person {
+  color: var(--holo-violet);
+}

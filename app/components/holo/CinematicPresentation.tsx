@@ -1,30 +1,73 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { HoloScene, HoloLocalMedia } from "../../../lib/holo/types";
-import {
-  HoloPanel,
-  HoloModuleView,
-  HoloTextStream,
-  HoloPlaybackContext,
-} from "./HoloModules";
+import { HoloPanel, HoloModuleView } from "./HoloModules";
+import { HoloPlaybackContext } from "./HoloPlaybackContext";
+import HoloAutomaticContent from "./HoloAutomaticContent";
 import { useDemonstration } from "./useDemonstration";
+import { useHoloAutoFlow } from "./useHoloAutoFlow";
+import { DEFAULT_PRESENTATION_SPACE } from "../../../lib/holo/content-planner";
+const SUPPORT_PLAYBACK = {
+  playing: false,
+  instant: true,
+  automatic: true,
+  elapsed: 0,
+  bodyStart: 0,
+};
 export default function CinematicPresentation({
   scene,
   local,
   onExplore,
+  onStop,
   showNarration = false,
 }: {
-  showNarration?: boolean;
   scene: HoloScene;
   local: HoloLocalMedia[];
   onExplore: () => void;
+  onStop: () => void;
+  showNarration?: boolean;
 }) {
-  const director = useDemonstration(scene),
+  const root = useRef<HTMLDivElement>(null),
+    primaryRef = useRef<HTMLDivElement>(null),
+    optionsRef = useRef<HTMLDetailsElement>(null),
+    [space, setSpace] = useState(DEFAULT_PRESENTATION_SPACE),
+    [reduced, setReduced] = useState(false),
+    [textOpen, setTextOpen] = useState(false);
+  const director = useDemonstration(scene, space),
     step = director.step,
-    [textOpen, setTextOpen] = useState(showNarration);
-  useEffect(() => setTextOpen(showNarration), [showNarration]);
-  const primary = scene.modules.find((m) => m.id === step?.moduleId),
-    support = scene.modules.find((m) => m.id === step?.supportId);
+    instant = director.instant || reduced;
+  useHoloAutoFlow({
+    root: primaryRef,
+    stepId: step?.id || "",
+    playing: director.playing,
+    instant,
+    onEvidence: director.reportFlow,
+  });
+  useEffect(() => {
+    if (!root.current) return;
+    const element = root.current,
+      resize = new ResizeObserver(() => {
+        const rect = element.getBoundingClientRect();
+        setSpace((old) =>
+          Math.abs(old.width - rect.width) < 3 &&
+          Math.abs(old.height - rect.height) < 3
+            ? old
+            : {
+                width: Math.max(180, Math.round(rect.width)),
+                height: Math.max(100, Math.round(rect.height)),
+              },
+        );
+      });
+    resize.observe(element);
+    return () => resize.disconnect();
+  }, []);
+  useEffect(() => {
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
   useEffect(() => {
     window.dispatchEvent(
       new CustomEvent("jk-core-focus", {
@@ -37,193 +80,219 @@ export default function CinematicPresentation({
       );
     };
   }, [step?.focus]);
-  if (!step || !primary) return null;
+  if (!step) return null;
+  const support = scene.modules.find((m) => m.id === step.supportId);
   return (
-    <HoloPlaybackContext.Provider
-      value={{
-        playing: director.playing,
-        instant: director.manual || director.finished,
-      }}
+    <div
+      ref={root}
+      className="cinema-root holo-experience-v2"
+      data-focus={step.focus}
+      data-playing={director.playing}
+      data-complete={director.finished}
+      data-sync={director.sync ? "speech" : "guided"}
+      data-motion={instant ? "static" : "animated"}
+      data-active-hologram={step.id}
+      data-tone={step.metricTone}
+      data-kind={step.content.kind}
+      data-mentioned={
+        !!director.spokenTerm &&
+        step.content.title
+          .toLowerCase()
+          .includes(director.spokenTerm.toLowerCase())
+      }
     >
-      <div
-        className="cinema-root"
-        data-focus={step.focus}
-        data-playing={director.playing}
-        data-complete={director.finished}
-        data-sync={director.sync ? "speech" : "guided"}
-      >
-        <div className="cinema-director">
-          <span className="cinema-state">
-            {director.finished
-              ? "Relatório pronto"
+      <div className="cinema-director">
+        <span className="cinema-state">
+          {director.issue
+            ? "Conteúdo preservado"
+            : director.finished
+              ? "Relatório disponível"
               : director.playing
                 ? director.sync
                   ? "Acompanhando a fala"
-                  : "Demonstração em andamento"
+                  : "Construindo a explicação"
                 : "Demonstração pausada"}
-          </span>
-          <div className="cinema-controls">
-            <button
-              onClick={() => director.jump(Math.max(0, director.index - 1))}
-              aria-label="Cena anterior"
-              disabled={director.index === 0}
-            >
-              ‹
-            </button>
-            <button
-              onClick={
-                director.playing
-                  ? director.pause
-                  : director.finished
-                    ? director.replay
-                    : director.resume
-              }
-              aria-label={
-                director.playing
-                  ? "Pausar demonstração"
-                  : director.finished
-                    ? "Reiniciar demonstração"
-                    : "Continuar demonstração"
-              }
-            >
-              {director.playing ? "Ⅱ" : director.finished ? "↻" : "▶"}
-            </button>
-            <button
-              onClick={() =>
-                director.jump(
-                  Math.min(director.plan.length - 1, director.index + 1),
-                )
-              }
-              aria-label="Próxima cena"
-              disabled={director.index >= director.plan.length - 1}
-            >
-              ›
-            </button>
-            <label>
-              Ritmo
-              <select
-                value={director.speed}
-                onChange={(e) => director.setSpeed(Number(e.target.value))}
-              >
-                <option value={0.75}>Calmo</option>
-                <option value={1}>Natural</option>
-                <option value={1.5}>Rápido</option>
-              </select>
-            </label>
-            <button onClick={onExplore}>Explorar quadros</button>
-          </div>
-          <div
-            className="cinema-track"
-            role="progressbar"
-            aria-label="Progresso da demonstração"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(
-              (director.elapsed / (director.duration || 1)) * 100,
-            )}
-          >
-            <i
-              style={{
-                width:
-                  (director.elapsed / (director.duration || 1)) * 100 + "%",
-              }}
-            />
-          </div>
-        </div>
-        <div className="cinema-caption" key={step.id + "-caption"}>
-          <span>
-            {String(director.index + 1).padStart(2, "0")} /{" "}
-            {String(director.plan.length).padStart(2, "0")}
-          </span>
-          <HoloTextStream text={step.cue} />
-        </div>
-        <div className={"cinema-primary placement-" + step.focus} key={step.id}>
-          <HoloPanel
-            id={scene.id + "-" + step.id}
-            title={primary.title}
-            kind={primary.kind}
-            onClose={() =>
-              director.jump(
-                Math.min(director.plan.length - 1, director.index + 1),
-              )
+        </span>
+        <div className="cinema-essential-controls">
+          <button
+            onClick={
+              director.playing
+                ? director.pause
+                : director.finished
+                  ? director.replay
+                  : () => {
+                      if (optionsRef.current) optionsRef.current.open = false;
+                      director.resume();
+                    }
+            }
+            aria-label={
+              director.playing
+                ? "Pausar demonstração"
+                : director.finished
+                  ? "Rever demonstração"
+                  : "Continuar demonstração"
             }
           >
-            <HoloModuleView
-              module={primary}
+            {director.playing ? "Ⅱ" : director.finished ? "↻" : "▶"}
+          </button>
+          <button onClick={onStop} aria-label="Interromper demonstração visual">
+            ×
+          </button>
+          <details
+            ref={optionsRef}
+            className="cinema-options"
+            onToggle={(e) => {
+              if (e.currentTarget.open) director.pause();
+            }}
+          >
+            <summary>Opções</summary>
+            <div className="glass">
+              <label>
+                Ritmo
+                <select
+                  value={director.speed}
+                  onChange={(e) => director.setSpeed(Number(e.target.value))}
+                >
+                  <option value={0.75}>Calmo</option>
+                  <option value={1}>Natural</option>
+                  <option value={1.5}>Ágil</option>
+                </select>
+              </label>
+              <label className="cinema-motion-choice">
+                <input
+                  type="checkbox"
+                  checked={director.instant}
+                  onChange={(e) => director.setNoAnimation(e.target.checked)}
+                />
+                Sem animação
+              </label>
+              <button onClick={onExplore}>Explorar quadros</button>
+            </div>
+          </details>
+        </div>
+      </div>
+      {director.issue ? (
+        <p className="cinema-flow-notice" role="status">
+          {director.issue}
+        </p>
+      ) : null}
+      <HoloPlaybackContext.Provider
+        value={{
+          playing: director.playing,
+          instant,
+          automatic: true,
+          elapsed: director.elapsed,
+          bodyStart: step.reveal.bodyStart,
+          subtitleStart: step.reveal.subtitleStart,
+          highlights: step.highlights,
+        }}
+      >
+        <div
+          ref={primaryRef}
+          className={"cinema-primary placement-" + step.focus}
+          key={step.id}
+          data-content-type={step.content.kind}
+          data-summary={step.summarized}
+          onClickCapture={(event) => {
+            if ((event.target as Element).closest("button,a,input,summary"))
+              director.pause();
+          }}
+        >
+          <HoloPanel
+            id={scene.id + "-" + step.id}
+            title={step.content.title}
+            kind={step.content.kind}
+            note={step.summarized ? "Síntese visual" : undefined}
+            onClose={onStop}
+          >
+            <HoloAutomaticContent
+              step={step}
               local={local}
-              progress={
-                director.manual || director.finished ? 1 : director.progress
-              }
-              point={step.point}
+              progress={instant ? 1 : director.progress}
             />
           </HoloPanel>
+          {step.summarized ? (
+            <p className="cinema-summary-note">
+              Síntese visual · conteúdo integral nas exportações
+            </p>
+          ) : null}
         </div>
-        {support && support.id !== primary.id ? (
-          <div className="cinema-support" key={step.id + "-support"}>
+      </HoloPlaybackContext.Provider>
+      {support && support.id !== step.moduleId ? (
+        <HoloPlaybackContext.Provider value={SUPPORT_PLAYBACK}>
+          <div
+            className="cinema-support"
+            key={step.id + "-support"}
+            aria-label="Contexto de apoio"
+          >
             <HoloPanel
               id={scene.id + "-support"}
               title={support.title}
               kind={support.kind}
-              onClose={() => director.pause()}
+              onClose={director.pause}
             >
-              <HoloModuleView module={support} local={local} progress={1} />
+              {support.kind === "map" ? (
+                <HoloAutomaticContent
+                  step={{ ...step, content: support }}
+                  local={local}
+                  progress={1}
+                />
+              ) : (
+                <HoloModuleView module={support} local={local} />
+              )}
             </HoloPanel>
           </div>
-        ) : null}
-        <div
-          className="cinema-scene-index"
-          aria-label="Sequência da demonstração"
-        >
-          {director.plan.map((s, i) => (
-            <button
-              key={s.id}
-              aria-current={i === director.index ? "step" : undefined}
-              onClick={() => director.jump(i)}
-              title={s.cue}
-            >
-              {i + 1}
-            </button>
-          ))}
-        </div>
-        {scene.narration ? (
-          <div className="cinema-text-access">
-            <button
-              aria-expanded={textOpen}
-              onClick={() => setTextOpen(!textOpen)}
-            >
-              {textOpen ? "Recolher texto" : "Ler resposta em texto"}
-            </button>
-            {textOpen ? (
-              <div className="glass cinema-full-text" tabIndex={0}>
-                {scene.narration}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-        {scene.sources?.length ? (
-          <details className="cinema-sources">
-            <summary>Fontes, datas e verificação</summary>
-            <div>
-              {scene.sources.map((source, i) => (
-                <article key={i}>
-                  <a href={source.href} target="_blank" rel="noreferrer">
-                    {source.label} ↗
-                  </a>
-                  <small>
-                    {source.status === "ok"
-                      ? "Consulta válida"
-                      : source.status === "mismatch"
-                        ? "Divergência"
-                        : "Indisponível"}{" "}
-                    · {new Date(source.checkedAt).toLocaleString("pt-BR")}
-                  </small>
-                  <p>{source.note}</p>
-                </article>
-              ))}
+        </HoloPlaybackContext.Provider>
+      ) : null}
+      {scene.narration ? (
+        <div className="cinema-text-access">
+          <button
+            aria-expanded={textOpen}
+            onClick={() => {
+              setTextOpen(!textOpen);
+              if (!textOpen) director.pause();
+            }}
+          >
+            {textOpen ? "Recolher texto" : "Ler resposta em texto"}
+          </button>
+          {showNarration && !textOpen ? (
+            <small>Texto completo disponível</small>
+          ) : null}
+          {textOpen ? (
+            <div className="glass cinema-full-text" tabIndex={0}>
+              {scene.narration}
             </div>
-          </details>
-        ) : null}
-      </div>
-    </HoloPlaybackContext.Provider>
+          ) : null}
+        </div>
+      ) : null}
+      {scene.sources?.length ? (
+        <details
+          className="cinema-sources"
+          onToggle={(e) => {
+            if (e.currentTarget.open) director.pause();
+          }}
+        >
+          <summary>Fontes, datas e verificação</summary>
+          <div>
+            {scene.sources.map((source, i) => (
+              <article key={i}>
+                <a href={source.href} target="_blank" rel="noreferrer">
+                  {source.label} ↗
+                </a>
+                <small>
+                  {source.status === "ok"
+                    ? "Consulta válida"
+                    : source.status === "mismatch"
+                      ? "Divergência"
+                      : "Indisponível"}{" "}
+                  · {new Date(source.checkedAt).toLocaleString("pt-BR")}
+                </small>
+                <p>{source.note}</p>
+              </article>
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </div>
   );
 }
