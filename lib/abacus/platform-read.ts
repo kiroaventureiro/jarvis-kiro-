@@ -65,6 +65,49 @@ export async function probeAbacusPlatform(
 
 }
 
+
+/** List display-safe account resources for an explicit user request, not status screens. */
+export async function listAbacusResourceNames(apiKey: string | undefined, signal?: AbortSignal) {
+  if (!apiKey) return {state:"unauthorized" as const, projects:[] as string[], deployments:[] as string[]};
+  async function read(method: string, projectId?: string) {
+    const url = new URL("https://api.abacus.ai/api/v0/"+method);
+    if(projectId) url.searchParams.set("projectId",projectId);
+    const res=await fetch(url,{headers:{apiKey:apiKey!},cache:"no-store",redirect:"error",
+      signal:signal?AbortSignal.any([signal,AbortSignal.timeout(9000)]):AbortSignal.timeout(9000)});
+    if(res.status===401||res.status===403) throw Error("unauthorized");
+    if(!res.ok) throw Error("unavailable");
+    const payload:unknown=await res.json();
+    if(!payload||typeof payload!=="object"||Array.isArray(payload))throw Error("invalid_response");
+    const body=payload as Record<string,unknown>;
+    if(body.success!==true||!Array.isArray(body.result))throw Error("invalid_response");
+    return body.result as unknown[];
+  }
+  try{
+    const projects=await read("listProjects");
+    const namedProjects:string[]=[];
+    const deployments:string[]=[];
+    for(const item of projects.slice(0,20)){
+      if(!item||typeof item!=="object"||Array.isArray(item))continue;
+      const p=item as Record<string,unknown>;
+      const name=typeof p.name==="string"?p.name:typeof p.projectName==="string"?p.projectName:"Projeto sem nome informado";
+      namedProjects.push(name.slice(0,120));
+      const id=p.projectId;
+      if(typeof id!=="string"||!(/^[a-zA-Z0-9_-]{1,128}$/.test(id)))continue;
+      const ds=await read("listDeployments",id);
+      for(const entry of ds.slice(0,30)){
+        if(!entry||typeof entry!=="object"||Array.isArray(entry))continue;
+        const d=entry as Record<string,unknown>;
+        const title=typeof d.name==="string"?d.name:typeof d.deploymentName==="string"?d.deploymentName:"Deployment sem nome informado";
+        deployments.push(title.slice(0,120));
+      }
+    }
+    return {state:"verified" as const,projects:namedProjects,deployments};
+  }catch(e){
+    return {state: e instanceof Error && ["unauthorized","invalid_response"].includes(e.message) ? e.message as "unauthorized"|"invalid_response":"unavailable" as const,
+      projects:[] as string[],deployments:[] as string[]};
+  }
+}
+
 /** Never confuse developer-platform access with ChatLLM sessions. */
 export async function answerAbacusPlatformQuestion(message: string, signal?: AbortSignal) {
   const n = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -72,6 +115,11 @@ export async function answerAbacusPlatformQuestion(message: string, signal?: Abo
       !/\b(projetos|deployments|implantacoes|acesso|conexao|permissao)\b/.test(n) ||
       !/\b(verifique|verificar|consulte|consultar|liste|listar|quais|status|tenho|conectad[oa])\b/.test(n))
     return null;
+  const wantsNames = /\\b(nomes|nome|liste|listar|quais|mostre|mostrar)\\b/.test(n) && /\\b(projetos|deployments|implantacoes)\\b/.test(n);
+  if (wantsNames) {
+    const found = await listAbacusResourceNames(process.env.ABACUS_PLATFORM_API_KEY || process.env.ABACUS_API_KEY,signal);
+    return {text:found.state==="verified" ? "Recursos da API Developer Platform da Abacus. Projetos: "+(found.projects.join("; ")||"nenhum nome identificado")+". Deployments: "+(found.deployments.join("; ")||"nenhum nome identificado")+". Essa lista não inclui conversas privadas do ChatLLM." : "Não consegui listar os recursos da API principal da Abacus: "+found.state+".",model:"jk-abacus-platform",provider:"local_operational" as const,usage:null};
+  }
   const checks = await probeAbacusPlatform(process.env.ABACUS_PLATFORM_API_KEY || process.env.ABACUS_API_KEY, signal);
   const project = checks.find(c=>c.method==="listProjects")!;
   const deployment = checks.find(c=>c.method==="listDeployments")!;
