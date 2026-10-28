@@ -4,6 +4,25 @@ import { listPersistentProjects, savePersistentProject } from "./projects";
 const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export async function answerWorkspaceQuestion(message: string) {
   const n = normalize(message);
+  const attach = /^(?:jarvis[, ]*)?(?:associe|vincule) (?:a )?tarefa (?:da )?abacus\\s+([a-zA-Z0-9_-]{1,160})\\s+(?:ao|a|no) projeto\\s+(.{1,100})$/i.exec(message.trim());
+  if (attach) {
+    if (!connectorStore.configured())
+      return {text:"A memória persistente não está configurada neste ambiente.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    try {
+      const [identifier, name] = [attach[1],attach[2].trim()];
+      const matches = (await listPersistentProjects()).filter(p=>normalize(p.name)===normalize(name));
+      if (matches.length !== 1)
+        return {text:"Não encontrei um projeto salvo com esse nome exato. Não associei a tarefa.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+      const current = matches[0];
+      await savePersistentProject({id:current.id,name:current.name,objective:current.objective,
+        provider:current.provider,nextStep:current.nextStep,status:current.status,
+        externalTask:{provider:"abacus",kind:"task",id:identifier,verification:"unverified"},
+        notes:current.notes});
+      return {text:"Associei a referência da tarefa ao projeto "+current.name+" na memória criptografada. O identificador ainda não foi validado na Abacus e nenhuma tarefa externa foi executada.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    } catch {
+      return {text:"Não consegui confirmar a gravação da referência. O vínculo não foi concluído.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    }
+  }
   const save = /^(?:jarvis[, ]*)?(?:salve|salvar|registre|registrar) (?:na memoria )?(?:o )?projeto\s+(.+?)\s*;\s*objetivo\s*:\s*(.+?)\s*;\s*(?:proxima etapa|proximo passo)\s*:\s*(.+)$/i.exec(message.trim());
   if (save) {
     if (!connectorStore.configured())
