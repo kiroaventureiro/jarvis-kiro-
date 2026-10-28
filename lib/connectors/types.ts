@@ -89,6 +89,13 @@ export type PersistentProject = {
   name: string;
   provider: string;
   externalRef?: string;
+  externalTask?: {
+    provider: "abacus";
+    kind: "agent" | "task" | "workflow" | "media";
+    id: string;
+    verification: "unverified" | "verified";
+    checkedAt?: string;
+  };
   objective: string;
   status: "planned" | "active" | "paused" | "completed";
   nextStep: string;
