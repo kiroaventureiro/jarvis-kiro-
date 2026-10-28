@@ -85,6 +85,7 @@ export type OAuthPending = {
   sessionExpires: number;
 };
 export type VaultState = {
+  abacusObservation?: import("../abacus/hub").AccountObservation;
   cognitive?: Record<
     string,
     import("../cognitive/vault-context").StoredConversation

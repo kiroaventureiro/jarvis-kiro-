@@ -362,15 +362,24 @@ async function activate(page) {
     await cp
       .getByRole("button", { name: "Desligar escuta contínua", exact: true })
       .click();
-    assert.equal(await cp.evaluate(() => window.__synthCurrent), null);
+    assert.equal(
+      await cp.evaluate(() => window.__synthCurrent?.text),
+      "Bom dia! Estou à disposição. O que vamos fazer hoje?",
+    );
     assert.equal(
       await cp.evaluate(() => window.__recs.filter((r) => r.active).length),
       0,
     );
+    await cp.evaluate(() => window.__finish());
     await cp.waitForTimeout(700);
+    assert.equal(
+      await cp.evaluate(() => window.__recs.filter((r) => r.active).length),
+      0,
+    );
     assert.equal(await cp.evaluate(() => window.__recs.length), 1);
     results.push({
-      scenario: "off interrupts speech without restarting",
+      scenario:
+        "microphone off preserves narration and never restarts recognition",
       passed: true,
     });
     await activate(cp);

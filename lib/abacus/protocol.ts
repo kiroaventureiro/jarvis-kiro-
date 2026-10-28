@@ -18,6 +18,8 @@ export type TokenUsage = {
   cachedTokens: number;
 };
 export type AbacusResult = {
+  inlineAsset?: string;
+  generatedImageId?: string;
   result?: ConnectorResultLink;
   visual?: HoloScene;
   provider?: "abacus" | "local_operational";

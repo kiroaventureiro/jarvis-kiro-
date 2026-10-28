@@ -1,3 +1,5 @@
+import { answerAbacusHub } from "../../../../lib/abacus/hub-server";
+import { answerPublicLibrary } from "../../../../lib/research/library-server";
 import { answerKnowledge } from "../../../../lib/research/knowledge-server";
 import { answerCognitiveRequest } from "../../../../lib/cognitive/server";
 import { answerPlaceReference } from "../../../../lib/research/places";
@@ -64,6 +66,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Consulta inválida" }, { status: 400 });
   try {
     const reply =
+      (await answerAbacusHub(body.query, request.signal)) ||
+      (await answerPublicLibrary(body.query, request.signal)) ||
       answerPlaceReference(body.query) ||
       (await answerImages(body.query, request.signal)) ||
       (await answerResearch(body.query, request.signal)) ||

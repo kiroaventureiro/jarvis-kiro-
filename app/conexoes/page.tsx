@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import AbacusHub from "../components/AbacusHub";
 import AbacusStatus from "../components/AbacusStatus";
 import NativeConnectors from "../components/NativeConnectors";
 type Item = {
@@ -53,7 +54,45 @@ export default function ConnectionsPage() {
       <Link href="/configuracoes">← Configurações</Link>
       <h1>Central de Conexões</h1>
       <AbacusStatus />
+      <AbacusHub />
       <NativeConnectors />
+      <section
+        className="glass notice"
+        aria-label="Consultas públicas integradas"
+      >
+        <h2>Consultas públicas sem novas credenciais</h2>
+        <p>
+          Estas fontes têm caminhos de consulta implementados no JK. A
+          disponibilidade é confirmada em cada pesquisa; não representam contas
+          privadas conectadas.
+        </p>
+        <ul>
+          <li>
+            Wikipedia: referências enciclopédicas. Exemplo: “Explique como
+            funciona um semicondutor”.
+          </li>
+          <li>
+            Wikimedia Commons: imagens com autoria e licença. Exemplo: “Busque
+            imagens de florestas”.
+          </li>
+          <li>
+            Crossref: artigos e DOI. Exemplo: “Pesquise artigos científicos
+            sobre energia solar”.
+          </li>
+          <li>
+            Open Library: livros e autoria. Exemplo: “Busque livros sobre
+            cinema”.
+          </li>
+          <li>
+            Banco Central e IBGE: indicadores econômicos já integrados, com
+            período e fonte.
+          </li>
+        </ul>
+        <p>
+          Mapas e referências geográficas continuam disponíveis. Essas consultas
+          não geram imagens, vídeos ou notícias verificadas automaticamente.
+        </p>
+      </section>
       <p>
         Explore plataformas de IA, redes sociais e ferramentas para a KIRO.
         Catálogo de possibilidades: a presença aqui não significa que a conta

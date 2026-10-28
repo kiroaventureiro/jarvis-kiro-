@@ -1,7 +1,34 @@
 import { composeScene } from "../holo/orchestrator";
 import { boundHistory, type ChatTurn, type AbacusResult } from "./protocol";
 import { readSSE } from "./sse";
-function complete(raw: AbacusResult, message: string): AbacusResult {
+function complete(
+  raw: AbacusResult,
+  message: string,
+  onGeneratedMedia?: (
+    items: Array<{ id: string; label: string; file: File }>,
+  ) => void,
+): AbacusResult {
+  if (
+    raw.generatedImageId &&
+    /^[-\w]{1,90}$/.test(raw.generatedImageId) &&
+    typeof raw.inlineAsset === "string" &&
+    raw.inlineAsset.length < 11000000
+  ) {
+    const m =
+      /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(
+        raw.inlineAsset,
+      );
+    if (m && onGeneratedMedia) {
+      const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+      onGeneratedMedia([
+        {
+          id: raw.generatedImageId,
+          label: "Imagem criada por IA",
+          file: new File([bytes], "jarvis-imagem", { type: m[1] }),
+        },
+      ]);
+    }
+  }
   const reply = { ...raw, visual: composeScene(message, raw) || undefined };
   return reply.truncated
     ? {
@@ -18,6 +45,9 @@ export async function requestAbacus(
     history?: ChatTurn[];
     signal: AbortSignal;
     onDelta?: (text: string) => void;
+    onGeneratedMedia?: (
+      items: Array<{ id: string; label: string; file: File }>,
+    ) => void;
   },
 ): Promise<AbacusResult> {
   const response = await fetch("/api/director/abacus", {
@@ -55,7 +85,7 @@ export async function requestAbacus(
     )
       throw new Error("Resposta inválida da Abacus");
     options.onDelta?.(data.text);
-    return complete(data, message);
+    return complete(data, message, options.onGeneratedMedia);
   }
   if (!response.body) throw new Error("Resposta vazia da Abacus");
   let aggregate = "",
@@ -89,5 +119,5 @@ export async function requestAbacus(
   if (options.signal.aborted) throw new DOMException("Cancelled", "AbortError");
   if (!reply)
     throw new Error("A resposta foi interrompida antes da conclusão.");
-  return complete(reply, message);
+  return complete(reply, message, options.onGeneratedMedia);
 }

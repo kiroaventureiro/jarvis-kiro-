@@ -706,6 +706,7 @@ export default function JarvisExperience() {
       const result =
         local ||
         (await requestAbacus(text, {
+          onGeneratedMedia: holoSession.rememberMedia,
           history: messages.map(({ role, text }) => ({ role, content: text })),
           signal: requestController.signal,
           onDelta: (partial) => {
@@ -1115,6 +1116,7 @@ export default function JarvisExperience() {
                   "O comando é longo demais. Use uma mensagem de até 1.500 caracteres.",
                 );
               const data = await requestAbacus(spoken, {
+                onGeneratedMedia: holoSession.rememberMedia,
                 history: messages.map(({ role, text }) => ({
                   role,
                   content: text,

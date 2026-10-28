@@ -1,3 +1,8 @@
+import {
+  answerAbacusHub,
+  answerMediaRequest,
+} from "../../../../lib/abacus/hub-server";
+import { answerPublicLibrary } from "../../../../lib/research/library-server";
 import { webResearchPolicy } from "../../../../lib/research/web";
 import { answerWebResearch } from "../../../../lib/research/web-server";
 import {
@@ -65,6 +70,9 @@ export async function POST(request: Request) {
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     localReply: async (message, signal) =>
+      (await answerAbacusHub(message, signal)) ||
+      (await answerMediaRequest(message, signal)) ||
+      (await answerPublicLibrary(message, signal)) ||
       answerPlaceReference(message) ||
       (await answerImages(message, signal)) ||
       (await answerResearch(message, signal)) ||

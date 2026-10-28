@@ -157,10 +157,11 @@ export default function AbacusStatus() {
         </div>
       ) : null}
       <p>
-        Imagem e áudio: documentados pela Abacus, preparados para integração
-        futura e sujeitos a autorização. Vídeo, pesquisa web e ferramentas
-        externas não estão habilitados no Jarvis. O catálogo de serviços não
-        concede acesso à conta.
+        Imagem, áudio e análise visual estão disponíveis no laboratório abaixo,
+        sujeitos ao modelo da conta e ao orçamento autorizado. Pesquisa web tem
+        autorização própria. Vídeo e execução de agentes da interface Abacus
+        ainda não estão integrados ao JK. Consultar o catálogo não concede
+        permissões.
       </p>
     </section>
   );

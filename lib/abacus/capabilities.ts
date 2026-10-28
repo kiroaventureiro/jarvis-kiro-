@@ -10,10 +10,16 @@ export const ABACUS_CAPABILITIES = {
     history: "bounded_session",
     projectContext: "curated_index",
   },
-  images: { documented: true, implemented: false, authorizationRequired: true },
+  images: {
+    documented: true,
+    implemented: true,
+    generationTested: false,
+    authorizationRequired: true,
+  },
   audio: {
     documented: true,
-    implemented: false,
+    implemented: true,
+    generationTested: false,
     authorizationRequired: true,
     browserVoicePreserved: true,
   },
@@ -23,7 +29,11 @@ export const ABACUS_CAPABILITIES = {
     entitlementVerified: false,
     authorizationRequired: true,
   },
-  externalTools: { implemented: false, automaticExecution: false },
+  externalTools: {
+    implemented: false,
+    discoveryImplemented: true,
+    automaticExecution: false,
+  },
   liveWeb: {
     implemented: true,
     requiresExplicitToolBudget: true,
