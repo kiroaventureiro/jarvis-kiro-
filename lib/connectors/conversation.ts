@@ -64,7 +64,12 @@ export async function conversationalConnectorRead(message: string) {
       if (!c.grants.includes("read")) { results.push(provider + ": leitura não autorizada."); panels.push({label: provider.toUpperCase(), detail: "Leitura não autorizada"}); continue; }
       if (!c.resources.length) { results.push(provider + ": conectado, mas nenhum projeto foi autorizado no JK."); panels.push({label: provider.toUpperCase(), detail: "Nenhum projeto autorizado"}); continue; }
       results.push(provider.toUpperCase() + ": " + c.resources.length + " projeto(s) autorizado(s).");
-      const targets = c.resources.slice(0, 5);
+      const named = c.resources.filter(r => {
+        const label = normalize(r.name).replace(/[-_/]/g, " ");
+        const tokens = label.split(/\s+/).filter(token => token.length > 3 && !["kiro", "site"].includes(token));
+        return tokens.length > 0 && tokens.every(token => n.includes(token));
+      });
+      const targets = (named.length ? named : c.resources).slice(0, 5);
       for (const resource of targets) {
         const op = provider === "github" ? "repo" : provider === "vercel" ? "deployments" : "schemas";
         try {
