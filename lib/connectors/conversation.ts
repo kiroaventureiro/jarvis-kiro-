@@ -38,6 +38,19 @@ function observation(provider: Provider, data: unknown): string {
 function displayName(name: string) {
   return name.split("/").at(-1)!.replace(/[-_]/g, " ");
 }
+const STOP = new Set(["kiro", "site", "projeto", "projetos", "sistema", "do", "da", "de", "no", "na", "e", "origem"]);
+function projectWords(value: string) {
+  return normalize(value).replace(/[-_/]/g, " ").split(/\s+/).filter(word => word.length > 3 && !STOP.has(word));
+}
+function requestedProject(message: string, names: string[]) {
+  // Prefer an exact, distinctive name from the owner's authorized resource list.
+  const hits = names.map(name => {
+    const words = projectWords(name);
+    const matches = words.filter(word => new RegExp("(^|[^a-z])" + word + "([^a-z]|$)").test(message));
+    return {name, score: words.length && matches.length === words.length ? matches.length : 0};
+  }).filter(hit => hit.score > 0).sort((a,b) => b.score-a.score);
+  return hits[0]?.name || null;
+}
 export async function conversationalConnectorRead(message: string) {
   const n = normalize(message);
   if (!readIntent.test(n)) return null;
@@ -58,18 +71,27 @@ export async function conversationalConnectorRead(message: string) {
     const failedNames: string[] = [];
     const findings: string[] = [];
     const panels: Array<{label: string; detail: string}> = [];
+    const namedResources = providers.flatMap(p => state.connections[p]?.resources.map(r => r.name) || []);
+    const namedTarget = requestedProject(n, namedResources);
+    const explicitProject = /(?:projeto|sobre|do|da|no|na)\s+([\\p{L}0-9 -]{5,70})/u.test(n) && !all;
     for (const provider of providers) {
       const c = state.connections[provider];
       if (!c || c.status !== "connected") { results.push(provider + ": sem conexão ativa."); panels.push({label: provider.toUpperCase(), detail: "Sem conexão ativa"}); continue; }
       if (!c.grants.includes("read")) { results.push(provider + ": leitura não autorizada."); panels.push({label: provider.toUpperCase(), detail: "Leitura não autorizada"}); continue; }
       if (!c.resources.length) { results.push(provider + ": conectado, mas nenhum projeto foi autorizado no JK."); panels.push({label: provider.toUpperCase(), detail: "Nenhum projeto autorizado"}); continue; }
       results.push(provider.toUpperCase() + ": " + c.resources.length + " projeto(s) autorizado(s).");
-      const named = c.resources.filter(r => {
-        const label = normalize(r.name).replace(/[-_/]/g, " ");
-        const tokens = label.split(/\s+/).filter(token => token.length > 3 && !["kiro", "site"].includes(token));
-        return tokens.length > 0 && tokens.every(token => n.includes(token));
-      });
-      const targets = (named.length ? named : c.resources).slice(0, 5);
+      const selected = namedTarget ? c.resources.filter(r => r.name === namedTarget || projectWords(r.name).every(w => projectWords(namedTarget).includes(w))) : [];
+      const targets = (namedTarget ? selected : explicitProject ? [] : c.resources).slice(0, 5);
+      if (namedTarget && !targets.length) {
+        results.push(provider + ": nenhum recurso correspondente a " + displayName(namedTarget) + " foi autorizado.");
+        panels.push({label: provider.toUpperCase(), detail: "Projeto solicitado não está no escopo deste provedor"});
+        continue;
+      }
+      if (explicitProject && !namedTarget) {
+        results.push(provider + ": não encontrei o projeto solicitado entre os recursos autorizados.");
+        panels.push({label: provider.toUpperCase(), detail: "Projeto não identificado; informe o nome exato do recurso"});
+        continue;
+      }
       for (const resource of targets) {
         const op = provider === "github" ? "repo" : provider === "vercel" ? "deployments" : "schemas";
         try {
