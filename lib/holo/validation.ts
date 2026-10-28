@@ -1,3 +1,5 @@
+import { BRAZIL_STATE_IDS } from "./geographic-focus";
+import { commonsTitle as validCommonsTitle } from "../research/commons";
 import type { HoloScene, HoloModule, HoloSource } from "./types";
 const object = (v: unknown): Record<string, unknown> =>
   v && typeof v === "object" && !Array.isArray(v)
@@ -121,6 +123,27 @@ export function normalizeScene(value: unknown): HoloScene | null {
           /^[A-Z0-9-]{2,12}$/.test(m.focusCountry)
             ? { focusCountry: m.focusCountry }
             : {}),
+          ...(typeof m.focusPlaceId === "string" &&
+          /^\d{5,15}$/.test(m.focusPlaceId)
+            ? { focusPlaceId: m.focusPlaceId }
+            : {}),
+          ...(Array.isArray(m.focusCountries) &&
+          m.focusCountries.length <= 177 &&
+          m.focusCountries.every(
+            (x) => typeof x === "string" && /^[A-Z]{3}$/.test(x),
+          )
+            ? { focusCountries: [...new Set(m.focusCountries)] as string[] }
+            : {}),
+          ...(Array.isArray(m.focusRegions) &&
+          m.focusRegions.length <= 27 &&
+          m.focusRegions.every(
+            (x) => typeof x === "string" && BRAZIL_STATE_IDS.includes(x),
+          )
+            ? { focusRegions: [...new Set(m.focusRegions)] as string[] }
+            : {}),
+          ...(typeof m.focusLabel === "string"
+            ? { focusLabel: clean(m.focusLabel, 80) }
+            : {}),
           caption: clean(m.caption, 200),
         });
       } else if (m.kind === "timeline") {
@@ -169,7 +192,7 @@ export function normalizeScene(value: unknown): HoloScene | null {
                   : undefined;
             if (
               !["image", "video"].includes(String(a.type)) ||
-              (!url && !localId)
+              (!url && !localId && !validCommonsTitle(a.commonsTitle))
             )
               throw Error();
             return {
@@ -179,6 +202,24 @@ export function normalizeScene(value: unknown): HoloScene | null {
               ...(url ? { url } : {}),
               ...(localId ? { localId } : {}),
               caption: clean(a.caption, 200),
+              ...(validCommonsTitle(a.commonsTitle)
+                ? {
+                    commonsTitle: validCommonsTitle(a.commonsTitle),
+                    credit: clean(a.credit, 300),
+                    sourceHref: publicHref(a.sourceHref),
+                    license: clean(a.license, 80),
+                    licenseHref: publicHref(a.licenseHref),
+                    mediaNature: [
+                      "photograph",
+                      "illustration",
+                      "reproduction",
+                      "reference",
+                    ].includes(String(a.mediaNature))
+                      ? (a.mediaNature as "reference")
+                      : undefined,
+                    verifiedAt: date(a.verifiedAt),
+                  }
+                : {}),
             };
           }),
         });

@@ -1,5 +1,10 @@
 import "server-only";
-import projects from "../../config/kiro-project-registry.json";
+import catalogProjects from "../../config/kiro-project-registry.json";
+import { JK_DEVELOPMENT_TARGET, developmentIntent } from "./development-intent";
+const projects = {
+  ...catalogProjects,
+  projects: [...catalogProjects.projects, JK_DEVELOPMENT_TARGET],
+};
 import { SupabaseConnectorStore, connectorEnvironment } from "./store";
 import { OAuthClient, oauthApps } from "./oauth";
 import { providerCall } from "./transport";
@@ -71,7 +76,7 @@ export async function answerNativeRequest(message: string) {
   const intent = /\b(verifique|diagnostique|corrija|analise o site)\b/i.test(
     message,
   );
-  if (intent) {
+  if (intent || developmentIntent(message)) {
     const planner = await developerPlanner();
     const reply = await planner.intent(message);
     if (reply) return reply;

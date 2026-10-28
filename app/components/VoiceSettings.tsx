@@ -8,6 +8,7 @@ import {
   selectVoice,
 } from "../../lib/voice/voice-preferences";
 import type { VoicePreferences } from "../../lib/voice/voice-types";
+import VoiceComparison from "./VoiceComparison";
 import { getVoiceManager } from "../../lib/voice/speech-output";
 export default function VoiceSettings() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]),
@@ -214,6 +215,7 @@ export default function VoiceSettings() {
         preservada usa sua própria configuração vocal, separada, e permanece
         sujeita à autorização de custo do servidor.
       </p>
+      <VoiceComparison voices={voices} prefs={prefs} onSelect={update} />
       <h3>Privacidade e compatibilidade</h3>
       <p>
         A escuta só começa ao autorizar na home. O reconhecimento do navegador

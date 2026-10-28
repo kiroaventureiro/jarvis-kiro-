@@ -1,3 +1,4 @@
+import { developmentIntent } from "./development-intent";
 import { planScene } from "../holo/orchestrator";
 import { randomUUID } from "node:crypto";
 import { ConnectorError, type Plan, type Action } from "./types";
@@ -24,7 +25,7 @@ export class DevelopmentPlanner {
       throw new ConnectorError("PROJECT_BINDING_REQUIRED", 409);
     return { github, vercel };
   }
-  async investigate(projectId: string) {
+  async investigate(projectId: string, paths: string[] = []) {
     const binding = await this.binding(projectId);
     const actions: Action[] = [
       {
@@ -46,6 +47,14 @@ export class DevelopmentPlanner {
         resource: binding.vercel.id,
         operation: "deployments",
         args: {},
+      });
+    if (paths.length > 3) throw new ConnectorError("FILES_LIMIT");
+    for (const path of paths)
+      actions.push({
+        provider: "github",
+        resource: binding.github.id,
+        operation: "file",
+        args: { path: filePath(path) },
       });
     const plan = await this.service.plan(
       "Diagnóstico: " + this.projects.find((p) => p.id === projectId)!.name,
@@ -208,23 +217,37 @@ export class DevelopmentPlanner {
         .replace(/[\u0300-\u036f]/g, "")
         .toLowerCase();
     const n = normalize(message);
-    if (!/\b(verifique|diagnostique|corrija|analise o site)\b/.test(n))
+    const self = developmentIntent(message);
+    if (!self && !/\b(verifique|diagnostique|corrija|analise o site)\b/.test(n))
       return null;
-    const project = this.projects.find(
-      (p) =>
-        n.includes(normalize(p.name.split("/").at(-1)!.trim())) ||
-        n.includes(p.id.replaceAll("-", " ")),
-    );
+    const project = self
+      ? this.projects.find((p) => p.id === self.project)
+      : this.projects.find(
+          (p) =>
+            n.includes(normalize(p.name.split("/").at(-1)!.trim())) ||
+            n.includes(p.id.replaceAll("-", " ")),
+        );
     if (!project) return null;
     try {
-      const result = await this.investigate(project.id);
+      const result = await this.investigate(project.id, self?.paths);
+      const readFiles = result.steps.filter(
+        (s) => s.action.operation === "file",
+      );
+      const scope = readFiles.length
+        ? " Arquivos consultados: " +
+          readFiles
+            .map((s) => String(s.action.args.path) + " (" + s.status + ")")
+            .join(", ") +
+          "."
+        : "";
       return {
         text:
           (result.status === "done"
             ? "Concluí o diagnóstico autorizado de "
             : "O diagnóstico está pendente ou falhou para ") +
           project.name +
-          ". Os resultados estão na Central de Conexões. Uma correção precisa de proposta e aprovação específica; nenhuma modificação foi executada.",
+          scope +
+          ". Os resultados estão na Central de Conexões. Plano de continuidade: revisar as evidências, preparar correção pequena, validar testes no CI e gerar Preview somente após aprovação. A proposta com modelo também depende de autorização de custo. Nenhuma modificação foi executada.",
         model: "jk-connectors",
         provider: "local_operational" as const,
         usage: null,

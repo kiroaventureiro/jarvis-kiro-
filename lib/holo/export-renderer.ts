@@ -1,3 +1,4 @@
+import { projectWorldPoint, type PlaceRow } from "./place-policy";
 import { muxVp8, type VideoPacket } from "./webm";
 import type { HoloScene, HoloModule } from "./types";
 import {
@@ -12,6 +13,20 @@ async function world() {
   if (!regions)
     regions = (await import("../../config/holo-world-map.json")).regions;
   return regions;
+}
+let placeRows: Promise<PlaceRow[]> | null = null;
+async function places() {
+  if (!placeRows)
+    placeRows = fetch("/holo-places-index.json", {
+      signal: AbortSignal.timeout(10000),
+    }).then((r) => {
+      if (!r.ok)
+        throw Error(
+          "Índice geográfico indisponível para exportar a localidade.",
+        );
+      return r.json();
+    });
+  return placeRows;
 }
 const W = 1440,
   H = 900;
@@ -145,11 +160,27 @@ export async function renderFrame(
     ctx.scale(scale, scale);
     for (const region of areas) {
       const path = new Path2D(region.d);
-      ctx.fillStyle = region.id === module.focusCountry ? "#31e7ff" : "#10384f";
+      ctx.fillStyle =
+        region.id === module.focusCountry ||
+        module.focusRegions?.includes(region.id) ||
+        module.focusCountries?.includes(region.id)
+          ? "#31e7ff"
+          : "#10384f";
       ctx.strokeStyle = "#369dbb";
       ctx.lineWidth = 0.5;
       ctx.fill(path, "evenodd");
       ctx.stroke(path);
+    }
+    if (module.focusPlaceId) {
+      const city = (await places()).find((p) => p[0] === module.focusPlaceId);
+      if (city) {
+        const point = projectWorldPoint(city[3], city[4]);
+        ctx.fillStyle = "#ffe2a0";
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        label(ctx, city[1], point.x + 8, point.y - 7, 15, "#fff0c8");
+      }
     }
     ctx.restore();
     write(ctx, module.caption, 90, 775, 1240, 20, "#a2cdde", 2);
@@ -328,7 +359,10 @@ export function reportText(scene: HoloScene) {
       case "map":
         content.push(
           m.caption,
-          "Cartografia: Natural Earth, escala 1:110m. Limites simplificados, sem serviço de navegação.",
+          m.region === "BR"
+            ? "Cartografia: IBGE, divisão estadual atual simplificada; não representa fronteiras históricas."
+            : "Cartografia: Natural Earth, escala 1:110m. Localidades 1:10m, quando indicadas. Limites simplificados, sem serviço de navegação.",
+          ...(m.focusLabel ? ["Área: " + m.focusLabel] : []),
         );
         break;
       case "timeline":
@@ -369,6 +403,11 @@ export function reportText(scene: HoloScene) {
               i.type +
               ")\n" +
               (i.caption || "") +
+              (i.credit ? "\nAutoria: " + i.credit : "") +
+              (i.license
+                ? "\nLicença: " + i.license + " · " + (i.licenseHref || "")
+                : "") +
+              (i.sourceHref ? "\nFonte: " + i.sourceHref : "") +
               (i.url
                 ? "\n" + i.url
                 : "\nArquivo temporário da sessão; não incorporado ao PDF."),

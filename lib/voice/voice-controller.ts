@@ -23,7 +23,7 @@ type Options = {
   muted: () => boolean;
   command: (text: string, signal: AbortSignal) => Promise<VoiceReply>;
   onUser: (text: string) => void;
-  onReply: (reply: VoiceReply) => void;
+  onReply: (reply: VoiceReply) => VoiceReply | void;
   onSpeechUnavailable?: () => void;
   onState: (state: VoiceSnapshot) => void;
   navigate?: (path: string) => void;
@@ -252,16 +252,27 @@ export class VoiceController {
         ? { ...local, provider: "local" }
         : await this.options.command(command, abort.signal);
       if (epoch !== this.epoch || !this.enabled) return;
-      this.options.onReply(reply);
+      const candidate = this.options.onReply(reply);
+      const prepared =
+        candidate &&
+        typeof candidate === "object" &&
+        typeof candidate.text === "string"
+          ? candidate
+          : reply;
       if (!this.options.muted()) {
         this.emit("speaking", "Jarvis respondendo · reconhecimento pausado.");
         this.skipSpeech = false;
         this.speechPending = true;
         try {
-          await this.options.speech.speak(reply.text, abort.signal);
+          await this.options.speech.speak(prepared.text, abort.signal, {
+            scene: prepared.visual,
+          });
         } catch (error) {
-          if (epoch === this.epoch) this.options.onSpeechUnavailable?.();
-          if (!this.skipSpeech) throw error;
+          const stopped =
+            error instanceof DOMException && error.name === "AbortError";
+          if (epoch === this.epoch && !stopped)
+            this.options.onSpeechUnavailable?.();
+          if (!this.skipSpeech && !stopped) throw error;
         } finally {
           if (epoch === this.epoch) this.speechPending = false;
         }

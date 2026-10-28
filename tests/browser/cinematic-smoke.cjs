@@ -117,7 +117,7 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
       await page
         .getByRole("button", { name: "Enviar mensagem", exact: true })
         .click();
-      await page.locator("main[data-state=idle]").waitFor();
+      await page.locator(".cinema-root").waitFor();
     }
 
     await send("Mostre um mapa-múndi interativo");

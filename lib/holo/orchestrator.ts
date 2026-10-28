@@ -1,3 +1,4 @@
+import { BRAZIL_CHAPTERS, BRAZIL_EXPLANATION } from "./brazil-chapters";
 import { geographyScene } from "./geography";
 import type { HoloScene, HoloModule, HoloSource } from "./types";
 import { clean, normalizeScene, publicHref, mediaHref } from "./validation";
@@ -199,7 +200,10 @@ export function localVisualReference(message: string) {
       : null;
     if (geo)
       return {
-        text: "Preparei um mapa-múndi interativo. Você pode selecionar países, aproximar e abrir uma localização no Google Maps. A cartografia é uma referência geográfica; dados e indicadores atuais precisam de uma fonte específica.",
+        text:
+          geo.modules[0]?.kind === "map" && geo.modules[0].region === "BR"
+            ? "Preparei um mapa regional do Brasil com limites estaduais atuais do IBGE. Vou destacar a região indicada; não é um mapa de ruas nem uma reconstrução de fronteiras históricas."
+            : "Preparei um mapa-múndi interativo. Você pode selecionar países, aproximar e abrir uma localização no Google Maps. A cartografia é uma referência geográfica; dados e indicadores atuais precisam de uma fonte específica.",
         model: "jk-geography",
         provider: "local_operational" as const,
         usage: null,
@@ -207,12 +211,28 @@ export function localVisualReference(message: string) {
       };
     return null;
   }
+  const detailed = /complet|aprofund|detalhad|explique/i.test(message);
+  const visual = brazilReferenceScene();
+  if (detailed) {
+    const timeline = visual.modules.find((m) => m.kind === "timeline");
+    if (timeline?.kind === "timeline") timeline.events = BRAZIL_CHAPTERS;
+    const report = visual.modules.find((m) => m.kind === "report");
+    if (report?.kind === "report") {
+      report.body = BRAZIL_EXPLANATION;
+      report.summary =
+        "Panorama ampliado por capítulos; limites estaduais atuais são apenas referência de localização.";
+    }
+    visual.narration = BRAZIL_EXPLANATION;
+    visual.id = "brazil-reference-chapters-v3";
+  }
   return {
-    text: "O território brasileiro já era habitado por diversos povos indígenas antes da chegada da expedição portuguesa, em 1500. Entre os marcos estão a independência, em 1822, a proclamação da República, em 1889, e a Constituição de 1988. Projetei um mapa e uma linha do tempo de referência. Você pode selecionar os estados e explorar cada período.",
+    text: detailed
+      ? BRAZIL_EXPLANATION
+      : "O território brasileiro já era habitado por diversos povos indígenas antes da chegada da expedição portuguesa, em 1500. Entre os marcos estão a independência, em 1822, a proclamação da República, em 1889, e a Constituição de 1988. Projetei um mapa e uma linha do tempo de referência. Você pode selecionar os estados e explorar cada período.",
     model: "jk-curated-reference",
     provider: "local_operational" as const,
     usage: null,
-    visual: brazilReferenceScene(),
+    visual,
   };
 }
 export function operationalScene(value: unknown): HoloScene | null {

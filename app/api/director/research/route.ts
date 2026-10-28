@@ -1,3 +1,5 @@
+import { answerPlaceReference } from "../../../../lib/research/places";
+import { answerImages } from "../../../../lib/research/images";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
 import { answerResearch } from "../../../../lib/research/server";
@@ -60,6 +62,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Consulta inválida" }, { status: 400 });
   try {
     const reply =
+      answerPlaceReference(body.query) ||
+      (await answerImages(body.query, request.signal)) ||
       (await answerResearch(body.query, request.signal)) ||
       localVisualReference(body.query);
     return NextResponse.json(

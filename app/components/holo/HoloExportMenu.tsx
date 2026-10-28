@@ -1,8 +1,15 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { HoloScene } from "../../../lib/holo/types";
+import { useHoloSession } from "./HoloSession";
 import { exportScene } from "../../../lib/holo/validation";
 export default function HoloExportMenu({ scene }: { scene: HoloScene }) {
+  const { exportRequest } = useHoloSession();
+  const [prepared, setPrepared] = useState<{
+    blob: Blob;
+    format: string;
+  } | null>(null);
+  const handled = useRef("");
   const [open, setOpen] = useState(false),
     [busy, setBusy] = useState(""),
     [progress, setProgress] = useState(0),
@@ -16,7 +23,47 @@ export default function HoloExportMenu({ scene }: { scene: HoloScene }) {
     },
     [scene.id],
   );
-  async function run(format: "pdf" | "png" | "webm" | "json") {
+  useEffect(() => {
+    window.dispatchEvent(
+      new CustomEvent("jk-holo-export-hold", {
+        detail: { sceneId: scene.id, hold: open || !!busy },
+      }),
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("jk-holo-export-hold", {
+          detail: { sceneId: scene.id, hold: false },
+        }),
+      );
+    };
+  }, [open, busy, scene.id]);
+  useEffect(() => {
+    if (
+      exportRequest?.sceneId !== scene.id ||
+      handled.current === exportRequest.id
+    )
+      return;
+    handled.current = exportRequest.id;
+    setOpen(true);
+    void run(exportRequest.format, true);
+  }, [exportRequest?.id, scene.id]);
+  useEffect(() => {
+    setPrepared(null);
+  }, [scene.id]);
+  function download(blob: Blob, format: string) {
+    const url = URL.createObjectURL(blob),
+      a = document.createElement("a");
+    a.href = url;
+    a.download = "jk-" + scene.id + "." + format;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+  async function run(
+    format: "pdf" | "png" | "webm" | "json",
+    prepareOnly = false,
+  ) {
     if (controller.current) return;
     const abort = new AbortController(),
       epoch = ++generation.current;
@@ -38,15 +85,12 @@ export default function HoloExportMenu({ scene }: { scene: HoloScene }) {
               : await render.videoExport(scene, abort.signal, setProgress);
       }
       if (abort.signal.aborted || epoch !== generation.current) return;
-      const url = URL.createObjectURL(blob),
-        a = document.createElement("a");
-      a.href = url;
-      a.download = "jk-" + scene.id + "." + format;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 30000);
-      setOpen(false);
+      if (prepareOnly) {
+        setPrepared({ blob, format });
+      } else {
+        download(blob, format);
+        setOpen(false);
+      }
     } catch (e) {
       if (!abort.signal.aborted)
         setError(e instanceof Error ? e.message : "Não foi possível exportar.");
@@ -89,6 +133,17 @@ export default function HoloExportMenu({ scene }: { scene: HoloScene }) {
             quadros; não é vídeo generativo. Mídias externas permanecem como
             referências.
           </small>
+          {prepared && !busy ? (
+            <div className="holo-prepared-export">
+              <p role="status">
+                {prepared.format.toUpperCase()} preparado neste navegador.
+                Nenhum arquivo foi enviado ou salvo em serviço externo.
+              </p>
+              <button onClick={() => download(prepared.blob, prepared.format)}>
+                Baixar {prepared.format.toUpperCase()}
+              </button>
+            </div>
+          ) : null}
           {busy ? (
             <>
               <p role="status">

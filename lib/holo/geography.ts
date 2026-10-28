@@ -1,3 +1,5 @@
+import continents from "../../config/holo-continents.json";
+import { regionalMap } from "./geographic-focus";
 import countries from "../../config/holo-world-index.json";
 import type { HoloScene } from "./types";
 const norm = (s: string) =>
@@ -32,6 +34,49 @@ export function countryFor(query: string) {
     );
 }
 export function geographyScene(message: string): HoloScene | null {
+  const continent = continents.find((c) =>
+    (" " + norm(message) + " ").includes(" " + norm(c.label) + " "),
+  );
+  if (continent)
+    return {
+      version: 1,
+      id: "geo-" + continent.id,
+      title: continent.label + " · contexto continental",
+      mode: "explanation",
+      createdAt: new Date().toISOString(),
+      source: {
+        kind: "reference",
+        label: "Natural Earth · classificação continental",
+        href: "https://www.naturalearthdata.com/",
+      },
+      modules: [
+        {
+          id: "continent",
+          kind: "map",
+          region: "WORLD",
+          title: continent.label,
+          focusCountries: continent.countries,
+          focusLabel: continent.label,
+          caption:
+            "Países agrupados segundo a classificação da fonte. Países transcontinentais, territórios e áreas em disputa exigem contexto específico; estes não são limites históricos.",
+        },
+      ],
+    };
+  const regional = regionalMap(message);
+  if (regional)
+    return {
+      version: 1,
+      id: "geo-region-" + regional.focusRegions!.join("-"),
+      title: regional.focusLabel + " · contexto geográfico",
+      mode: "explanation",
+      createdAt: new Date().toISOString(),
+      source: {
+        kind: "reference",
+        label: "IBGE · divisão estadual atual",
+        href: "https://servicodados.ibge.gov.br/api/docs/malhas?versao=3",
+      },
+      modules: [regional],
+    };
   const n = norm(message),
     country = countryFor(message);
   if (

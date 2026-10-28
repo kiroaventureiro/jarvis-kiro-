@@ -19,6 +19,10 @@ export type HoloModule =
       region: "BR" | "WORLD";
       caption: string;
       focusCountry?: string;
+      focusPlaceId?: string;
+      focusCountries?: string[];
+      focusRegions?: string[];
+      focusLabel?: string;
     })
   | (Base & {
       kind: "timeline";
@@ -44,6 +48,17 @@ export type HoloModule =
         type: "image" | "video";
         url?: string;
         localId?: string;
+        commonsTitle?: string;
+        credit?: string;
+        sourceHref?: string;
+        license?: string;
+        licenseHref?: string;
+        mediaNature?:
+          | "photograph"
+          | "illustration"
+          | "reproduction"
+          | "reference";
+        verifiedAt?: string;
         caption?: string;
       }>;
     })

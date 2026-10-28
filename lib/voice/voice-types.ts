@@ -44,7 +44,11 @@ export interface RecognitionDriver {
 }
 export type RecognitionConstructor = new () => RecognitionDriver;
 export interface SpeechOutput {
-  speak(text: string, signal: AbortSignal): Promise<void>;
+  speak(
+    text: string,
+    signal: AbortSignal,
+    options?: { scene?: HoloScene },
+  ): Promise<void>;
   cancel(): void;
 }
 export type VoiceReply = {

@@ -2,6 +2,7 @@
 import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import HoloTypewriter from "./HoloTypewriter";
+import ReferenceImage from "./ReferenceImage";
 import { HoloPlaybackContext } from "./HoloPlaybackContext";
 import { chartRange, chartPosition } from "../../../lib/holo/presentation";
 import { connectionPresentation } from "../../../lib/holo/validation";
@@ -217,6 +218,7 @@ function MediaItem({
     [loaded, setLoaded] = useState(false),
     [failed, setFailed] = useState(false);
   const url = localFile?.url || (loaded ? item.url : undefined);
+  if (item.commonsTitle) return <ReferenceImage title={item.commonsTitle} />;
   return (
     <figure className="holo-media-item">
       <div className="holo-media-frame">

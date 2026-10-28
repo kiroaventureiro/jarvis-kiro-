@@ -20,19 +20,24 @@ export default function CinematicPresentation({
   onExplore,
   onStop,
   showNarration = false,
+  externalAudioActive = false,
 }: {
   scene: HoloScene;
   local: HoloLocalMedia[];
   onExplore: () => void;
   onStop: () => void;
   showNarration?: boolean;
+  externalAudioActive?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null),
     primaryRef = useRef<HTMLDivElement>(null),
     optionsRef = useRef<HTMLDetailsElement>(null),
     [space, setSpace] = useState(DEFAULT_PRESENTATION_SPACE),
     [reduced, setReduced] = useState(false),
-    [textOpen, setTextOpen] = useState(false);
+    [textOpen, setTextOpen] = useState(false),
+    [keepOpen, setKeepOpen] = useState(false),
+    [closing, setClosing] = useState(false),
+    [exportHeld, setExportHeld] = useState(false);
   const director = useDemonstration(scene, space),
     step = director.step,
     instant = director.instant || reduced;
@@ -43,6 +48,45 @@ export default function CinematicPresentation({
     instant,
     onEvidence: director.reportFlow,
   });
+  useEffect(() => {
+    try {
+      setKeepOpen(localStorage.getItem("jk-holo-keep") === "true");
+    } catch {}
+  }, []);
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent).detail;
+      if (d?.sceneId === scene.id) setExportHeld(!!d.hold);
+    };
+    window.addEventListener("jk-holo-export-hold", handler);
+    return () => window.removeEventListener("jk-holo-export-hold", handler);
+  }, [scene.id]);
+  useEffect(() => {
+    if (
+      !director.finished ||
+      keepOpen ||
+      textOpen ||
+      exportHeld ||
+      externalAudioActive ||
+      director.narration.phase === "speaking"
+    )
+      return;
+    const fade = setTimeout(() => setClosing(true), 1800),
+      close = setTimeout(onStop, 2600);
+    return () => {
+      clearTimeout(fade);
+      clearTimeout(close);
+      setClosing(false);
+    };
+  }, [
+    director.finished,
+    director.narration.phase,
+    keepOpen,
+    textOpen,
+    exportHeld,
+    externalAudioActive,
+    onStop,
+  ]);
   useEffect(() => {
     if (!root.current) return;
     const element = root.current,
@@ -86,6 +130,9 @@ export default function CinematicPresentation({
     <div
       ref={root}
       className="cinema-root holo-experience-v2"
+      data-closing={closing}
+      data-narration-phase={director.narration.phase}
+      data-spatial={["map", "media", "metrics"].includes(step.content.kind)}
       data-focus={step.focus}
       data-playing={director.playing}
       data-complete={director.finished}
@@ -166,11 +213,34 @@ export default function CinematicPresentation({
                 />
                 Sem animação
               </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={keepOpen}
+                  onChange={(e) => {
+                    setKeepOpen(e.target.checked);
+                    try {
+                      localStorage.setItem(
+                        "jk-holo-keep",
+                        String(e.target.checked),
+                      );
+                    } catch {}
+                  }}
+                />
+                Manter resultado aberto
+              </label>
               <button onClick={onExplore}>Explorar quadros</button>
             </div>
           </details>
         </div>
       </div>
+      {director.narration.phase === "error" ? (
+        <div className="cinema-voice-recovery glass" role="status">
+          <p>{director.narration.message}</p>
+          <button onClick={director.retryVoice}>Retomar voz</button>
+          <button onClick={director.continueSilently}>Continuar sem voz</button>
+        </div>
+      ) : null}
       {director.issue ? (
         <p className="cinema-flow-notice" role="status">
           {director.issue}

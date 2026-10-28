@@ -982,3 +982,38 @@ test("transport rejects auth failures, provider limits, oversized results and ho
       (e) => e.code === "PATH_BLOCKED",
     );
 });
+
+test("supervised self-diagnostic reads only fixed files from an authorized binding, with no model or writes", async () => {
+  const f = fixture();
+  await setup(f);
+  f.service.options.kiroIds.push("jarvis-kiro");
+  await f.store.update((s) => {
+    s.connections.github.resources[0].kiroProject = "jarvis-kiro";
+  });
+  let modelCalls = 0;
+  const planner = new DevelopmentPlanner(
+    f.service,
+    [{ id: "jarvis-kiro", name: "Jarvis Kiro" }],
+    async () => {
+      modelCalls++;
+      return "";
+    },
+  );
+  const before = f.calls.length;
+  const reply = await planner.intent(
+    "Jarvis, encontre o problema da sua voz e proponha correção",
+  );
+  assert.match(reply.text, /Nenhuma modificação foi executada/);
+  assert.match(reply.text, /speech-output/);
+  assert.equal(modelCalls, 0);
+  assert.ok(f.calls.slice(before).every((x) => x.method === "GET"));
+  const state = await f.store.read();
+  assert.equal(
+    state.plans.at(-1).steps.filter((s) => s.action.operation === "file")
+      .length,
+    3,
+  );
+  assert.ok(
+    state.audit.some((x) => x.outcome === "done" || x.operation === "execute"),
+  );
+});

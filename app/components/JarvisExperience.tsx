@@ -1,4 +1,5 @@
 "use client";
+import { conversationAction } from "../../lib/holo/conversation-actions";
 import HoloResponseHUD from "./holo/HoloResponseHUD";
 import { useHoloSession } from "./holo/HoloSession";
 import {
@@ -215,7 +216,8 @@ export default function JarvisExperience() {
           .filter((f) => f.image)
           .map((f) => ({ id: f.id, label: f.name, file: f.file })),
       );
-      holoSession.present(attachmentScene(text, visualFiles.current));
+      const visual = attachmentScene(text, visualFiles.current);
+      holoSession.present(visual);
       if (
         desktopVoice &&
         !muteRef.current &&
@@ -226,10 +228,11 @@ export default function JarvisExperience() {
         fileSpeech.current = controller;
         setState("responding");
         void getVoiceManager()
-          .speak(text, controller.signal)
-          .catch(() =>
-            setMessages((items) => speechUnavailable(items, new Set([id]))),
-          )
+          .speak(text, controller.signal, { scene: visual || undefined })
+          .catch(() => {
+            if (!controller.signal.aborted)
+              setMessages((items) => speechUnavailable(items, new Set([id])));
+          })
           .finally(() => {
             if (fileSpeech.current === controller) {
               fileSpeech.current = null;
@@ -630,12 +633,42 @@ export default function JarvisExperience() {
     });
     setMic(enabled);
   }
+  function localConversationReply(text: string) {
+    const action = conversationAction(text);
+    if (!action) return null;
+    if (action.kind === "external")
+      return {
+        text: "Salvar, enviar ou compartilhar exige um serviço realmente conectado, destino e aprovação do plano. Nenhuma dessas ações foi executada. Consulte a Central de Conexões.",
+        model: "jk-local-action",
+        provider: "local_operational" as const,
+        usage: null,
+        visual: undefined,
+      };
+    const prior = holoSession.scenes[0];
+    if (!prior)
+      return {
+        text: "Ainda não há um resultado para exportar. Primeiro peça uma explicação ou análise.",
+        model: "jk-local-action",
+        provider: "local_operational" as const,
+        usage: null,
+        visual: undefined,
+      };
+    holoSession.requestExport(prior.id, action.format);
+    return {
+      text:
+        "Vou preparar o " +
+        action.format.toUpperCase() +
+        " do resultado. Quando estiver pronto, use o botão Baixar. O arquivo fica neste navegador; não será enviado a outro serviço.",
+      model: "jk-local-action",
+      provider: "local_operational" as const,
+      usage: null,
+      visual: undefined,
+    };
+  }
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
-    if (typingAbort.current && !typingAbort.current.signal.aborted) return;
-    if (!text || ["connecting", "processing", "responding"].includes(state))
-      return;
+    if (!text || ["connecting", "processing"].includes(state)) return;
     if (workspace.files.length) {
       if (workspace.recording) return;
       holoSession.close();
@@ -644,6 +677,9 @@ export default function JarvisExperience() {
       return;
     }
     wakeStop.current();
+    if (connected || peer.current) stop();
+    fileSpeech.current?.abort();
+    fileSpeech.current = null;
     typingAbort.current?.abort();
     const requestController = new AbortController();
     typingAbort.current = requestController;
@@ -660,26 +696,29 @@ export default function JarvisExperience() {
     try {
       const voiceFirst =
         desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
-      const result = await requestAbacus(text, {
-        history: messages.map(({ role, text }) => ({ role, content: text })),
-        signal: requestController.signal,
-        onDelta: (partial) => {
-          if (requestController.signal.aborted) return;
-          setMessages((items) =>
-            voiceFirst
-              ? appendSpokenReply(items, assistantId, partial, true)
-              : appendTranscript(
-                  items,
-                  assistantId,
-                  "assistant",
-                  partial,
-                  true,
-                ),
-          );
-        },
-      });
+      const local = localConversationReply(text);
+      const result =
+        local ||
+        (await requestAbacus(text, {
+          history: messages.map(({ role, text }) => ({ role, content: text })),
+          signal: requestController.signal,
+          onDelta: (partial) => {
+            if (requestController.signal.aborted) return;
+            setMessages((items) =>
+              voiceFirst
+                ? appendSpokenReply(items, assistantId, partial, true)
+                : appendTranscript(
+                    items,
+                    assistantId,
+                    "assistant",
+                    partial,
+                    true,
+                  ),
+            );
+          },
+        }));
       if (requestController.signal.aborted) return;
-      const visual = composeScene(text, result);
+      const visual = local ? null : composeScene(text, result);
       if (visual) holoSession.present(visual);
       if (
         desktopVoice &&
@@ -694,11 +733,16 @@ export default function JarvisExperience() {
           await getVoiceManager().speak(
             result.text as string,
             requestController.signal,
+            { scene: visual || undefined },
           );
-        } catch {
-          setMessages((items) =>
-            speechUnavailable(items, new Set([assistantId])),
-          );
+        } catch (error) {
+          if (
+            !(error instanceof DOMException && error.name === "AbortError") &&
+            !requestController.signal.aborted
+          )
+            setMessages((items) =>
+              speechUnavailable(items, new Set([assistantId])),
+            );
         }
       } else {
         setMessages((items) =>
@@ -858,11 +902,12 @@ export default function JarvisExperience() {
                     ? mic
                       ? "Microfone ativo"
                       : "Microfone desligado"
-                    : "Sessão neural desligada"}
+                    : ""}
           </span>
         </div>
       </section>
       <HoloResponseHUD
+        externalAudioActive={connected && state === "responding"}
         showNarration={
           !!last && (!desktopVoice || muted || last.speechAvailable === false)
         }
@@ -879,7 +924,7 @@ export default function JarvisExperience() {
         <div className="holo-task-state" role="status">
           <span />{" "}
           {workspace.busy ? "Analisando arquivos" : "Organizando resposta"} ·
-          sem estimativa de duração
+          aguarde o resultado
         </div>
       ) : null}
       {shown.length && !holoSession.current ? (
@@ -941,21 +986,26 @@ export default function JarvisExperience() {
         </div>
       ) : null}
       <div className="interaction-dock">
-        <button
-          className="subtle-button"
-          type="button"
-          onClick={() => {
-            const next = !retainHistory;
-            setHistoryConsent(next);
-            setRetainHistory(next);
-          }}
-          aria-pressed={retainHistory}
-          title="Armazenamento local não criptografado. Desativar apaga a cópia local."
-        >
-          {retainHistory
-            ? "Não guardar neste dispositivo"
-            : "Guardar neste dispositivo"}
-        </button>
+        <details className="dock-preferences">
+          <summary aria-label="Preferências da conversa">Preferências</summary>
+          <div className="glass">
+            <button
+              className="subtle-button"
+              type="button"
+              onClick={() => {
+                const next = !retainHistory;
+                setHistoryConsent(next);
+                setRetainHistory(next);
+              }}
+              aria-pressed={retainHistory}
+              title="Armazenamento local não criptografado. Desativar apaga a cópia local."
+            >
+              {retainHistory
+                ? "Não guardar neste dispositivo"
+                : "Guardar neste dispositivo"}
+            </button>
+          </div>
+        </details>
         {typing ? (
           <form onSubmit={send} className="text-composer glass">
             <label className="sr-only" htmlFor="jarvis-input">
@@ -979,7 +1029,7 @@ export default function JarvisExperience() {
               disabled={
                 !draft.trim() ||
                 workspace.recording ||
-                ["connecting", "processing", "responding"].includes(state)
+                ["connecting", "processing"].includes(state)
               }
               aria-label="Enviar mensagem"
             >
@@ -1011,8 +1061,12 @@ export default function JarvisExperience() {
               ]);
             }}
             onReply={(reply) => {
-              const visual = composeScene(lastUserText.current, reply);
+              const visual =
+                reply.provider === "local_action"
+                  ? null
+                  : composeScene(lastUserText.current, reply);
               if (visual) holoSession.present(visual);
+              const prepared = { ...reply, visual: visual || undefined };
               const id = crypto.randomUUID();
               browserReplyId.current = id;
               setMessages((items) =>
@@ -1024,6 +1078,7 @@ export default function JarvisExperience() {
                   !muteRef.current,
                 ),
               );
+              return prepared;
             }}
             onSpeechUnavailable={() => {
               const id = browserReplyId.current;
@@ -1048,6 +1103,8 @@ export default function JarvisExperience() {
               );
             }}
             onMessage={async (spoken, signal) => {
+              const local = localConversationReply(spoken);
+              if (local) return { ...local, provider: "local_action" };
               if (spoken.length > 1500)
                 throw new Error(
                   "O comando é longo demais. Use uma mensagem de até 1.500 caracteres.",
@@ -1082,6 +1139,11 @@ export default function JarvisExperience() {
                   : mic
                     ? "Desativar microfone"
                     : "Ativar microfone"
+            }
+            title={
+              workspace.files.length
+                ? "Orientação por voz sobre os arquivos"
+                : "Conversa neural · requer autorização de custo"
             }
             aria-pressed={mic || workspace.recording}
           >
@@ -1152,10 +1214,24 @@ export default function JarvisExperience() {
           <button
             className="icon-button"
             onClick={toggleAudio}
+            title={muted ? "Ativar saída de voz" : "Silenciar saída de voz"}
             aria-label={muted ? "Ativar áudio" : "Silenciar áudio"}
             aria-pressed={muted}
           >
-            {muted ? "♩" : "♫"}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden="true"
+            >
+              <path d="M4 9h4l5-4v14l-5-4H4z" />
+              {muted ? (
+                <path d="m17 9 5 6m0-6-5 6" />
+              ) : (
+                <path d="M17 8a6 6 0 0 1 0 8M19 5a10 10 0 0 1 0 14" />
+              )}
+            </svg>
           </button>
           {connected || state === "connecting" ? (
             <button

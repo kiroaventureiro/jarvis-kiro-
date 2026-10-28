@@ -1,3 +1,5 @@
+import { narrationCoordinator } from "../holo/narration";
+import type { HoloScene } from "../holo/types";
 import { emitSpeechProgress } from "../holo/speech-progress";
 import type { SpeechOutput, VoicePreferences } from "./voice-types";
 import { readVoicePreferences, selectVoice } from "./voice-preferences";
@@ -5,6 +7,8 @@ export interface SpeechAdapter {
   getVoices(): SpeechSynthesisVoice[];
   speak(utterance: SpeechSynthesisUtterance): void;
   cancel(): void;
+  pause?(): void;
+  resume?(): void;
   addEventListener?(type: string, listener: EventListener): void;
   removeEventListener?(type: string, listener: EventListener): void;
 }
@@ -13,17 +17,36 @@ export function speechChunks(text: string) {
     .replace(/https?:\/\/\S+/g, "link disponível na tela")
     .replace(/[\*#_`]/g, "")
     .trim();
+  const sentences =
+    typeof Intl.Segmenter === "function"
+      ? [
+          ...new Intl.Segmenter("pt-BR", { granularity: "sentence" }).segment(
+            clean,
+          ),
+        ].map((x) => x.segment)
+      : clean.split(/(?<=[.!?])\s+/u);
   const chunks: string[] = [];
-  let rest = clean.slice(0, 12000);
-  while (rest) {
-    let length = Math.min(240, rest.length);
-    if (length < rest.length) {
-      const boundary = rest.lastIndexOf(" ", length);
-      if (boundary > 100) length = boundary;
+  let pending = "";
+  for (const sentence of sentences) {
+    if (pending.length + sentence.length <= 640) {
+      pending += sentence;
+      continue;
     }
-    chunks.push(rest.slice(0, length));
-    rest = rest.slice(length).trim();
+    if (pending.trim()) chunks.push(pending.trim());
+    pending = "";
+    if (sentence.length <= 640) {
+      pending = sentence;
+      continue;
+    }
+    for (const unit of sentence.match(/\S+\s*|\s+/gu) || []) {
+      if (pending.length + unit.length > 640 && pending) {
+        chunks.push(pending.trim());
+        pending = "";
+      }
+      pending += unit;
+    }
   }
+  if (pending.trim()) chunks.push(pending.trim());
   return chunks;
 }
 export class BrowserSpeechOutput implements SpeechOutput {
@@ -35,13 +58,37 @@ export class BrowserSpeechOutput implements SpeechOutput {
     private preferences: () => VoicePreferences = readVoicePreferences,
   ) {}
   cancel() {
+    narrationCoordinator.cancel();
+    this.cancelAudio();
+  }
+  private cancelAudio() {
     this.serial++;
     this.cancelCurrent?.();
     this.cancelCurrent = null;
     this.adapter()?.cancel();
   }
-  async speak(text: string, signal: AbortSignal) {
+  async speak(
+    text: string,
+    signal: AbortSignal,
+    options?: { scene?: HoloScene },
+  ) {
     this.cancel();
+    if (options?.scene)
+      return narrationCoordinator.begin(options.scene, text, signal, {
+        speak: (segment, abort) => this.speakText(segment, abort),
+        cancel: () => this.cancelAudio(),
+        pause: () => {
+          const api = this.adapter();
+          if (!api?.pause) return false;
+          api.pause();
+          return true;
+        },
+        resume: () => this.adapter()?.resume?.(),
+      });
+    return this.speakText(text, signal);
+  }
+  private async speakText(text: string, signal: AbortSignal) {
+    this.cancelAudio();
     const serial = this.serial;
     const api = this.adapter();
     if (!api)
@@ -93,7 +140,11 @@ export class BrowserSpeechOutput implements SpeechOutput {
         }
         this.cancelCurrent = null;
         emitSpeechProgress({
-          phase: error ? (signal.aborted ? "cancel" : "error") : "end",
+          phase: error
+            ? signal.aborted || error.name === "AbortError"
+              ? "cancel"
+              : "error"
+            : "end",
           fraction: error ? Math.min(1, charOffset / textLength) : 1,
           textLength,
           charIndex: error ? charOffset : textLength,
@@ -153,14 +204,20 @@ export class BrowserSpeechOutput implements SpeechOutput {
               "A reprodução de voz falhou. A resposta está no HUD; reative a escuta quando desejar.",
             ),
           );
-        timeout = setTimeout(() => {
-          finish(
-            new Error(
-              "A voz não concluiu a reprodução. Reative a escuta para tentar novamente.",
-            ),
-          );
-          api.cancel();
-        }, 30000);
+        timeout = setTimeout(
+          () => {
+            finish(
+              new Error(
+                "A voz não concluiu a reprodução. Reative a escuta para tentar novamente.",
+              ),
+            );
+            api.cancel();
+          },
+          Math.max(
+            30000,
+            Math.min(90000, (utterance.text.length * 130) / prefs.rate),
+          ),
+        );
         try {
           api.speak(utterance);
         } catch {

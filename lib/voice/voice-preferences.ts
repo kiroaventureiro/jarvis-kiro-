@@ -6,7 +6,7 @@ export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = {
   voiceURI: "",
   maleConfirmedURI: "",
   rate: 0.95,
-  pitch: 0.9,
+  pitch: 1,
   volume: 1,
   continuous: true,
 };
@@ -28,7 +28,7 @@ export function sanitizeVoicePreferences(value: unknown): VoicePreferences {
         ? raw.maleConfirmedURI.slice(0, 300)
         : "",
     rate: clamp("rate", 0.7, 1.3, 0.95),
-    pitch: clamp("pitch", 0.6, 1.2, 0.9),
+    pitch: clamp("pitch", 0.6, 1.2, 1),
     volume: clamp("volume", 0, 1, 1),
     continuous: typeof raw.continuous === "boolean" ? raw.continuous : true,
   };

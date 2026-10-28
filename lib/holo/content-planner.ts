@@ -1,3 +1,4 @@
+import { brazilFocuses } from "./geographic-focus";
 import type { HoloScene, HoloModule } from "./types";
 import type { DemonstrationStep, Layout } from "./presentation";
 import {
@@ -305,6 +306,29 @@ export function planContent(
           );
       }
     } else if (m.kind === "map") {
+      if (m.region === "BR" && !m.focusRegions?.length) {
+        const regions = brazilFocuses(
+          (scene.narration || "") + " " + m.title + " " + m.caption,
+        );
+        if (regions.length) {
+          add(m, m, -1);
+          regions.forEach((r, i) =>
+            add(
+              m,
+              {
+                ...m,
+                title: r.name,
+                focusRegions: r.ids,
+                focusLabel: r.name,
+                caption:
+                  "Divisão estadual atual do IBGE, usada como referência regional. Fronteiras históricas e limites municipais exigem outra escala.",
+              },
+              i,
+            ),
+          );
+          continue;
+        }
+      }
       const focuses = contextualCountries(scene, m);
       if (focuses.length)
         focuses.forEach((id, i) =>

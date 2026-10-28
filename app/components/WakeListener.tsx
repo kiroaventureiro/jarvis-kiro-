@@ -14,7 +14,7 @@ import type {
 type Props = {
   onMessage: (text: string, signal: AbortSignal) => Promise<VoiceReply>;
   onUser: (text: string) => void;
-  onReply: (reply: VoiceReply) => void;
+  onReply: (reply: VoiceReply) => VoiceReply | void;
   onSpeechUnavailable: () => void;
   onState: (state: VoiceSnapshot) => void;
   beforeStart: () => void;
@@ -121,9 +121,21 @@ export default function WakeListener(props: Props) {
         className={"icon-button " + (snapshot.enabled ? "active" : "")}
         data-voice-phase={snapshot.phase}
       >
-        {snapshot.enabled ? "◉" : "◎"}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          aria-hidden="true"
+        >
+          <path d="M6 5C3 9 3 15 6 19M18 5c3 4 3 10 0 14M9 8c-2 2-2 6 0 8M15 8c2 2 2 6 0 8" />
+          <circle cx="12" cy="12" r="1.5" />
+        </svg>
       </button>
-      {snapshot.message ? (
+      {snapshot.message &&
+      (snapshot.microphoneActive ||
+        snapshot.phase === "error" ||
+        /oculta|indisponível|permiss|negad/i.test(snapshot.message)) ? (
         <span className="wake-status" role="status" aria-live="polite">
           {snapshot.message}
           {snapshot.microphoneActive ? " · microfone ativo" : ""}

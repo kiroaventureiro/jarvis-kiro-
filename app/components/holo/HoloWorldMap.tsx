@@ -1,9 +1,14 @@
 "use client";
+import {
+  projectWorldPoint,
+  type PlaceRow,
+} from "../../../lib/holo/place-policy";
 import { memo, useEffect, useId, useMemo, useRef, useState } from "react";
 import geography from "../../../config/holo-world-map.json";
 import { googleMapsUrl } from "../../../lib/holo/presentation";
 import HoloTypewriter from "./HoloTypewriter";
 import type { HoloModule } from "../../../lib/holo/types";
+let placesRequest: Promise<PlaceRow[]> | null = null;
 function HoloWorldMap({
   module: m,
   automatic = false,
@@ -17,6 +22,57 @@ function HoloWorldMap({
     [zoom, setZoom] = useState(1),
     [offset, setOffset] = useState({ x: 0, y: 0 }),
     [query, setQuery] = useState("");
+  const [place, setPlace] = useState<PlaceRow | null>(null),
+    [placeError, setPlaceError] = useState(false);
+  useEffect(() => {
+    if (!m.focusPlaceId) {
+      setPlace(null);
+      return;
+    }
+    let active = true;
+    setPlaceError(false);
+    if (!placesRequest)
+      placesRequest = fetch("/holo-places-index.json", {
+        signal: AbortSignal.timeout(10000),
+      }).then((r) => {
+        if (!r.ok) throw Error();
+        return r.json();
+      });
+    void placesRequest.then(
+      (rows) => {
+        if (!active) return;
+        const p = rows.find((r) => r[0] === m.focusPlaceId);
+        if (p) setPlace(p);
+        else setPlaceError(true);
+      },
+      () => {
+        if (active) setPlaceError(true);
+        placesRequest = null;
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [m.focusPlaceId]);
+  useEffect(() => {
+    if (!automatic || !place) return;
+    const point = projectWorldPoint(place[3], place[4]),
+      scale = 5;
+    setZoom(scale);
+    setSelected(place[2]);
+    setOffset({ x: scale * (500 - point.x), y: scale * (250 - point.y) });
+  }, [automatic, place]);
+  useEffect(() => {
+    if (!automatic || !m.focusCountries?.length) return;
+    setSelected("");
+    setZoom(1.1);
+    setOffset({ x: 0, y: 0 });
+  }, [automatic, m.focusCountries]);
+  const showPlace =
+    place && (automatic || selected === place[2]) ? place : null;
+  const point = showPlace
+    ? projectWorldPoint(showPlace[3], showPlace[4])
+    : null;
   const country = geography.regions.find((r) => r.id === selected);
   useEffect(() => {
     if (!automatic || !m.focusCountry) return;
@@ -55,7 +111,11 @@ function HoloWorldMap({
   return (
     <div
       className={"holo-world-map" + (automatic ? " is-automatic-map" : "")}
-      data-context-country={selected}
+      data-context-country={selected || m.focusLabel}
+      data-context-place={showPlace?.[1]}
+      data-holo-pending={
+        m.focusPlaceId && !place && !placeError ? true : undefined
+      }
     >
       <div className="holo-world-viewport">
         <svg
@@ -113,7 +173,12 @@ function HoloWorldMap({
                 d={r.d}
                 fillRule="evenodd"
                 pathLength="1"
-                className={selected === r.id ? "is-selected" : ""}
+                className={
+                  selected === r.id ||
+                  (automatic && m.focusCountries?.includes(r.id))
+                    ? "is-selected"
+                    : ""
+                }
                 tabIndex={automatic ? -1 : 0}
                 role={automatic ? "presentation" : "button"}
                 aria-hidden={automatic || undefined}
@@ -130,6 +195,34 @@ function HoloWorldMap({
                 <title>{r.name}</title>
               </path>
             ))}
+            {point && showPlace ? (
+              <g
+                className="holo-world-place-marker"
+                transform={"translate(" + point.x + "," + point.y + ")"}
+                aria-label={"Localidade de referência: " + showPlace[1]}
+              >
+                <circle
+                  r={4 / zoom}
+                  fill="#ffe4aa"
+                  stroke="#fff3d8"
+                  strokeWidth={1 / zoom}
+                />
+                <circle
+                  r={8 / zoom}
+                  fill="none"
+                  stroke="#ffe4aa"
+                  strokeWidth={0.6 / zoom}
+                />
+                <text
+                  x={11 / zoom}
+                  y={-8 / zoom}
+                  fill="#fff0c8"
+                  fontSize={15 / zoom}
+                >
+                  {showPlace[1]}
+                </text>
+              </g>
+            ) : null}
           </g>
         </svg>
         <span className="holo-map-coordinate">EARTH / NATURAL EARTH 110M</span>
@@ -199,18 +292,36 @@ function HoloWorldMap({
         </>
       ) : null}
       <p className="holo-map-selection" role="status">
-        {country?.name || "Selecione uma área no mapa"}
+        {showPlace?.[1] ||
+          m.focusLabel ||
+          country?.name ||
+          "Selecione uma área no mapa"}
       </p>
       {!automatic ? (
         <a
           className="holo-google-maps"
-          href={googleMapsUrl(query.trim() || country?.name || "Mundo")}
+          href={googleMapsUrl(
+            query.trim() || showPlace?.[1] || country?.name || "Mundo",
+          )}
           target="_blank"
           rel="noreferrer"
         >
-          Abrir {query.trim() || country?.name || "localização"} no Google Maps
-          ↗
+          Abrir{" "}
+          {query.trim() || showPlace?.[1] || country?.name || "localização"} no
+          Google Maps ↗
         </a>
+      ) : null}
+      {showPlace ? (
+        <small className="holo-geography-note">
+          Ponto de referência Natural Earth · {showPlace[4].toFixed(3)},{" "}
+          {showPlace[3].toFixed(3)} · sem mapa de ruas.
+        </small>
+      ) : null}
+      {placeError ? (
+        <p role="status">
+          Não foi possível carregar a localidade. O contexto do país continua
+          disponível.
+        </p>
       ) : null}
       <p className="holo-caption">
         {automatic ? <HoloTypewriter text={m.caption} /> : m.caption}

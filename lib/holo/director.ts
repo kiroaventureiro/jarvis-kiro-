@@ -97,7 +97,12 @@ export class HoloDirector {
       return this.state;
     }
     // A safety limit pauses instead of silently discarding hidden essential content.
-    if (elapsed >= step.completion.timeoutMs) {
+    if (
+      elapsed >= step.completion.timeoutMs &&
+      (!voice.fresh ||
+        voice.ended ||
+        voice.fraction >= step.completion.voiceEnd)
+    ) {
       this.state = {
         ...this.state,
         elapsed,

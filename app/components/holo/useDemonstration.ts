@@ -1,5 +1,12 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { HoloScene } from "../../../lib/holo/types";
 import { presentationPlan, planDuration } from "../../../lib/holo/presentation";
 import { HoloDirector, type FlowEvidence } from "../../../lib/holo/director";
@@ -8,7 +15,16 @@ import {
   SPEECH_PROGRESS_EVENT,
   type SpeechProgress,
 } from "../../../lib/holo/speech-progress";
+import {
+  narrationCoordinator,
+  NARRATION_IDLE,
+} from "../../../lib/holo/narration";
 export function useDemonstration(scene: HoloScene, space?: PresentationSpace) {
+  const narration = useSyncExternalStore(
+    narrationCoordinator.subscribe,
+    () => narrationCoordinator.state,
+    () => NARRATION_IDLE,
+  );
   const plan = useMemo(
       () => presentationPlan(scene, space),
       [scene, space?.width, space?.height],
@@ -43,6 +59,13 @@ export function useDemonstration(scene: HoloScene, space?: PresentationSpace) {
   }, []);
   useEffect(() => {
     const speech = (event: Event) => {
+      if (
+        narrationCoordinator.state.sceneId === scene.id &&
+        !["idle", "complete", "cancelled"].includes(
+          narrationCoordinator.state.phase,
+        )
+      )
+        return;
       const d = (event as CustomEvent<SpeechProgress>).detail;
       if (!d || !Number.isFinite(d.fraction)) return;
       if (d.phase === "cancel") {
@@ -82,10 +105,25 @@ export function useDemonstration(scene: HoloScene, space?: PresentationSpace) {
       last = now;
       const old = machine.current!.state,
         fresh = voice.current.boundary && now - voice.current.at < 4000;
+      const shared = narrationCoordinator.state,
+        managed =
+          shared.sceneId === scene.id &&
+          !["idle", "complete", "cancelled"].includes(shared.phase);
+      const sharedDone =
+        shared.stepId ===
+          machine.current!.plan[machine.current!.state.index]?.id &&
+        ["waiting", "silent"].includes(shared.phase);
+      if (managed && shared.phase === "error") machine.current!.pause();
       const next = machine.current!.tick(
         delta,
         flow.current,
-        { fraction: voice.current.fraction, fresh, ended: voice.current.ended },
+        managed
+          ? { fraction: sharedDone ? 1 : 0, fresh: true, ended: sharedDone }
+          : {
+              fraction: voice.current.fraction,
+              fresh,
+              ended: voice.current.ended,
+            },
         rate.current,
         !document.hidden,
       );
@@ -97,10 +135,21 @@ export function useDemonstration(scene: HoloScene, space?: PresentationSpace) {
       window.removeEventListener(SPEECH_PROGRESS_EVENT, speech);
     };
   }, [scene.id, scene.narration]);
-  const act = useCallback((action: "pause" | "resume" | "replay") => {
-    machine.current![action]();
-    setSnapshot({ ...machine.current!.state });
-  }, []);
+  useEffect(() => {
+    const step = plan[Math.min(snapshot.index, Math.max(0, plan.length - 1))];
+    if (step) narrationCoordinator.register(scene.id, plan, step.id);
+    if (snapshot.status === "complete") narrationCoordinator.finish(scene.id);
+  }, [scene.id, plan, snapshot.index, snapshot.status]);
+  useEffect(() => () => narrationCoordinator.detach(scene.id), [scene.id]);
+  const act = useCallback(
+    (action: "pause" | "resume" | "replay") => {
+      if (action === "pause") narrationCoordinator.pause(scene.id);
+      if (action === "resume") narrationCoordinator.resume(scene.id);
+      machine.current![action]();
+      setSnapshot({ ...machine.current!.state });
+    },
+    [scene.id],
+  );
   const reportFlow = useCallback((e: FlowEvidence) => {
     flow.current = e;
   }, []);
@@ -109,6 +158,17 @@ export function useDemonstration(scene: HoloScene, space?: PresentationSpace) {
     finished = snapshot.status === "complete",
     playing = snapshot.status === "playing";
   return {
+    narration: narration.sceneId === scene.id ? narration : NARRATION_IDLE,
+    retryVoice: () => {
+      narrationCoordinator.retry();
+      machine.current!.resume();
+      setSnapshot({ ...machine.current!.state });
+    },
+    continueSilently: () => {
+      narrationCoordinator.silence();
+      machine.current!.resume();
+      setSnapshot({ ...machine.current!.state });
+    },
     plan,
     step,
     index,

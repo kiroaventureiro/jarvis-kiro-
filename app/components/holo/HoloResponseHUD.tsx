@@ -1,4 +1,5 @@
 "use client";
+import { narrationCoordinator } from "../../../lib/holo/narration";
 import HoloExportMenu from "./HoloExportMenu";
 import CinematicPresentation from "./CinematicPresentation";
 import { useEffect, useState } from "react";
@@ -91,8 +92,10 @@ export function ScenePanels({
 export default function HoloResponseHUD({
   local = [],
   showNarration = false,
+  externalAudioActive = false,
 }: {
   showNarration?: boolean;
+  externalAudioActive?: boolean;
   local?: HoloLocalMedia[];
 }) {
   const { current: scene, close, media } = useHoloSession();
@@ -153,10 +156,14 @@ export default function HoloResponseHUD({
       ) : (
         <CinematicPresentation
           key={scene.id}
+          externalAudioActive={externalAudioActive}
           showNarration={showNarration}
           scene={scene}
           local={[...media, ...local]}
-          onExplore={() => setExplore(true)}
+          onExplore={() => {
+            narrationCoordinator.cancel(scene.id);
+            setExplore(true);
+          }}
           onStop={close}
         />
       )}
