@@ -76,6 +76,9 @@ export async function answerNativeRequest(
   message: string,
   signal?: AbortSignal,
 ) {
+  const { answerWorkspaceQuestion } = await import("../workspace/conversation");
+  const workspace = await answerWorkspaceQuestion(message);
+  if (workspace) return workspace;
   const { answerCognitiveRequest } = await import("../cognitive/server");
   const cognitive = await answerCognitiveRequest(message, signal);
   if (cognitive) return cognitive;
