@@ -57,10 +57,10 @@ export async function conversationalConnectorRead(message: string) {
       if (c.resources.length > targets.length)
         results.push("Outros " + (c.resources.length - targets.length) + " projetos autorizados não foram consultados nesta resposta para limitar tempo e volume. Solicite uma consulta específica.");
     }
-    const sampleNames = verifiedNames.slice(0, 4).map(name => name.replace(/^[^/]+\\//, "").replace(/[-_]/g, " "));
+    const sampleNames = verifiedNames.slice(0, 4).map(name => name.split("/").at(-1)!.replace(/[-_]/g, " "));
     const examples = sampleNames.length ? " Entre os projetos verificados estão " + sampleNames.join(", ") + "." : "";
     const failureNote = failed === 1 ? " Uma consulta não pôde ser concluída" : failed > 1 ? " " + failed + " consultas não puderam ser concluídas" : "";
-    const failureDetail = failedNames.length ? ": " + failedNames.slice(0, 2).map(name => name.replace(/^[^/]+\\//, "").replace(/[-_]/g, " ")).join(" e ") + "." : ".";
+    const failureDetail = failedNames.length ? ": " + failedNames.slice(0, 2).map(name => name.split("/").at(-1)!.replace(/[-_]/g, " ")).join(" e ") + "." : ".";
     const text = "Concluí " + successful + (successful === 1 ? " consulta de leitura." : " consultas de leitura.") + examples + (failed ? failureNote + failureDetail : "") + " Nenhuma alteração foi feita. Essas verificações confirmam o acesso aos projetos, mas não substituem uma análise aprofundada do código e dos serviços.";
     const visual: HoloScene = {
       version: 1, id: "jk-connected-projects-" + Date.now(),
