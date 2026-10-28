@@ -119,6 +119,18 @@ export class VoiceController {
     this.dedupe = new CommandDeduplicator();
     this.listen();
   }
+  /** Turn off the user's microphone without cancelling a reply already being spoken. */
+  disableListening() {
+    if (!this.enabled) return;
+    if (!this.speechPending) {
+      this.stop("Microfone desligado.");
+      return;
+    }
+    this.enabled = false;
+    this.clearTimers();
+    this.pause();
+    this.emit("off", "Microfone desligado. A narração continua.");
+  }
   stop(message = "Escuta desligada.") {
     const ownedSpeech = this.speechPending || this.busy;
     if (this.speechPending) this.options.onSpeechUnavailable?.();
