@@ -4,7 +4,7 @@ import { listPersistentProjects, savePersistentProject } from "./projects";
 const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export async function answerWorkspaceQuestion(message: string) {
   const n = normalize(message);
-  const checkpoint = /^(?:jarvis[, ]*)?(?:atualize|atualizar|salve|registre) (?:a )?(?:proxima etapa|proximo passo) (?:do |no )?projeto\\s+(.+?)\\s*:\\s*(.+)$/i.exec(message.trim());
+  const checkpoint = /^(?:jarvis[, ]*)?(?:atualize|atualizar|salve|registre) (?:a )?(?:proxima etapa|proximo passo) (?:do |no )?projeto\s+(.+?)\s*:\s*(.+)$/i.exec(message.trim());
   if (checkpoint) {
     if (!connectorStore.configured())
       return {text:"O cofre da memória contínua está indisponível.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
