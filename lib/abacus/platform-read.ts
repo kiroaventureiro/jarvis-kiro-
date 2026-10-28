@@ -111,11 +111,11 @@ export async function listAbacusResourceNames(apiKey: string | undefined, signal
 /** Never confuse developer-platform access with ChatLLM sessions. */
 export async function answerAbacusPlatformQuestion(message: string, signal?: AbortSignal) {
   const n = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  if (!/\b(abacus|abaqus)\b/.test(n) ||
-      !/\b(projetos|deployments|implantacoes|acesso|conexao|permissao)\b/.test(n) ||
-      !/\b(verifique|verificar|consulte|consultar|liste|listar|quais|mostre|mostrar|status|tenho|conectad[oa])\b/.test(n))
+  if (!/\b(abacus|abaqus|avacus|abagus)\b/.test(n) ||
+      !/\b(projetos|deployments|deploys|deploy|implantacoes|acesso|conexao|permissao)\b/.test(n) ||
+      !/\b(verifique|verifica|verificar|consulte|consulta|consultar|liste|listar|quais|mostre|mostrar|status|tenho|conectad[oa])\b/.test(n))
     return null;
-  const wantsNames = /\b(nomes|nome|liste|listar|quais|mostre|mostrar)\\b/.test(n) && /\b(projetos|deployments|implantacoes)\\b/.test(n);
+  const wantsNames = /\b(nomes|nome|liste|listar|quais|mostre|mostrar)\\b/.test(n) && /\b(projetos|deployments|deploys|deploy|implantacoes)\\b/.test(n);
   if (wantsNames) {
     const found = await listAbacusResourceNames(process.env.ABACUS_PLATFORM_API_KEY || process.env.ABACUS_API_KEY,signal);
     return {text:found.state==="verified" ? "Recursos da API Developer Platform da Abacus. Projetos: "+(found.projects.join("; ")||"nenhum nome identificado")+". Deployments: "+(found.deployments.join("; ")||"nenhum nome identificado")+". Essa lista não inclui conversas privadas do ChatLLM." : "Não consegui listar os recursos da API principal da Abacus: "+found.state+".",model:"jk-abacus-platform",provider:"local_operational" as const,usage:null};
