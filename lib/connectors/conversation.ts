@@ -1,6 +1,7 @@
 import "server-only";
 import { connectors, connectorStore } from "./server";
 import { type Provider } from "./types";
+import type { HoloScene } from "../holo/types";
 
 /** Extend this registry when a real, authorized native adapter is added. */
 const READ_PROVIDERS: Record<Provider, { aliases: string[]; summary: string }> = {
@@ -26,11 +27,12 @@ export async function conversationalConnectorRead(message: string) {
   try {
     const state = await connectorStore.read();
     const results: string[] = [];
+    const panels: Array<{label: string; detail: string}> = [];
     for (const provider of providers) {
       const c = state.connections[provider];
-      if (!c || c.status !== "connected") { results.push(provider + ": sem conexão ativa."); continue; }
-      if (!c.grants.includes("read")) { results.push(provider + ": leitura não autorizada."); continue; }
-      if (!c.resources.length) { results.push(provider + ": conectado, mas nenhum projeto foi autorizado no JK."); continue; }
+      if (!c || c.status !== "connected") { results.push(provider + ": sem conexão ativa."); panels.push({label: provider.toUpperCase(), detail: "Sem conexão ativa"}); continue; }
+      if (!c.grants.includes("read")) { results.push(provider + ": leitura não autorizada."); panels.push({label: provider.toUpperCase(), detail: "Leitura não autorizada"}); continue; }
+      if (!c.resources.length) { results.push(provider + ": conectado, mas nenhum projeto foi autorizado no JK."); panels.push({label: provider.toUpperCase(), detail: "Nenhum projeto autorizado"}); continue; }
       results.push(provider.toUpperCase() + ": " + c.resources.length + " projeto(s) autorizado(s).");
       const targets = c.resources.slice(0, 5);
       for (const resource of targets) {
@@ -39,14 +41,25 @@ export async function conversationalConnectorRead(message: string) {
           const checked = await connectors.readAuthorized(provider, resource.id, op);
           const result = JSON.stringify(checked.data).slice(0, 1400);
           results.push("- " + resource.name + " | consulta real " + op + " em " + checked.checkedAt + " | " + result);
+          panels.push({label: provider.toUpperCase() + " · " + resource.name, detail: "Consulta " + op + " concluída em " + checked.checkedAt});
         } catch {
           results.push("- " + resource.name + " | não foi possível consultar agora; não afirmar que o projeto foi verificado.");
+          panels.push({label: provider.toUpperCase() + " · " + resource.name, detail: "Consulta indisponível; nenhum resultado confirmado"});
         }
       }
       if (c.resources.length > targets.length)
         results.push("Outros " + (c.resources.length - targets.length) + " projetos autorizados não foram consultados nesta resposta para limitar tempo e volume. Solicite uma consulta específica.");
     }
-    return { text: "Diagnóstico operacional de leitura. Fontes: consultas realizadas aos conectores nativos autorizados.\n" + results.join("\n") + "\nNenhuma alteração foi executada. Resultados externos não comprovam ausência de erros; para auditoria profunda é necessário ler arquivos e testes específicos.", model: "jk-tools", provider: "local_operational" as const, usage: null };
+    const text = "Diagnóstico operacional de leitura. Fontes: consultas realizadas aos conectores nativos autorizados.\\n" + results.join("\\n") + "\\nNenhuma alteração foi executada. Resultados externos não comprovam ausência de erros; para auditoria profunda é necessário ler arquivos e testes específicos.";
+    const visual: HoloScene = {
+      version: 1, id: "jk-connected-projects-" + Date.now(),
+      title: "Diagnóstico dos sistemas conectados", mode: "technical",
+      createdAt: new Date().toISOString(),
+      source: {kind: "connector", label: "Consultas reais aos provedores autorizados", checkedAt: new Date().toISOString()},
+      modules: [{id: "verified-projects", kind: "report", title: "Projetos e consultas verificadas", summary: "Somente leitura. Resultados limitados às operações concluídas nesta solicitação.", items: panels.slice(0, 20)}],
+      narration: text,
+    };
+    return { text, visual, model: "jk-tools", provider: "local_operational" as const, usage: null };
   } catch {
     return { text: "Não consegui consultar o cofre dos conectores agora. Não posso garantir que as contas estejam desconectadas.", model: "jk-tools", provider: "local_operational" as const, usage: null };
   }
