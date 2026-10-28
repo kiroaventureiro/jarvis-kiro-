@@ -133,3 +133,10 @@ test("Text and voice route interface requests to the native studio without a pai
   }
   assert.equal(answerDesignRequest("Qual o saldo da Abacus?"), null);
 });
+
+test("Sandbox preview anchors stay in srcdoc while exported files keep relative navigation",()=>{
+ const files=designFiles(designFromBrief("Kiro\nProjetos\nContato"));
+ assert.match(files["index.html"],/href="#section-0"/);
+ assert.match(previewDocument(files),/href="about:srcdoc#section-0"/);
+ assert.ok(!previewDocument(files).includes('href="#'));
+});

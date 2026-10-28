@@ -210,6 +210,8 @@ export function designFiles(
 }
 export function previewDocument(files: Record<string, string>) {
   return files["index.html"]
+    .replace(/href="#/g, 'href="about:srcdoc#')
+    .replace('href="index.html"', 'href="about:srcdoc#"')
     .replace("style-src 'self'", "style-src 'unsafe-inline'")
     .replace(
       '<link rel="stylesheet" href="assets/styles.css">',

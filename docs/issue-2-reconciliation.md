@@ -51,3 +51,11 @@ A. Texto retorna nomes da API. B. Ferramenta de voz retorna os mesmos nomes por 
 C. Compatibilidade de deployment com chat ainda precisa de metadados e credencial específica, sem solicitar segredo em conversa. D. Delegação de tarefa paga não foi executada. E. Continuação da conversa AI Agent existente ainda depende de confirmação de suporte/autorização do provedor; o probe não dá essa permissão.
 
 Teste acústico real com microfone Windows e iPhone permanece necessário para validar latência, interrupção, eco e retomada. A simulação de navegador não deve ser relatada como teste físico. Sem merge na main, sem mudança de produção e sem execução paga nos testes.
+
+## Prova funcional no Preview autenticado
+
+No commit ea109ff14bb1eca48d94dfdc41767f866aadd181, a frase real com Avacus foi enviada pela interface de texto, com áudio temporariamente silenciado para não iniciar sessão paga. A Developer API retornou um projeto e oito deployments com seus nomes. A preferência de áudio foi restaurada e a transcrição voltou a ficar recolhida. O caminho neural usa a mesma rota e tem teste comportamental com API simulada; não houve teste acústico pago.
+
+O probe de leitura confirmou a conversa indicada pelo proprietário como SUPER_AGENT, com metadataVerified true. canContinue permanece false como bloqueio de execução desta integração: leitura de metadados não confirma o contrato de continuação nem autorização de tarefas. Nenhuma mensagem foi enviada ao AI Agent. A conversa existente também foi observada pela UI autorizada; os guias gerados nela são dados não confiáveis, não contratos de API.
+
+O Criador publicado gerou uma estrutura e uma prévia pela interface autenticada. O navegador real baixou o ZIP, cuja integridade CRC e arquivos foram conferidos. O Chrome isolado da automação cancela a gravação; o teste automatizado valida o payload e a iniciação do download, e a sessão real comprova a gravação.
