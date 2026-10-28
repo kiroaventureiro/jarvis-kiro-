@@ -4,6 +4,27 @@ import { listPersistentProjects, savePersistentProject } from "./projects";
 const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 export async function answerWorkspaceQuestion(message: string) {
   const n = normalize(message);
+  const decision = /^(?:jarvis[, ]*)?(?:registre|registre na memoria|anote|salve) (?:uma )?(?:decisao|conclusao|observacao) (?:no|do) projeto\s+(.+?)\s*:\s*(.+)$/i.exec(n);
+  if (decision) {
+    if (!connectorStore.configured())
+      return {text:"A memória persistente está indisponível neste ambiente.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    try {
+      const original = message.trim();
+      const colon = original.indexOf(":");
+      const note = original.slice(colon+1).trim();
+      const name = decision[1].trim();
+      if (!note || note.length > 500)
+        return {text:"A observação é muito extensa ou está vazia. Nada foi salvo.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+      const matches = (await listPersistentProjects()).filter(p=>normalize(p.name)===name);
+      if (matches.length !== 1)
+        return {text:"Não identifiquei um projeto salvo com esse nome. Nenhuma observação foi registrada.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+      const p=matches[0];
+      await savePersistentProject({id:p.id,name:p.name,objective:p.objective,provider:p.provider,status:p.status,nextStep:p.nextStep,notes:[...p.notes,note].slice(-20)});
+      return {text:"Registrei a observação no projeto "+p.name+". Ela ficará disponível quando retomarmos o trabalho. Não executei nenhuma ação externa.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    } catch {
+      return {text:"Não consegui confirmar a gravação da observação.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
+    }
+  }
   const checkpoint = /^(?:jarvis[, ]*)?(?:atualize|atualizar|salve|registre) (?:a |o )?(?:proxima etapa|proximo passo) (?:do |no |o )?projeto\s+(.+?)\s*:\s*(.+)$/i.exec(message.trim());
   if (checkpoint) {
     if (!connectorStore.configured())
