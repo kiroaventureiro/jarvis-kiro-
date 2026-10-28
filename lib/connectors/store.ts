@@ -119,6 +119,8 @@ export class SupabaseConnectorStore implements StateStore {
         .slice(-50);
       for (const [k, pending] of Object.entries(state.oauth))
         if (pending.expiresAt < Date.now()) delete state.oauth[k];
+      for (const [key, value] of Object.entries(state.cognitive || {}))
+        if (value.expires < Date.now()) delete state.cognitive![key];
       const ciphertext = encrypt(state, c.secret, c.id);
       if (ciphertext.length > 1800000)
         throw new ConnectorError("VAULT_LIMIT", 413);

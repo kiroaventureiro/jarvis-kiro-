@@ -72,7 +72,13 @@ export async function developerPlanner() {
   );
 }
 
-export async function answerNativeRequest(message: string) {
+export async function answerNativeRequest(
+  message: string,
+  signal?: AbortSignal,
+) {
+  const { answerCognitiveRequest } = await import("../cognitive/server");
+  const cognitive = await answerCognitiveRequest(message, signal);
+  if (cognitive) return cognitive;
   const intent = /\b(verifique|diagnostique|corrija|analise o site)\b/i.test(
     message,
   );

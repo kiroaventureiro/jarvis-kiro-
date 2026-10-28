@@ -379,6 +379,7 @@ export class ConnectorService {
     resourceId: string,
     operationId: string,
     args: Record<string, unknown> = {},
+    signal?: AbortSignal,
   ) {
     const definition = operation(provider, operationId);
     if (!definition || definition.grant !== "read")
@@ -393,7 +394,14 @@ export class ConnectorService {
     const resource = this.allow(action, connection);
     let result: unknown;
     try {
-      result = await this.run(action, connection.credentials!, resource);
+      if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
+      const run = signal
+        ? createAdapters((p, c, path, options) =>
+            this.options.call(p, c, path, { ...options, signal }),
+          )
+        : this.run;
+      result = await run(action, connection.credentials!, resource);
+      if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
       await this.options.store.update((state) =>
         audit(state, "conversation:" + operationId, "done", {
           provider,

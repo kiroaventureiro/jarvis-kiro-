@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       answerPlaceReference(message) ||
       (await answerImages(message, signal)) ||
       (await answerResearch(message, signal)) ||
-      (await answerNativeRequest(message)) ||
+      (await answerNativeRequest(message, signal)) ||
       (await answerOperationalQuestion(message, signal)) ||
       localVisualReference(message),
     reply: askAbacus,

@@ -36,7 +36,14 @@ export function requestedProject(
   const canonical = projects.filter((p) =>
     p.names.some((name) => {
       const k = compact(name);
-      return k.length >= 4 && flat.includes(k);
+      const phrase = tokens(name).join("[\\s_/-]*");
+      return (
+        k.length >= 4 &&
+        (new RegExp("(?:^|[^a-z0-9])" + phrase + "(?:$|[^a-z0-9])").test(
+          tokens(message).join(" "),
+        ) ||
+          new RegExp("(?:^|[^a-z0-9])" + k + "(?:$|[^a-z0-9])").test(n))
+      );
     }),
   );
   if (canonical.length > 1)
@@ -91,15 +98,16 @@ export function requestedProject(
       "Não identifiquei um projeto autorizado com esse nome. Informe o nome ou vínculo exato na Central de Conexões.",
   };
 }
-export function selectProjectResources(
+export function selectProjectResources<T extends ProjectResource>(
   selection: ProjectSelection,
-  resources: ProjectResource[],
+  resources: T[],
 ) {
   if (selection.kind === "all") return resources;
   if (selection.kind === "unresolved") return [];
   return resources.filter(
     (r) =>
       (selection.projectId && r.kiroProject === selection.projectId) ||
-      selection.keys.includes(compact(r.name.split("/").at(-1) || r.name)),
+      ((!r.kiroProject || !selection.projectId) &&
+        selection.keys.includes(compact(r.name.split("/").at(-1) || r.name))),
   );
 }

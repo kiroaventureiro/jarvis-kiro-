@@ -85,6 +85,10 @@ export type OAuthPending = {
   sessionExpires: number;
 };
 export type VaultState = {
+  cognitive?: Record<
+    string,
+    import("../cognitive/vault-context").StoredConversation
+  >;
   version: 1;
   connections: Partial<Record<Provider, Connection>>;
   plans: Plan[];

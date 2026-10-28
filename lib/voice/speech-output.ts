@@ -1,3 +1,4 @@
+import { spokenExplanation } from "../cognitive/narration";
 import { narrationCoordinator } from "../holo/narration";
 import type { HoloScene } from "../holo/types";
 import { emitSpeechProgress } from "../holo/speech-progress";
@@ -13,7 +14,7 @@ export interface SpeechAdapter {
   removeEventListener?(type: string, listener: EventListener): void;
 }
 export function speechChunks(text: string) {
-  const clean = text
+  const clean = spokenExplanation(text)
     .replace(/https?:\/\/\S+/g, "link disponível na tela")
     .replace(/[\*#_`]/g, "")
     .trim();

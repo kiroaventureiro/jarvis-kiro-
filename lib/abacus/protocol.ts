@@ -1,3 +1,4 @@
+import { depthFor } from "../cognitive/intent";
 import type { HoloScene } from "../holo/types";
 import type { ConnectorResultLink } from "../connectors/result";
 import { kiroChatContext } from "../kiro-context-for-chat";
@@ -142,8 +143,19 @@ export function buildAbacusPlan(
     research:
       "Separe fatos e incertezas; sem ferramenta web, não alegue pesquisa ao vivo.",
   }[task];
+  const depth = depthFor(message);
+  const depthStyle = {
+    brief: "Responda de forma breve, com os fatos essenciais.",
+    normal:
+      "Explique com clareza os resultados, evidências, limites e próximos passos quando pertinentes; não imponha três frases.",
+    detailed:
+      "Organize uma explicação detalhada em etapas, com causas apenas quando sustentadas por evidências.",
+    deep: "Organize análise aprofundada em capítulos, relacionando evidências e consequências sem chamar uma parte de resposta completa.",
+  }[depth];
   const system =
     "Você é Jarvis Kiro, assistente da KIRO. Responda em pt-BR. " +
+    depthStyle +
+    " O orçamento de saída permanece limitado; se precisar continuar, informe isso claramente, sem inventar pesquisa ou executar novas chamadas automaticamente. " +
     (/complet|aprofund|detalhad|em detalhes|capitulos|capítulos/i.test(message)
       ? " Organize uma explicação proporcional ao pedido, em capítulos claros. O limite de saída é restrito: informe se esta é apenas uma parte e mantenha continuidade quando o usuário pedir para continuar; não chame um resumo de explicação completa. Não substitua explicação por sugestões genéricas de pesquisa. "
       : style) +
