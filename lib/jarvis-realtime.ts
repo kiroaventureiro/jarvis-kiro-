@@ -20,6 +20,8 @@ export type RealtimeEvent = {
   transcript?: string;
   error?: { message?: string };
   response?: {
+    id?: string;
+    usage?: {input_tokens?:number;output_tokens?:number};
     output?: Array<{
       type?: string;
       name?: string;

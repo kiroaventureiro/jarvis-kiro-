@@ -91,7 +91,9 @@ export async function runMedia(
   key: string,
   signal?: AbortSignal,
   fetcher: typeof fetch = fetch,
+  maxOutputTokens = 350,
 ): Promise<MediaOutput> {
+  if (!Number.isInteger(maxOutputTokens) || maxOutputTokens < 350 || maxOutputTokens > 1500) throw Error("INVALID_OUTPUT_LIMIT");
   const content =
     input.kind === "vision"
       ? [
@@ -101,7 +103,7 @@ export async function runMedia(
       : input.prompt;
   const body = {
     model: input.model,
-    max_tokens: 350,
+    max_tokens: maxOutputTokens,
     stream: false,
     messages: [
       {

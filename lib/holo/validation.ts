@@ -19,7 +19,7 @@ export function publicHref(v: unknown): string | undefined {
   if (typeof v !== "string" || v.length > 900 || /[\x00-\x20\\]/.test(v))
     return;
   if (
-    /^\/(?:conexoes|configuracoes|projetos|diagnostico|resultados)(?:#[\w-]+)?$/.test(
+    /^\/(?:conexoes|configuracoes|projetos|diagnostico|resultados|criador)(?:#[\w-]+)?$/.test(
       v,
     )
   )

@@ -6,6 +6,7 @@ export const areas = [
   ["/integracoes", "Integrações"],
   ["/conexoes", "Conexões"],
   ["/resultados", "Resultados"],
+  ["/criador", "Criador de interfaces"],
   ["/memoria", "Memória"],
   ["/projetos", "Projetos"],
   ["/controle", "Controle"],

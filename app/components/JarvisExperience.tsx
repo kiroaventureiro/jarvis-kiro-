@@ -123,6 +123,11 @@ export default function JarvisExperience() {
   const browserReplyId = useRef<string | null>(null);
   const realtimeReplyIds = useRef(new Set<string>());
   const realtimeSpeechAvailable = useRef(true);
+  const [voiceConsumption, setVoiceConsumption] = useState<{
+    inputTokens: number;
+    outputTokens: number;
+    responses: number;
+  } | null>(null);
   useEffect(() => {
     const pointer = window.matchMedia("(hover: hover) and (pointer: fine)");
     const mobile =
@@ -415,6 +420,7 @@ export default function JarvisExperience() {
       const dc = pc.createDataChannel("oai-events");
       channel.current = dc;
       const statusTool = createOperationalVoiceTool({
+        question: () => lastUserText.current,
         signal: controller.signal,
         isCurrent: () => attempt === generation.current,
         allowPrivateAbacus: () =>
@@ -461,7 +467,31 @@ export default function JarvisExperience() {
         } catch {
           return;
         }
+        if (
+          event.type === "response.done" &&
+          event.response?.usage &&
+          data.usageSessionId
+        ) {
+          const usage = event.response.usage;
+          void fetch("/api/voice/usage", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              sessionId: data.usageSessionId,
+              responseId: event.response.id || event.response_id,
+              inputTokens: usage.input_tokens || 0,
+              outputTokens: usage.output_tokens || 0,
+            }),
+          })
+            .then(async (r) => {
+              if (r.ok && attempt === generation.current)
+                setVoiceConsumption((await r.json()).stats);
+            })
+            .catch(() => {});
+        }
         if (event.type === "input_audio_buffer.speech_started") {
+          playing.current = false;
           statusTool.resetTurn();
           operationalProjection.current = false;
           operationalVisual.current = null;
@@ -1057,6 +1087,14 @@ export default function JarvisExperience() {
       <div className="interaction-dock">
         <details className="dock-preferences">
           <summary aria-label="Preferências da conversa">Preferências</summary>
+          {voiceConsumption ? (
+            <p aria-live="polite">
+              Consumo relatado: {voiceConsumption.inputTokens} tokens de entrada
+              · {voiceConsumption.outputTokens} de saída ·{" "}
+              {voiceConsumption.responses} respostas. Registro persistente; não
+              é a fatura do provedor.
+            </p>
+          ) : null}
           <div className="glass">
             <button
               className="subtle-button"

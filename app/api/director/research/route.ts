@@ -1,3 +1,7 @@
+import { answerVoiceUsageQuestion } from "../../../../lib/voice/usage-answer";
+import { answerAbacusAgentQuestion } from "../../../../lib/abacus/agent-read";
+import { answerAbacusPlatformQuestion } from "../../../../lib/abacus/platform-read";
+import { answerDesignRequest } from "../../../../lib/design/intent";
 import { answerAbacusHub } from "../../../../lib/abacus/hub-server";
 import { answerPublicLibrary } from "../../../../lib/research/library-server";
 import { answerKnowledge } from "../../../../lib/research/knowledge-server";
@@ -66,6 +70,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Consulta inválida" }, { status: 400 });
   try {
     const reply =
+      (await answerVoiceUsageQuestion(body.query)) ||
+      (await answerAbacusPlatformQuestion(body.query, request.signal)) ||
+      (await answerAbacusAgentQuestion(body.query, request.signal)) ||
+      answerDesignRequest(body.query) ||
       (await answerAbacusHub(body.query, request.signal)) ||
       (await answerPublicLibrary(body.query, request.signal)) ||
       answerPlaceReference(body.query) ||

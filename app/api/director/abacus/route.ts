@@ -1,3 +1,6 @@
+import { answerVoiceUsageQuestion } from "../../../../lib/voice/usage-answer";
+import { answerAbacusAgentQuestion } from "../../../../lib/abacus/agent-read";
+import { answerDesignRequest } from "../../../../lib/design/intent";
 import { answerAbacusPlatformQuestion } from "../../../../lib/abacus/platform-read";
 import {
   answerAbacusHub,
@@ -71,6 +74,9 @@ export async function POST(request: Request) {
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     localReply: async (message, signal) =>
+      (await answerVoiceUsageQuestion(message)) ||
+      (await answerAbacusAgentQuestion(message, signal)) ||
+      answerDesignRequest(message) ||
       (await answerAbacusPlatformQuestion(message, signal)) ||
       (await answerAbacusHub(message, signal)) ||
       (await answerMediaRequest(message, signal)) ||

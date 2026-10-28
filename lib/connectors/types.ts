@@ -104,6 +104,7 @@ export type PersistentProject = {
   updatedAt: string;
 };
 export type VaultState = {
+  voiceUsage?: import('../voice/ledger').VoiceUsageState;
   persistentProjects?: Record<string, PersistentProject>;
 
   abacusObservation?: import("../abacus/hub").AccountObservation;

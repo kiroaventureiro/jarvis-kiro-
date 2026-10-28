@@ -559,6 +559,51 @@ const make = (
     pass(
       "The spoken answer becomes readable only after neural audio is unavailable",
     );
+
+    await page.evaluate(() => {
+      window.__dc.onmessage({
+        data: JSON.stringify({ type: "input_audio_buffer.speech_started" }),
+      });
+      window.__dc.onmessage({
+        data: JSON.stringify({
+          type: "conversation.item.input_audio_transcription.completed",
+          item_id: "platform-user",
+          transcript:
+            "Jarvis, verifica os projetos e deploys disponíveis na minha conta da Avacus.",
+        }),
+      });
+      window.__dc.onmessage({
+        data: JSON.stringify({
+          type: "response.done",
+          response: {
+            status: "completed",
+            output: [
+              {
+                type: "function_call",
+                name: "jarvis_operational_status",
+                call_id: "platform-real-route",
+                arguments: "{}",
+              },
+            ],
+          },
+        }),
+      });
+    });
+    await page.waitForFunction(() =>
+      window.__sent.some((e) => e.item?.call_id === "platform-real-route"),
+    );
+    const platformOutput = await page.evaluate(() =>
+      JSON.parse(
+        window.__sent.find((e) => e.item?.call_id === "platform-real-route")
+          .item.output,
+      ),
+    );
+    assert.equal(platformOutput.model, "jk-abacus-platform");
+    assert.match(platformOutput.text, /Projeto da plataforma verificado/);
+    assert.equal(platformOutput.platform.deployments.length, 8);
+    pass(
+      "Neural voice redirects a generic status call to the actual platform route for the Avacus request and returns names",
+    );
     assert.deepEqual(errors, []);
     pass("No uncaught browser errors, microphone access or paid API calls");
   } finally {

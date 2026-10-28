@@ -143,7 +143,8 @@ export async function answerAbacusHub(message: string, signal?: AbortSignal) {
     } as HoloScene,
   };
 }
-export async function executeMedia(input: unknown, signal?: AbortSignal) {
+export async function executeMedia(input: unknown, signal?: AbortSignal, maxOutputTokens = 350) {
+  if (!Number.isInteger(maxOutputTokens) || maxOutputTokens < 350 || maxOutputTokens > 1500) throw Error("INVALID_OUTPUT_LIMIT");
   const request = validateMediaRequest(input),
     permission = costPermission("abacus", process.env);
   if (!process.env.ABACUS_API_KEY) throw Error("ABACUS_NOT_CONFIGURED");
@@ -155,7 +156,7 @@ export async function executeMedia(input: unknown, signal?: AbortSignal) {
   if (!catalog.models.some((m) => m.id === request.model))
     throw Error("MODEL_NOT_IN_ACCOUNT_CATALOG");
   const ticket = abacusUsage.begin(
-    request.prompt.length + 350 + (request.image ? 40000 : 3000),
+    request.prompt.length + maxOutputTokens + (request.image ? 40000 : 3000),
     tokenLimit(process.env),
   );
   if (!providerCallBudget.admit("abacus", permission).allowed) {
@@ -168,7 +169,7 @@ export async function executeMedia(input: unknown, signal?: AbortSignal) {
     throw Error("ABACUS_BUDGET");
   }
   try {
-    const output = await runMedia(request, process.env.ABACUS_API_KEY, signal);
+    const output = await runMedia(request, process.env.ABACUS_API_KEY, signal, fetch, maxOutputTokens);
     abacusUsage.finish(ticket, output.usage, output.model, "completed");
     let asset: string | undefined, inlineAsset: string | undefined;
     if (output.audio) inlineAsset = "data:audio/mpeg;base64," + output.audio;
