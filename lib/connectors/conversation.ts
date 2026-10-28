@@ -13,6 +13,31 @@ function normalize(input: string) {
   return input.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 const readIntent = /\b(consult|verific|analis|diagnostic|listar|liste|mostr|acesse|abra|pesquis|status|situacao|meus projetos|minhas conexoes)\w*/;
+/** Convert provider responses into bounded, non-sensitive observations. Never send raw rows to speech. */
+function observation(provider: Provider, data: unknown): string {
+  const items = Array.isArray(data) ? data : null;
+  if (provider === "github") {
+    if (data && typeof data === "object" && !items) {
+      const r = data as Record<string, unknown>;
+      const branch = typeof r.defaultBranch === "string" ? r.defaultBranch : null;
+      const description = typeof r.description === "string" ? r.description.slice(0, 110) : null;
+      return "Repositório acessível" + (branch ? "; branch principal: " + branch : "") + (description ? "; descrição: " + description : "") + ". Não foram examinados arquivos nem testes.";
+    }
+    return "Consulta ao GitHub concluída; conteúdo exige inspeção específica.";
+  }
+  if (provider === "vercel") {
+    if (!items) return "Resposta da Vercel recebida; formato não reconhecido para análise.";
+    const ready = items.filter(x => x && typeof x === "object" && (x as Record<string,unknown>).state === "READY").length;
+    const errors = items.filter(x => x && typeof x === "object" && (x as Record<string,unknown>).state === "ERROR").length;
+    return items.length + " deployments listados; " + ready + " prontos e " + errors + " com erro nesta amostra. Isto não mede o funcionamento do site em tempo real.";
+  }
+  if (!items) return "Consulta ao Supabase concluída; resposta não permite contabilizar tabelas com segurança.";
+  const publicTables = items.filter(x => x && typeof x === "object" && (x as Record<string,unknown>).table_schema === "public");
+  return publicTables.length + " tabelas públicas listadas na consulta limitada; dados e permissões de cada tabela não foram analisados.";
+}
+function displayName(name: string) {
+  return name.split("/").at(-1)!.replace(/[-_]/g, " ");
+}
 export async function conversationalConnectorRead(message: string) {
   const n = normalize(message);
   if (!readIntent.test(n)) return null;
@@ -31,6 +56,7 @@ export async function conversationalConnectorRead(message: string) {
     let failed = 0;
     const verifiedNames: string[] = [];
     const failedNames: string[] = [];
+    const findings: string[] = [];
     const panels: Array<{label: string; detail: string}> = [];
     for (const provider of providers) {
       const c = state.connections[provider];
@@ -45,8 +71,10 @@ export async function conversationalConnectorRead(message: string) {
           const checked = await connectors.readAuthorized(provider, resource.id, op);
           successful++;
           verifiedNames.push(resource.name);
+          const finding = observation(provider, checked.data);
+          findings.push(displayName(resource.name) + ": " + finding);
           results.push("- " + resource.name + ": consulta de " + (provider === "github" ? "repositório" : provider === "vercel" ? "publicações" : "estrutura do banco") + " concluída.");
-          panels.push({label: provider.toUpperCase() + " · " + resource.name, detail: "Consulta " + op + " concluída em " + checked.checkedAt});
+          panels.push({label: provider.toUpperCase() + " · " + resource.name, detail: finding});
         } catch {
           failed++;
           failedNames.push(resource.name);
@@ -61,7 +89,9 @@ export async function conversationalConnectorRead(message: string) {
     const examples = sampleNames.length ? " Entre os projetos verificados estão " + sampleNames.join(", ") + "." : "";
     const failureNote = failed === 1 ? " Uma consulta não pôde ser concluída" : failed > 1 ? " " + failed + " consultas não puderam ser concluídas" : "";
     const failureDetail = failedNames.length ? ": " + failedNames.slice(0, 2).map(name => name.split("/").at(-1)!.replace(/[-_]/g, " ")).join(" e ") + "." : ".";
-    const text = "Concluí " + successful + (successful === 1 ? " consulta de leitura." : " consultas de leitura.") + examples + (failed ? failureNote + failureDetail : "") + " Nenhuma alteração foi feita. Essas verificações confirmam o acesso aos projetos, mas não substituem uma análise aprofundada do código e dos serviços.";
+    const focused = /detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnostic|analis/.test(n);
+    const selectedFindings = focused ? findings.slice(0, 3) : [];
+    const text = "Concluí " + successful + (successful === 1 ? " consulta de leitura." : " consultas de leitura.") + examples + (failed ? failureNote + failureDetail : "") + (selectedFindings.length ? " Resultados: " + selectedFindings.join(" ") : "") + " Nenhuma alteração foi feita. Uma consulta concluída não comprova ausência de falhas no projeto.";
     const visual: HoloScene = {
       version: 1, id: "jk-connected-projects-" + Date.now(),
       title: "Diagnóstico dos sistemas conectados", mode: "technical",
