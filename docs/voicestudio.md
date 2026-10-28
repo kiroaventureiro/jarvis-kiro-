@@ -21,9 +21,9 @@ JK executado localmente pode consultar http://127.0.0.1:3900. Na Vercel, loopbac
 
 ## Ainda pendente
 
-Aplicativo Electron, runtime Python e modelos no computador; pareamento/rota privada ao JK hospedado; geração real, transcrição e dublagem; teste de qualidade pt-BR e latência. Não há mudança automática do provedor de voz atual nem fallback para serviços pagos. O conector desta entrega é de diagnóstico, sem geração ou captura.
+O conector não instala aplicativo Electron, runtime Python ou modelos no computador. Essas etapas são verificadas separadamente. Pareamento/rota privada ao JK hospedado, geração real, transcrição, dublagem, qualidade pt-BR e latência continuam dependendo de validação específica. Não há mudança automática do provedor de voz atual nem fallback para serviços pagos. O conector desta entrega é de diagnóstico, sem geração ou captura.
 
-A sondagem nesta sessão não encontrou backend na porta 3900. A leitura CIM de RAM/GPU foi bloqueada pelo ambiente; o registro do Windows contém Intel HD Graphics/HD Graphics 3000, o que não comprova aceleração de inferência. A documentação recomenda aproximadamente 5 GiB para ambiente CPU e cerca de 10 GB para app, ambiente e modelos, variando conforme motor. Não foi baixado runtime ou modelo.
+A sondagem inicial não encontrou backend na porta 3900. A leitura CIM de RAM/GPU foi bloqueada pelo ambiente; o registro do Windows contém Intel HD Graphics/HD Graphics 3000, o que não comprova aceleração de inferência. A documentação recomenda aproximadamente 5 GiB para ambiente CPU e cerca de 10 GB para app, ambiente e modelos, variando conforme motor. Após autorização específica, o aplicativo 0.5.7 foi instalado e os arquivos do Supertonic-3 foram baixados na revisão 724fb5abbf5502583fb520898d45929e62f02c0b e conferidos. Download de pesos não equivale a instalação do motor, aceite da licença ou geração validada.
 
 O aplicativo informa AGPL-3.0-only; pesos e vozes têm termos separados. LICENSE-NOTICE.md identifica os pesos padrão k2-fsa/OmniVoice como CC-BY-NC, além de termos próprios do tokenizer. Não ativar esse padrão para a KIRO como se houvesse autorização comercial. Escolher um modelo com pt-BR e termos adequados, informar tamanho/licença e obter a autorização de download antes de instalá-lo. Clonagem exige voz autorizada; nenhum perfil foi clonado.
 
