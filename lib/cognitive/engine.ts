@@ -91,14 +91,38 @@ export class CognitiveEngine {
     message: string,
     key: string,
     signal: AbortSignal = new AbortController().signal,
+    options?: { semantic?: boolean },
   ) {
     abort(signal);
     const preliminary = understand(message, this.deps.catalog.aliases());
+    let semantic: SemanticProposal | null = null;
+    try {
+      semantic =
+        options?.semantic !== false && this.deps.semantic
+          ? validateProposal(
+              await this.deps.semantic(
+                message,
+                this.deps.catalog.list().map((c) => ({
+                  id: c.id,
+                  provider: c.provider,
+                  operation: c.operation,
+                })),
+                signal,
+              ),
+              [...new Set(this.deps.catalog.list().map((c) => c.provider))],
+            )
+          : null;
+    } catch (error) {
+      if (signal.aborted) throw error;
+    }
     if (
       requestedProject(message, []).kind !== "target" &&
       !preliminary.providers.length &&
       !preliminary.all &&
-      !preliminary.followUp
+      !preliminary.followUp &&
+      (!semantic ||
+        semantic.goal === "explain" ||
+        (!semantic.providers?.length && !semantic.project))
     )
       return null;
     let session;
@@ -116,11 +140,24 @@ export class CognitiveEngine {
       context.depth,
     );
     const named = requestedProject(message, []);
+    if (semantic)
+      intent = {
+        ...intent,
+        ...(semantic.goal
+          ? { goal: preliminary.goal === "modify" ? "modify" : semantic.goal }
+          : {}),
+        ...(semantic.depth ? { depth: semantic.depth } : {}),
+        providers: intent.providers.length
+          ? intent.providers
+          : semantic.providers || [],
+        followUp: intent.followUp || semantic.project === "$context",
+      };
     const relevant =
       named.kind === "target" ||
       intent.providers.length > 0 ||
       intent.all ||
-      (intent.followUp && context.records.length > 0);
+      (intent.followUp && context.records.length > 0) ||
+      !!semantic?.providers?.length;
     if (!relevant) return null;
     if (intent.goal === "modify")
       return messageReply(
@@ -151,36 +188,18 @@ export class CognitiveEngine {
       )
     )
       selection = context.selection;
-    if (intent.goal === "explain" && this.deps.semantic) {
-      const proposal = validateProposal(
-        await this.deps.semantic(
-          message,
-          this.deps.catalog.list().map((c) => ({
-            id: c.id,
-            provider: c.provider,
-            operation: c.operation,
-          })),
-          signal,
-        ),
-        Object.keys(available),
-      );
-      if (proposal) {
-        intent = {
-          ...intent,
-          ...(proposal.goal ? { goal: proposal.goal } : {}),
-          ...(proposal.depth ? { depth: proposal.depth } : {}),
-          providers: intent.providers.length
-            ? intent.providers
-            : proposal.providers || [],
-        };
-        if (selection.kind === "unresolved" && proposal.project)
-          selection = requestedProject(proposal.project, resources);
-      }
+    if (
+      selection.kind === "unresolved" &&
+      semantic?.project &&
+      semantic.project !== "$context"
+    ) {
+      const proposed = requestedProject(semantic.project, resources);
+      const mentioned = normalized(message).replace(/[^a-z0-9]/g, "");
+      const target = normalized(semantic.project).replace(/[^a-z0-9]/g, "");
+      if (target.length >= 4 && mentioned.includes(target))
+        selection = proposed;
     }
-    if (intent.goal === "modify")
-      return messageReply(
-        "A interpretação indica uma modificação. Nenhuma ferramenta de escrita foi executada; é necessário um plano aprovado na Central de Conexões.",
-      );
+
     if (selection.kind === "unresolved")
       return messageReply(
         selection.reason + " Nenhuma ferramenta foi executada.",

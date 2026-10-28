@@ -22,7 +22,7 @@ A interface e a sincronização por capítulos da versão 3.0 foram preservadas.
 
 A classificação padrão é local e usa regras linguísticas e entidades conhecidas. Isso dá comportamento verificável aos cenários implementados, mas não equivale a compreensão semântica universal.
 
-Há um ponto opcional de interpretação semântica pelo RouteLLM, com proposta estruturada validada antes de selecionar ferramentas. Ele permanece DESLIGADO: JARVIS_COGNITIVE_SEMANTIC_ENABLED não é definido por esta entrega. Só funciona com essa opção explícita, autorização de custos já existente, chave no servidor e orçamento disponível. Não recebe credenciais ou resultados brutos. A proposta não amplia permissões nem permite escrita. Não foi feito teste pago desse modo.
+Há um ponto opcional de interpretação semântica pelo RouteLLM, com proposta estruturada validada antes de selecionar ferramentas. A evolução Visual Freedom permite utilizá-lo quando a autorização Abacus já existente, a chave no servidor e o orçamento estiverem disponíveis. JARVIS_COGNITIVE_SEMANTIC_ENABLED=false o desliga explicitamente. Não recebe credenciais ou resultados brutos. A proposta não amplia permissões nem permite escrita. Não foi feito teste pago desse modo.
 
 Os perfis de profundidade deixam de impor respostas de três frases. Análises locais podem ser longas; o orçamento existente de 350 tokens do provedor permanece preservado. Pedidos gerais que precisem de mais saída continuam sujeitos a esse limite e devem informar quando a resposta é parcial. Não foram adicionadas chamadas automáticas de continuação.
 

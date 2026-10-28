@@ -119,6 +119,7 @@ export default function JarvisExperience() {
     const ids = new Set(realtimeReplyIds.current);
     setMessages((items) => speechUnavailable(items, ids));
   }, []);
+  const [wakeHandoff, setWakeHandoff] = useState(false);
   const wakeWasActive = useRef(false);
   const wakeStop = useRef<() => void>(() => {});
   const typingAbort = useRef<AbortController | null>(null);
@@ -183,6 +184,12 @@ export default function JarvisExperience() {
     setMic(false);
     setState("idle");
   }, [cleanup]);
+  useEffect(() => {
+    if (wakeHandoff && connected && state === "idle" && voiceSnapshot.enabled) {
+      setWakeHandoff(false);
+      stop();
+    }
+  }, [wakeHandoff, connected, state, voiceSnapshot.enabled, stop]);
   const fail = useCallback(
     (message: string) => {
       unavailableRealtime();
@@ -676,7 +683,6 @@ export default function JarvisExperience() {
       if (success) setDraft("");
       return;
     }
-    wakeStop.current();
     if (connected || peer.current) stop();
     fileSpeech.current?.abort();
     fileSpeech.current = null;
@@ -1040,15 +1046,11 @@ export default function JarvisExperience() {
         <div className="dock-controls glass">
           <WakeListener
             muted={muted}
-            blocked={
-              connected ||
-              workspace.files.length > 0 ||
-              typingRequest ||
-              state === "connecting"
-            }
+            blocked={workspace.files.length > 0 || state === "connecting"}
+            externalBusy={typingRequest || connected}
             registerStop={registerWakeStop}
             beforeStart={() => {
-              stop();
+              if (connected) setWakeHandoff(true);
               setError("");
             }}
             onUser={(spoken) => {
@@ -1089,6 +1091,9 @@ export default function JarvisExperience() {
               const wasActive = wakeWasActive.current;
               wakeWasActive.current = snapshot.enabled;
               setVoiceSnapshot(snapshot);
+              if (!snapshot.enabled) setWakeHandoff(false);
+              if (typingAbort.current || fileSpeech.current || connected)
+                return;
               if (snapshot.phase === "off" && !wasActive) return;
               setState(
                 snapshot.phase === "processing"

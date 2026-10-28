@@ -17,6 +17,9 @@ const edges = nodes.flatMap((a, i) =>
 function HologramBackdrop() {
   return (
     <div className="jk-backdrop" aria-hidden="true">
+      <div className="jk-perspective-grid" />
+      <div className="jk-volume-shaft" />
+      <div className="jk-orbit-environment" />
       <svg viewBox="0 0 1600 960" preserveAspectRatio="xMidYMid slice">
         <defs>
           <radialGradient id="jk-distance">
@@ -25,6 +28,19 @@ function HologramBackdrop() {
           </radialGradient>
         </defs>
         <ellipse cx="800" cy="450" rx="650" ry="470" fill="url(#jk-distance)" />
+        <g className="jk-architecture" fill="none" stroke="#4fcfff">
+          <path d="M0 180H190L280 90H490M1600 180H1410L1320 90H1110M0 640H140L245 750H420M1600 640H1460L1355 750H1180" />
+          <path d="M60 0V125L145 210V520L70 595V960M1540 0V125L1455 210V520L1530 595V960" />
+          <path d="M275 0V65H565M1325 0V65H1035M0 330H94M1506 330H1600" />
+          <ellipse cx="800" cy="815" rx="510" ry="72" />
+          <ellipse
+            cx="800"
+            cy="815"
+            rx="385"
+            ry="45"
+            strokeDasharray="110 34 5 34"
+          />
+        </g>
         <g stroke="#1688ee" strokeOpacity=".21" strokeWidth=".7">
           {edges.map(({ a, b, j }, i) => (
             <line

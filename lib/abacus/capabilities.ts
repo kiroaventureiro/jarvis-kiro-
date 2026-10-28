@@ -1,6 +1,6 @@
 /** Public documentation snapshot; never represents account entitlements or live credit balance. */
 export const ABACUS_CAPABILITIES = {
-  reviewedAt: "2026-10-26",
+  reviewedAt: "2026-10-28",
   source: "https://abacus.ai/help/route-llm/",
   defaultModel: "route-llm",
   modelSelection: "automatic_route_llm",
@@ -24,7 +24,12 @@ export const ABACUS_CAPABILITIES = {
     authorizationRequired: true,
   },
   externalTools: { implemented: false, automaticExecution: false },
-  liveWeb: { implemented: false },
+  liveWeb: {
+    implemented: true,
+    requiresExplicitToolBudget: true,
+    accountEntitlementVerified: false,
+    source: "https://api.abacus.ai/help/route-llm/responses",
+  },
   billing: {
     metered: true,
     chatllmUnlimitedDoesNotImplyFreeApi: true,

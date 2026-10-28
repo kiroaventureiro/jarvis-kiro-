@@ -12,6 +12,7 @@ export interface SpeechAdapter {
   resume?(): void;
   addEventListener?(type: string, listener: EventListener): void;
   removeEventListener?(type: string, listener: EventListener): void;
+  readonly paused?: boolean;
 }
 export function speechChunks(text: string) {
   const clean = spokenExplanation(text)
@@ -52,6 +53,11 @@ export function speechChunks(text: string) {
 }
 export class BrowserSpeechOutput implements SpeechOutput {
   private serial = 0;
+  private lease = 0;
+  private active = false;
+  isSpeaking() {
+    return this.active;
+  }
   private cancelCurrent: (() => void) | null = null;
   constructor(
     private adapter: () => SpeechAdapter | null,
@@ -59,6 +65,8 @@ export class BrowserSpeechOutput implements SpeechOutput {
     private preferences: () => VoicePreferences = readVoicePreferences,
   ) {}
   cancel() {
+    this.lease++;
+    this.active = false;
     narrationCoordinator.cancel();
     this.cancelAudio();
   }
@@ -67,6 +75,7 @@ export class BrowserSpeechOutput implements SpeechOutput {
     this.cancelCurrent?.();
     this.cancelCurrent = null;
     this.adapter()?.cancel();
+    this.adapter()?.resume?.();
   }
   async speak(
     text: string,
@@ -74,19 +83,25 @@ export class BrowserSpeechOutput implements SpeechOutput {
     options?: { scene?: HoloScene },
   ) {
     this.cancel();
-    if (options?.scene)
-      return narrationCoordinator.begin(options.scene, text, signal, {
-        speak: (segment, abort) => this.speakText(segment, abort),
-        cancel: () => this.cancelAudio(),
-        pause: () => {
-          const api = this.adapter();
-          if (!api?.pause) return false;
-          api.pause();
-          return true;
-        },
-        resume: () => this.adapter()?.resume?.(),
-      });
-    return this.speakText(text, signal);
+    const lease = this.lease;
+    this.active = true;
+    try {
+      if (options?.scene)
+        return await narrationCoordinator.begin(options.scene, text, signal, {
+          speak: (segment, abort) => this.speakText(segment, abort),
+          cancel: () => this.cancelAudio(),
+          pause: () => {
+            const api = this.adapter();
+            if (!api?.pause) return false;
+            api.pause();
+            return true;
+          },
+          resume: () => this.adapter()?.resume?.(),
+        });
+      return await this.speakText(text, signal);
+    } finally {
+      if (this.lease === lease) this.active = false;
+    }
   }
   private async speakText(text: string, signal: AbortSignal) {
     this.cancelAudio();
@@ -205,15 +220,20 @@ export class BrowserSpeechOutput implements SpeechOutput {
               "A reprodução de voz falhou. A resposta está no HUD; reative a escuta quando desejar.",
             ),
           );
+        const watchdog = () => {
+          if (api.paused) {
+            timeout = setTimeout(watchdog, 1000);
+            return;
+          }
+          finish(
+            new Error(
+              "A voz não concluiu a reprodução. Reative a escuta para tentar novamente.",
+            ),
+          );
+          api.cancel();
+        };
         timeout = setTimeout(
-          () => {
-            finish(
-              new Error(
-                "A voz não concluiu a reprodução. Reative a escuta para tentar novamente.",
-              ),
-            );
-            api.cancel();
-          },
+          watchdog,
           Math.max(
             30000,
             Math.min(90000, (utterance.text.length * 130) / prefs.rate),

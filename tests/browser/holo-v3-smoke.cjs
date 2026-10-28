@@ -188,7 +188,7 @@ const make = (
       .waitFor();
     await page.evaluate(() => document.fonts.ready);
     await page.clock.install();
-    await page.clock.pauseAt(new Date(Date.now() + 100));
+    await page.clock.pauseAt(new Date(Date.now() + 1000));
     const root = page.locator(".cinema-root");
     async function screenshot(name) {
       await page.screenshot({

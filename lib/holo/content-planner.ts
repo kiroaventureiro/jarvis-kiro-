@@ -151,7 +151,8 @@ export function planContent(
     const focus: Layout =
       visual.kind === "map" ||
       visual.kind === "metrics" ||
-      visual.kind === "compare"
+      visual.kind === "compare" ||
+      (visual.kind === "media" && scene.modules.length === 1)
         ? "center"
         : visual.kind === "timeline"
           ? "right"

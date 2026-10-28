@@ -233,15 +233,6 @@ export function economyReply(evidence: Evidence[]) {
       " Esses indicadores mostram preços, juros e câmbio; não são um diagnóstico completo da economia nem uma cotação em tempo real."
     : "As fontes oficiais não retornaram observações válidas agora. Não vou estimar números ou apresentar um gráfico como se tivesse sido consultado. O relatório registra as fontes e a indisponibilidade.";
   const modules: HoloModule[] = [
-    {
-      id: "economic-map",
-      kind: "map",
-      title: "Brasil no contexto mundial",
-      region: "WORLD",
-      focusCountry: "BRA",
-      caption:
-        "Contexto geográfico. Os gráficos usam apenas as séries oficiais indicadas; o mapa não atribui indicadores aos demais países.",
-    },
     ...facts.map(({ x }) => ({
       id: x.id,
       kind: "metrics" as const,

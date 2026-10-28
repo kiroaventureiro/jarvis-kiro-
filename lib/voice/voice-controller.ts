@@ -21,6 +21,7 @@ type Options = {
   speech: SpeechOutput;
   continuous: () => boolean;
   muted: () => boolean;
+  externalSpeechActive?: () => boolean;
   command: (text: string, signal: AbortSignal) => Promise<VoiceReply>;
   onUser: (text: string) => void;
   onReply: (reply: VoiceReply) => VoiceReply | void;
@@ -119,6 +120,7 @@ export class VoiceController {
     this.listen();
   }
   stop(message = "Escuta desligada.") {
+    const ownedSpeech = this.speechPending || this.busy;
     if (this.speechPending) this.options.onSpeechUnavailable?.();
     this.speechPending = false;
     this.enabled = false;
@@ -128,8 +130,21 @@ export class VoiceController {
     this.abort = null;
     this.busy = false;
     this.pause();
-    this.options.speech.cancel();
+    if (ownedSpeech) this.options.speech.cancel();
     this.emit("off", message);
+  }
+  suspendForExternal() {
+    if (!this.enabled) return;
+    this.epoch++;
+    this.clearTimers();
+    this.pause();
+    this.abort?.abort();
+    this.abort = null;
+    if (this.speechPending) this.options.speech.cancel();
+    this.speechPending = false;
+    this.busy = false;
+    this.emit("resuming", "Escuta preparada · acompanhando a resposta atual.");
+    this.later(() => this.listen(), 350);
   }
   private fail(message: string) {
     this.stop(message);
@@ -137,6 +152,14 @@ export class VoiceController {
   }
   private listen() {
     if (!this.enabled || this.busy || this.rec) return;
+    if (this.options.externalSpeechActive?.()) {
+      this.emit(
+        "resuming",
+        "Escuta preparada · aguardando o Jarvis concluir a fala.",
+      );
+      this.later(() => this.listen(), 350);
+      return;
+    }
     this.starts = this.starts.filter((at) => this.now() - at < 60000);
     if (this.starts.length >= 10) {
       this.fail(

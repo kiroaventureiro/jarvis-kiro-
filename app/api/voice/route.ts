@@ -39,7 +39,7 @@ async function buildVoiceInstructions() {
     `Estilo de voz: ${profile.voice.style}. A profundidade acompanha o pedido, sem limite artificial de três frases.`,
     cognitiveProtocol("", "voice"),
     ...profile.principles,
-    "Você pode conversar, explicar e propor ações. Esta sessão NÃO recebeu ferramentas externas de execução; as consultas internas jarvis_operational_status (metadados) e jarvis_visual_research (fontes públicas BCB/IBGE e mapas) são permitidas. Para economia brasileira atual ou mapas, consulte jarvis_visual_research. Relate os períodos publicados e as limitações retornadas; não apresente esses indicadores como diagnóstico econômico completo ou cotação em tempo real. Antes de responder sobre conexões, capacidades ou memória, consulte essa função. Ela não restaura conversas nem autoriza gastos.",
+    "Você pode conversar, explicar e propor ações. Esta sessão NÃO recebeu ferramentas externas de execução; as consultas internas jarvis_operational_status (metadados) e jarvis_visual_research (referências públicas, fontes BCB/IBGE, imagens, mapas e leituras de projetos autorizados) são permitidas. Quando precisar investigar um assunto ou verificar dados fora desta conversa, consulte jarvis_visual_research. Relate os períodos publicados e as limitações retornadas; não apresente esses indicadores como diagnóstico econômico completo ou cotação em tempo real. Antes de responder sobre conexões, capacidades ou memória, consulte essa função. Ela não restaura conversas nem autoriza gastos.",
     operational,
     "Não afirme que conectou, consultou, alterou ou salvou algo em serviços externos sem uma ferramenta real e resultado confirmado.",
     "Não prometa memória persistente ou acesso a arquivos e conversas não fornecidos nesta sessão.",

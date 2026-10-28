@@ -1,3 +1,5 @@
+import { answerKnowledge } from "../../../../lib/research/knowledge-server";
+import { answerCognitiveRequest } from "../../../../lib/cognitive/server";
 import { answerPlaceReference } from "../../../../lib/research/places";
 import { answerImages } from "../../../../lib/research/images";
 import { NextResponse } from "next/server";
@@ -65,7 +67,9 @@ export async function POST(request: Request) {
       answerPlaceReference(body.query) ||
       (await answerImages(body.query, request.signal)) ||
       (await answerResearch(body.query, request.signal)) ||
-      localVisualReference(body.query);
+      localVisualReference(body.query) ||
+      (await answerCognitiveRequest(body.query, request.signal, true)) ||
+      (await answerKnowledge(body.query, request.signal));
     return NextResponse.json(
       reply
         ? { available: true, ...reply }

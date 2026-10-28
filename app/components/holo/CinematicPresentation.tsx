@@ -132,7 +132,12 @@ export default function CinematicPresentation({
       className="cinema-root holo-experience-v2"
       data-closing={closing}
       data-narration-phase={director.narration.phase}
-      data-spatial={["map", "media", "metrics"].includes(step.content.kind)}
+      data-spatial={!["compare", "connections"].includes(step.content.kind)}
+      data-surface={
+        step.content.kind === "report" && !!step.content.body
+          ? "reading"
+          : "projection"
+      }
       data-focus={step.focus}
       data-playing={director.playing}
       data-complete={director.finished}

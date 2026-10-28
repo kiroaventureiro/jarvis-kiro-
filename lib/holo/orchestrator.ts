@@ -1,3 +1,4 @@
+import { requestIntent } from "../cognitive/request-intent";
 import { BRAZIL_CHAPTERS, BRAZIL_EXPLANATION } from "./brazil-chapters";
 import { geographyScene } from "./geography";
 import type { HoloScene, HoloModule, HoloSource } from "./types";
@@ -395,7 +396,8 @@ export function composeScene(message: string, reply: Reply): HoloScene | null {
       body: text,
     },
   ];
-  const geo = geographyScene(message);
+  const geo =
+    requestIntent(message) === "geography" ? geographyScene(message) : null;
   if (geo) modules.unshift(geo.modules[0]);
   const dates = [
     ...text.matchAll(

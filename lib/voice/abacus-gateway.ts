@@ -7,6 +7,11 @@ import {
 } from "../abacus/protocol";
 import type { CostPermission } from "./cost-policy";
 type Dependencies = {
+  prepare?: (
+    message: string,
+    signal: AbortSignal,
+    input: AbacusInput,
+  ) => Promise<AbacusInput>;
   configured: () => boolean;
   localReply?: (
     message: string,
@@ -143,6 +148,8 @@ export async function processAbacusRequest(
     );
   };
   try {
+    if (deps.prepare)
+      input = await deps.prepare(message, request.signal, input);
     if (stream === true && deps.stream) {
       const cancelled = new AbortController();
       const signal = AbortSignal.any([request.signal, cancelled.signal]);

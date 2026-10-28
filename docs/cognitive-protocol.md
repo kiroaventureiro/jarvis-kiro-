@@ -6,7 +6,7 @@ Define identidade, postura crítica, hipóteses explícitas, distinção de evid
 
 A expressão administrador de tudo descreve coordenação, sem conceder privilégios. Permissões permanecem nos serviços autenticados; modificações exigem o plano aprovado. Hipóteses de identidade, recurso, destino, permissão e custo nunca substituem validação. As sessões de voz só podem usar as funções realmente declaradas naquela modalidade.
 
-O protocolo não adiciona ferramentas, modelos, credenciais, chamadas externas ou capacidades de acesso. O classificador semântico opcional permanece desligado. O orçamento de saída existente é preservado; as instruções adicionais aumentam o contexto de entrada, contabilizado pelo controle de tokens já existente. Não há promessa de custo idêntico por chamada ou de profundidade ilimitada sob o orçamento atual.
+O protocolo não adiciona ferramentas, modelos, credenciais, chamadas externas ou capacidades de acesso. Na evolução Visual Freedom, o classificador pode utilizar a autorização Abacus existente; uma opção explícita false o desliga. Consulte docs/visual-freedom-and-research.md. O orçamento de saída existente é preservado; as instruções adicionais aumentam o contexto de entrada, contabilizado pelo controle de tokens já existente. Não há promessa de custo idêntico por chamada ou de profundidade ilimitada sob o orçamento atual.
 
 Testes verificam o conteúdo de sistema realmente construído, separação dos papéis, seleção de perfis, contrato do classificador, diretrizes de voz e bloqueio operacional de escrita mesmo quando o usuário diz administrador de tudo. Esses testes não demonstram obediência perfeita de um modelo pago: nenhuma chamada paga foi feita para avaliação.
 

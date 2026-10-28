@@ -1,3 +1,4 @@
+import { knowledgeVisual } from "./research/knowledge";
 import "server-only";
 import {
   recordOperationalSuccess,
@@ -55,6 +56,11 @@ export async function* streamAbacus(
         recordOperationalSuccess("abacus", ["conversation"]);
         usage = chunk.reply.usage;
         model = chunk.reply.model;
+        if (input.research?.sources.length)
+          chunk.reply.visual = knowledgeVisual(
+            chunk.reply.text,
+            input.research,
+          );
       }
       yield chunk;
     }

@@ -1,3 +1,9 @@
+import { webResearchPolicy } from "../../../../lib/research/web";
+import { answerWebResearch } from "../../../../lib/research/web-server";
+import {
+  answerKnowledge,
+  knowledgeResearch,
+} from "../../../../lib/research/knowledge-server";
 import { answerPlaceReference } from "../../../../lib/research/places";
 import { answerImages } from "../../../../lib/research/images";
 import { answerResearch } from "../../../../lib/research/server";
@@ -39,6 +45,13 @@ export async function GET() {
       telemetry: abacusUsage.stats(),
       tokenLimitPerHour: tokenLimit(process.env),
       capabilities: ABACUS_CAPABILITIES,
+      webResearch: {
+        configured:
+          webResearchPolicy(process.env).enabled &&
+          !!process.env.ABACUS_API_KEY,
+        paidCallsAllowed: permission.allowed,
+        accountEntitlementVerified: false,
+      },
       note: "Sem chamada externa de status; os limites são temporários por instância, não uma garantia financeira distribuída.",
     },
     { headers: { "Cache-Control": "no-store" } },
@@ -57,7 +70,21 @@ export async function POST(request: Request) {
       (await answerResearch(message, signal)) ||
       (await answerNativeRequest(message, signal)) ||
       (await answerOperationalQuestion(message, signal)) ||
-      localVisualReference(message),
+      localVisualReference(message) ||
+      (await answerWebResearch(message, signal)) ||
+      (!process.env.ABACUS_API_KEY ||
+      !costPermission("abacus", process.env).allowed
+        ? await answerKnowledge(message, signal)
+        : null),
+    prepare: async (message, signal, input) => {
+      try {
+        const research = await knowledgeResearch.search(message, signal);
+        return research?.sources.length ? { ...input, research } : input;
+      } catch (error) {
+        if (signal.aborted) throw error;
+        return input;
+      }
+    },
     reply: askAbacus,
     stream: streamAbacus,
   });

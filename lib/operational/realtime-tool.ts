@@ -15,7 +15,7 @@ export const VISUAL_RESEARCH_VOICE_TOOL = {
   type: "function",
   name: "jarvis_visual_research",
   description:
-    "Consulta dados econômicos brasileiros em fontes públicas BCB/IBGE e prepara demonstrações e mapa-múndi. Use antes de responder sobre IPCA, inflação, Selic, dólar ou economia brasileira atual e para pedidos de mapas/geografia. Não é pesquisa geral na web. Não executa ações, modelos ou serviços pagos. Dados retornam com período e limitações.",
+    "Investiga assuntos públicos em referências enciclopédicas, indicadores BCB/IBGE, imagens e mapas, e faz leituras de projetos já autorizados. Use quando precisar buscar informação ou evidências fora do contexto da conversa; escolha o conteúdo pelo objetivo, sem mapas obrigatórios. Retorna fontes, períodos e limitações. Não é pesquisa irrestrita de notícias na web. Não executa modificações nem inicia chamadas adicionais a modelos pagos.",
   parameters: {
     type: "object",
     properties: { query: { type: "string", maxLength: 1500 } },

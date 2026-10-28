@@ -21,6 +21,7 @@ type Props = {
   registerStop: (stop: () => void) => void;
   muted: boolean;
   blocked: boolean;
+  externalBusy?: boolean;
 };
 export default function WakeListener(props: Props) {
   const router = useRouter();
@@ -49,6 +50,8 @@ export default function WakeListener(props: Props) {
     const controller = new VoiceController({
       recognition: api.SpeechRecognition || api.webkitSpeechRecognition || null,
       speech: getVoiceManager(),
+      externalSpeechActive: () =>
+        !!callback.current.externalBusy || getVoiceManager().isSpeaking(),
       continuous: () => !ios.current && readVoicePreferences().continuous,
       muted: () =>
         callback.current.muted || readVoicePreferences().volume === 0,
@@ -87,6 +90,9 @@ export default function WakeListener(props: Props) {
   useEffect(() => {
     if (props.muted) engine.current?.audioMuted();
   }, [props.muted]);
+  useEffect(() => {
+    if (props.externalBusy) engine.current?.suspendForExternal();
+  }, [props.externalBusy]);
   function activate() {
     if (snapshot.enabled) {
       engine.current?.stop();
