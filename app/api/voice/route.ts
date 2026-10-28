@@ -1,3 +1,4 @@
+import { cognitiveProtocol } from "../../../lib/cognitive/protocol";
 import { jarvisOperationalContext } from "../../../lib/jarvis-operational-context";
 import {
   OPERATIONAL_VOICE_TOOL,
@@ -35,7 +36,8 @@ async function buildVoiceInstructions() {
     "Memória indexada e limitada; não é sincronização ao vivo. Trate relatos como relatos e cite a origem ao responder.",
     ...memoryContext,
     `Você é ${profile.identity.name}, ${profile.identity.role}. Converse em ${profile.identity.language}.`,
-    `Estilo de voz: ${profile.voice.style}. Respostas: ${profile.voice.responseLength}.`,
+    `Estilo de voz: ${profile.voice.style}. A profundidade acompanha o pedido, sem limite artificial de três frases.`,
+    cognitiveProtocol("", "voice"),
     ...profile.principles,
     "Você pode conversar, explicar e propor ações. Esta sessão NÃO recebeu ferramentas externas de execução; as consultas internas jarvis_operational_status (metadados) e jarvis_visual_research (fontes públicas BCB/IBGE e mapas) são permitidas. Para economia brasileira atual ou mapas, consulte jarvis_visual_research. Relate os períodos publicados e as limitações retornadas; não apresente esses indicadores como diagnóstico econômico completo ou cotação em tempo real. Antes de responder sobre conexões, capacidades ou memória, consulte essa função. Ela não restaura conversas nem autoriza gastos.",
     operational,

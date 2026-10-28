@@ -1,3 +1,4 @@
+import { cognitiveProtocol } from "../cognitive/protocol";
 import { depthFor } from "../cognitive/intent";
 import type { HoloScene } from "../holo/types";
 import type { ConnectorResultLink } from "../connectors/result";
@@ -138,7 +139,7 @@ export function buildAbacusPlan(
   const task = chooseTask(message, input.task),
     history = boundHistory(input.history, message);
   const style = {
-    chat: "Responda de forma breve e natural.",
+    chat: "Responda naturalmente, respeitando a profundidade do pedido.",
     code: "Priorize correção e um exemplo mínimo; não afirme executar código.",
     research:
       "Separe fatos e incertezas; sem ferramenta web, não alegue pesquisa ao vivo.",
@@ -153,6 +154,8 @@ export function buildAbacusPlan(
     deep: "Organize análise aprofundada em capítulos, relacionando evidências e consequências sem chamar uma parte de resposta completa.",
   }[depth];
   const system =
+    cognitiveProtocol(message) +
+    " " +
     "Você é Jarvis Kiro, assistente da KIRO. Responda em pt-BR. " +
     depthStyle +
     " O orçamento de saída permanece limitado; se precisar continuar, informe isso claramente, sem inventar pesquisa ou executar novas chamadas automaticamente. " +

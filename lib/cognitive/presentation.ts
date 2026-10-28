@@ -14,6 +14,14 @@ export function synthesize(
     : "Consultei os recursos autorizados agora.";
   const finding = (x: Evidence) =>
     x.resourceName + " no " + x.provider + ": " + x.observation.summary;
+  const factLabels: Record<string, string> = {
+    count: "itens da amostra",
+    ready: "publicações prontas",
+    errors: "publicações com erro",
+    publicTables: "tabelas públicas",
+    findings: "apontamentos",
+    dependencies: "dependências declaradas",
+  };
   let comparison = "";
   if (previous) {
     const comparable = e.flatMap((x) => {
@@ -34,7 +42,7 @@ export function synthesize(
         (k) =>
           x.provider +
           " · " +
-          k +
+          (factLabels[k] || "indicador da amostra") +
           ": antes " +
           old.observation.facts[k] +
           ", depois " +
