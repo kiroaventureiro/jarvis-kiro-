@@ -62,7 +62,7 @@ export async function conversationalConnectorRead(message: string) {
       modules: [{id: "verified-projects", kind: "report", title: "Projetos e consultas verificadas", summary: "Somente leitura. Resultados limitados às operações concluídas nesta solicitação.", items: panels.slice(0, 20)}],
       narration: text,
     };
-    return { text, visual, model: "jk-tools", provider: "local_operational" as const, usage: null };
+    return { text, visual, result: { kind: "connector_read", entries: results }, model: "jk-tools", provider: "local_operational" as const, usage: null };
   } catch {
     return { text: "Não consegui consultar o cofre dos conectores agora. Não posso garantir que as contas estejam desconectadas.", model: "jk-tools", provider: "local_operational" as const, usage: null };
   }
