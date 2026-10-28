@@ -27,7 +27,7 @@ export async function answerWorkspaceQuestion(message: string) {
       return {text:"Ainda não há projetos salvos na memória contínua. O espaço de trabalho está preparado, mas nenhum projeto foi registrado.",model:"jk-workspace",provider:"local_operational" as const,usage:null};
     const named = projects.filter(p=>normalize(p.name).split(/\s+/).filter(x=>x.length>3).every(x=>n.includes(x)));
     const selected = named.length ? named : projects;
-    const lines = selected.slice(0,5).map(p=>p.name+": "+(p.status==="paused"?"pausado":p.status==="completed"?"concluído":p.status==="active"?"em andamento":"planejado")+". Próxima etapa: "+p.nextStep+".");
+    const lines = selected.slice(0,5).map(p=>p.name+": "+(p.status==="paused"?"pausado":p.status==="completed"?"concluído":p.status==="active"?"em andamento":"planejado")+". Próxima etapa: "+p.nextStep+"."+(p.externalTask ? " Tarefa externa associada na Abacus, ainda sem verificação em tempo real." : ""));
     const text = named.length ? "Encontrei o registro salvo. "+lines.join(" ")+" Para continuar com segurança, preciso verificar o estado atual da plataforma antes de executar a próxima ação." : "Projetos registrados na memória contínua: "+lines.join(" ")+" Nenhuma tarefa externa foi executada.";
     return {text,model:"jk-workspace",provider:"local_operational" as const,usage:null,result:{kind:"persistent_projects",projects:selected.slice(0,5).map(p=>({id:p.id,name:p.name,status:p.status,provider:p.provider,updatedAt:p.updatedAt,nextStep:p.nextStep}))}};
   } catch {
