@@ -13,31 +13,56 @@ export async function probeAbacusPlatform(
   signal?: AbortSignal,
 ): Promise<AbacusPlatformProbe[]> {
   if (!apiKey) return METHODS.map(method => ({method,state:"unauthorized",checkedAt:new Date().toISOString()}));
-  const probe = async (method: typeof METHODS[number]): Promise<AbacusPlatformProbe> => {
-    const checkedAt = new Date().toISOString();
+  const checkedAt = () => new Date().toISOString();
+  const get = async (method: typeof METHODS[number], projectId?: string): Promise<{state: AbacusPlatformProbe["state"]; items?: unknown[]}> => {
     try {
-      const response = await fetch("https://api.abacus.ai/api/v0/" + method, {
+      const url = new URL("https://api.abacus.ai/api/v0/" + method);
+      if (projectId) url.searchParams.set("projectId", projectId);
+      const response = await fetch(url, {
         method: "GET", headers: {apiKey}, cache: "no-store", redirect: "error",
-        signal: signal ? AbortSignal.any([signal,AbortSignal.timeout(7000)]) : AbortSignal.timeout(7000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(7000)]) : AbortSignal.timeout(7000),
       });
-      if (response.status === 401 || response.status === 403) return {method,state:"unauthorized",checkedAt};
-      if (!response.ok) return {method,state:"unavailable",checkedAt};
+      if (response.status === 401 || response.status === 403) return {state:"unauthorized"};
+      if (!response.ok) return {state:"unavailable"};
       const raw = await response.text();
-      if (raw.length > 150000) return {method,state:"invalid_response",checkedAt};
+      if (raw.length > 150000) return {state:"invalid_response"};
       const json: unknown = JSON.parse(raw);
-      if (!json || typeof json !== "object" || Array.isArray(json)) return {method,state:"invalid_response",checkedAt};
+      if (!json || typeof json !== "object" || Array.isArray(json)) return {state:"invalid_response"};
       const body = json as Record<string,unknown>;
-      if (body.success === false || body.error) return {method,state:"unavailable",checkedAt};
-      const data = body.result && typeof body.result==="object" ? body.result as Record<string,unknown> : body;
-      const names = method==="listProjects" ? ["projects","items","data"] : ["deployments","items","data"];
-      const values = names.map(k=>data[k]).find(Array.isArray);
-      if (!Array.isArray(values)) return {method,state:"invalid_response",checkedAt};
-      return {method,state:"verified",checkedAt,count:values.length};
+      if (body.success !== true || !Array.isArray(body.result)) return {state:"invalid_response"};
+      return {state:"verified",items:body.result};
     } catch {
-      return {method,state:"unavailable",checkedAt};
+      return {state:"unavailable"};
     }
   };
-  return Promise.all(METHODS.map(probe));
+  const projects = await get("listProjects");
+  const projectSummary: AbacusPlatformProbe = {
+    method:"listProjects", state:projects.state, checkedAt:checkedAt(),
+    ...(projects.items ? {count:projects.items.length} : {}),
+  };
+  if (projects.state !== "verified" || !projects.items) return [
+    projectSummary, {method:"listDeployments",state:"unavailable",checkedAt:checkedAt()},
+  ];
+  if (!projects.items.length) return [
+    projectSummary, {method:"listDeployments",state:"verified",checkedAt:checkedAt(),count:0},
+  ];
+  // listDeployments requires a projectId. Do not expose identifiers in status responses.
+  const ids = projects.items.map(item =>
+    item && typeof item === "object" && !Array.isArray(item)
+      ? (item as Record<string,unknown>).projectId : undefined);
+  if (!ids.every(id => typeof id === "string" && /^[a-zA-Z0-9_-]{1,128}$/.test(id)))
+    return [projectSummary,{method:"listDeployments",state:"invalid_response",checkedAt:checkedAt()}];
+  const results = await Promise.all((ids as string[]).slice(0,20).map(id => get("listDeployments",id)));
+  const failed = results.find(x => x.state !== "verified");
+  return [
+    projectSummary,
+    { method:"listDeployments",
+      state:failed?.state || (ids.length>20 ? "unavailable" : "verified"),
+      checkedAt:checkedAt(),
+      ...(!failed && ids.length<=20 ? {count:results.reduce((n,x)=>n+(x.items?.length||0),0)} : {}),
+    },
+  ];
+
 }
 
 /** Never confuse developer-platform access with ChatLLM sessions. */
