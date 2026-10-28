@@ -42,10 +42,10 @@ export async function probeAbacusPlatform(
 
 /** Never confuse developer-platform access with ChatLLM sessions. */
 export async function answerAbacusPlatformQuestion(message: string, signal?: AbortSignal) {
-  const n = message.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase();
-  if (!/\\b(abacus|abaqus)\\b/.test(n) ||
-      !/\\b(projetos|deployments|implantacoes|acesso|conexao|permissao)\\b/.test(n) ||
-      !/\\b(verifique|verificar|consulte|consultar|liste|listar|quais|status|tenho|conectad[oa])\\b/.test(n))
+  const n = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  if (!/\b(abacus|abaqus)\b/.test(n) ||
+      !/\b(projetos|deployments|implantacoes|acesso|conexao|permissao)\b/.test(n) ||
+      !/\b(verifique|verificar|consulte|consultar|liste|listar|quais|status|tenho|conectad[oa])\b/.test(n))
     return null;
   const checks = await probeAbacusPlatform(process.env.ABACUS_PLATFORM_API_KEY || process.env.ABACUS_API_KEY, signal);
   const project = checks.find(c=>c.method==="listProjects")!;
