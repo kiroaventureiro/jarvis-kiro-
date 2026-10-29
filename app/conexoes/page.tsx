@@ -58,57 +58,37 @@ export default function ConnectionsPage() {
     >
       <Link href="/configuracoes">← Configurações</Link>
       <h1>Central de Conexões</h1>
-      <section className="glass notice" aria-label="Abrir aplicativos">
-        <h2>Abrir agora</h2>
-        <p>Acesso direto aos aplicativos. Para o Jarvis ler ou alterar dados, use as autorizações e verificações dos conectores abaixo.</p>
-        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+      <details className="glass notice">
+        <summary style={{cursor:"pointer",padding:8,fontWeight:600}}>Abrir aplicativos</summary>
+        <p>Atalhos para seus aplicativos; abrir um site não conecta uma conta.</p>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
           {APP_SHORTCUTS.map(app=><a key={app.name} href={app.url} target="_blank" rel="noopener noreferrer">{app.name}</a>)}
-          <Link href="/configuracoes">Ouvir e ajustar a voz</Link>
+          <Link href="/configuracoes">Voz</Link>
         </div>
-      </section>
-      <AbacusStatus />
-      <AbacusHub />
+      </details>
+      <details className="glass notice">
+        <summary style={{cursor:"pointer",padding:8,fontWeight:600}}>Abacus AI e ferramentas</summary>
+        <AbacusStatus />
+        <AbacusHub />
+      </details>
       <NativeConnectors />
-      <WorkspaceConnectors />
-      <DeviceCamera />
-      <ObsConnection />
-      <section
-        className="glass notice"
-        aria-label="Consultas públicas integradas"
-      >
-        <h2>Consultas públicas sem novas credenciais</h2>
-        <p>
-          Estas fontes têm caminhos de consulta implementados no JK. A
-          disponibilidade é confirmada em cada pesquisa; não representam contas
-          privadas conectadas.
-        </p>
-        <ul>
-          <li>
-            Wikipedia: referências enciclopédicas. Exemplo: “Explique como
-            funciona um semicondutor”.
-          </li>
-          <li>
-            Wikimedia Commons: imagens com autoria e licença. Exemplo: “Busque
-            imagens de florestas”.
-          </li>
-          <li>
-            Crossref: artigos e DOI. Exemplo: “Pesquise artigos científicos
-            sobre energia solar”.
-          </li>
-          <li>
-            Open Library: livros e autoria. Exemplo: “Busque livros sobre
-            cinema”.
-          </li>
-          <li>
-            Banco Central e IBGE: indicadores econômicos já integrados, com
-            período e fonte.
-          </li>
-        </ul>
-        <p>
-          Mapas e referências geográficas continuam disponíveis. Essas consultas
-          não geram imagens, vídeos ou notícias verificadas automaticamente.
-        </p>
-      </section>
+      <details className="glass notice">
+        <summary style={{cursor:"pointer",padding:8,fontWeight:600}}>Google e Microsoft</summary>
+        <WorkspaceConnectors />
+      </details>
+      <details className="glass notice">
+        <summary style={{cursor:"pointer",padding:8,fontWeight:600}}>Câmera</summary>
+        <DeviceCamera />
+      </details>
+      <details className="glass notice">
+        <summary style={{cursor:"pointer",padding:8,fontWeight:600}}>OBS e KIRO TV</summary>
+        <ObsConnection />
+      </details>
+      <details className="glass notice">
+        <summary style={{cursor:"pointer",padding:8,fontWeight:600}}>Consultas públicas disponíveis</summary>
+        <p>Wikipedia, Wikimedia Commons, Crossref, Open Library, Banco Central e IBGE.
+        A disponibilidade é verificada a cada consulta; não indica autorização de conta privada.</p>
+      </details>
       <p>
         Explore plataformas de IA, redes sociais e ferramentas para a KIRO.
         Catálogo de possibilidades: a presença aqui não significa que a conta
@@ -156,14 +136,19 @@ export default function ConnectionsPage() {
         }}
       >
         {shown.map((x) => { const option=connectionOption(x.id,x.category); return (
-          <article key={x.id} id={"catalog-"+x.id} className="glass card" style={{ padding: 18 }}>
-            <h2 style={{ fontSize: "1.1rem" }}>{x.name}</h2>
-            <p>{x.category}</p>
-            <p><strong>{option.status}</strong></p>
-            <p>{option.requirement}</p>
-            <details><summary>Como preparar esta conexão</summary><ol>{connectionInstructions(x.id,x.category).map(step=><li key={step}>{step}</li>)}</ol></details>
-            <p>Prioridade {option.priority === 0 ? "imediata" : option.priority === 1 ? "Kiro / contas principais" : option.priority === 2 ? "seguinte" : "posterior"}</p>
-            {option.href ? <a href={option.href} {...(option.href.startsWith("https:") ? {target:"_blank",rel:"noopener noreferrer"} : {})}>{option.action}</a> : <p><small>Sem autorização disponível nesta versão.</small></p>}
+          <article key={x.id} id={"catalog-"+x.id} className="glass card" style={{padding:10}}>
+            <details>
+              <summary style={{cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:7}}>
+                <strong>{x.name}</strong>
+                <small style={{opacity:.8}}>{option.status}</small>
+              </summary>
+              <div style={{padding:"6px 8px 12px"}}>
+                <p>{x.category}</p>
+                <p>{option.requirement}</p>
+                <details><summary>Como conectar</summary><ol>{connectionInstructions(x.id,x.category).map(step=><li key={step}>{step}</li>)}</ol></details>
+                {option.href ? <p><a href={option.href} {...(option.href.startsWith("https:") ? {target:"_blank",rel:"noopener noreferrer"} : {})}>{option.action}</a></p> : <p><small>Sem autorização disponível nesta versão.</small></p>}
+              </div>
+            </details>
           </article>
         );})}
       </div>
