@@ -29,3 +29,7 @@ test("Navi text adapter returns only genuine text and no fabricated media",()=>{
  assert.equal(r.provenance.provider,"openai");
  assert.throws(()=>exports.naviTextResult({requestId:"bad/id",text:"ok",provider:"openai"}),/INVALID_NAVI_RESULT/);
 });
+
+test("Codex adapter refuses a non-draft task record",()=>{
+ assert.throws(()=>exports.codexDraftResult({id:"task-1",state:"running",repository:"kiroaventureiro/jarvis-kiro-",branch:"feature/diretor-tecnico-agent"}),/CODEX_TASK_NOT_DRAFT/);
+});
