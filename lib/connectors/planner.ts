@@ -234,6 +234,13 @@ export class DevelopmentPlanner {
       const readFiles = result.steps.filter(
         (s) => s.action.operation === "file",
       );
+      const repairHref =
+        "/conexoes?repairProject=" + encodeURIComponent(project.id) +
+        "&repairRequest=" + encodeURIComponent(message.slice(0, 700)) +
+        (self?.paths?.length
+          ? "&repairPaths=" + encodeURIComponent(self.paths.join(","))
+          : "") +
+        "#repair";
       const scope = readFiles.length
         ? " Arquivos consultados: " +
           readFiles
@@ -258,8 +265,8 @@ export class DevelopmentPlanner {
         result: {
           kind: "connector_plan" as const,
           id: result.id,
-          title: result.title,
-          href: "/conexoes#plan-" + result.id,
+          title: wantsWrite ? "Preparar correção supervisionada" : result.title,
+          href: wantsWrite ? repairHref : "/conexoes#plan-" + result.id,
         },
       };
     } catch (e) {
