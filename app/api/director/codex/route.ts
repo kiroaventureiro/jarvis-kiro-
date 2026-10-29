@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
+import { createCodexTask } from "../../../../lib/codex/task-store";
 import { codexWorkerReadiness } from "../../../../lib/codex/worker-readiness";
 import { planCodexDelegation, type CodexTaskKind } from "../../../../lib/codex/delegation-plan";
 
@@ -29,11 +30,14 @@ export async function POST(request: Request) {
       task:v.task, repository:v.repository, branch:v.branch,
       kind:v.kind as CodexTaskKind,
     });
-    return NextResponse.json({plan, queued:false, started:false}, {
+    const saved = await createCodexTask({ repository: plan.repository, branch: plan.baseBranch });
+    return NextResponse.json({plan, task: saved, queued:false, started:false}, {
       headers:{"Cache-Control":"private, no-store"}
     });
-  } catch {
-    return NextResponse.json({error:"Escopo Codex inválido ou branch protegida"}, {status:400});
+  } catch (error) {
+    if (error instanceof Error && (error.message==="INVALID_SCOPE" || error.message.startsWith("INVALID_") || error.message==="PROTECTED_BRANCH"))
+      return NextResponse.json({error:"Escopo Codex inválido ou branch protegida"}, {status:400});
+    return NextResponse.json({error:"Não foi possível registrar a tarefa no armazenamento persistente"}, {status:503});
   }
 }
 
