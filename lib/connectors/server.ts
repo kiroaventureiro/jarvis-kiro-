@@ -113,17 +113,23 @@ export async function answerNativeRequest(
   const { answerWorkspaceQuestion } = await import("../workspace/conversation");
   const workspace = await answerWorkspaceQuestion(message);
   if (workspace) return workspace;
-  const { answerCognitiveRequest } = await import("../cognitive/server");
-  const cognitive = await answerCognitiveRequest(message, signal, localOnly);
-  if (cognitive) return cognitive;
-  const intent = /\b(verifique|diagnostique|corrija|analise o site)\b/i.test(
-    message,
-  );
-  if (intent || developmentIntent(message)) {
+  // Route authorized development requests before generic cognitive answers.
+  // This remains a read-only diagnosis; proposing and executing writes require
+  // the separate supervised approval and model-cost gates.
+  const normalizedRequest = message
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  const developmentRequest =
+    /\b(verifique|diagnostique|corrija|corrige|conserte|conserta|ajuste|ajusta|melhore|melhora|implemente|implementa|desenvolva|desenvolve|crie|cria|analise)\b/.test(normalizedRequest);
+  if (developmentRequest || developmentIntent(message)) {
     const planner = await developerPlanner();
     const reply = await planner.intent(message);
     if (reply) return reply;
   }
+  const { answerCognitiveRequest } = await import("../cognitive/server");
+  const cognitive = await answerCognitiveRequest(message, signal, localOnly);
+  if (cognitive) return cognitive;
   const n = message
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
