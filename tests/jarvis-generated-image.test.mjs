@@ -5,7 +5,7 @@ const chat=readFileSync(new URL("../app/components/JarvisExperience.tsx",import.
 const image=readFileSync(new URL("../app/components/JarvisGeneratedImage.tsx",import.meta.url),"utf8");
 test("Jarvis attaches only actual locally generated images to the relevant response",()=>{
  assert.match(chat,/holoSession\.rememberMedia\(items\)/);
- assert.match(chat,/setGeneratedImages\(previous=>\[\.\.\.previous\.slice\(-7\),\{messageId:assistantId,file:image\.file,label:image\.label,autoDownloadOnArrival:desktopDownloadCapable && autoDownload\}\]\)/);
+ assert.match(chat,/setGeneratedImages\(previous=>\[\.\.\.previous\.slice\(-7\),\{messageId:assistantId,file:image\.file,label:image\.label,autoDownloadOnArrival:false\}\]\)/);
  assert.match(chat,/generatedImages\.filter\(image=>image\.messageId === item\.id\)/);
  assert.match(chat,/<JarvisGeneratedImage/);
 });
@@ -22,14 +22,22 @@ test("Generated images survive later chat turns within an eight-image memory bou
 });
 
 test("Generated images can be saved locally using temporary object URLs",()=>{
- assert.match(image,/aria-label="Salvar imagem gerada"/);
- assert.match(image,/download=/);
+ assert.doesNotMatch(image,/aria-label="Salvar imagem gerada"/);
+ assert.match(image,/URL\.createObjectURL/);
  assert.match(image,/file\.size\s*===\s*0/);
  assert.doesNotMatch(image,/localStorage|dangerouslySetInnerHTML/);
 });
 
 test("Auto download opt-in only applies to images generated after enabling",()=>{
- assert.match(chat,/autoDownloadOnArrival:desktopDownloadCapable && autoDownload/);
+ assert.match(chat,/autoDownloadOnArrival:false/);
  assert.match(chat,/autoDownload=\{image\.autoDownloadOnArrival\}/);
  assert.match(image,/claimAutomaticDownload\(id\)/);
+});
+
+test("Jarvis asks for consent before conversational image downloads",()=>{
+ assert.match(chat,/conversationalDownloadIntent\(text/);
+ assert.match(chat,/Quer que eu baixe esta imagem no seu computador/);
+ assert.match(chat,/setPendingDownload\(\{id:assistantId,file:image\.file\}\)/);
+ assert.match(chat,/link\.click\(\)/);
+ assert.doesNotMatch(chat,/Baixar imagens automaticamente no PC/);
 });
