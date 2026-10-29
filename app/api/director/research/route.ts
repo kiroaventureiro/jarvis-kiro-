@@ -1,3 +1,4 @@
+import { answerNaviRequest } from "../../../../lib/openai/navi-router";
 import { answerNativeRequest } from "../../../../lib/connectors/server";
 import { answerCouncilRequest } from "../../../../lib/orchestration/council-server";
 import { boundHistory } from "../../../../lib/abacus/protocol";
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
   }
   try {
     const reply =
+      (await answerNaviRequest(body.query, history, request.signal)) ||
       (await answerCouncilRequest(body.query, request.signal, false)) ||
       (await answerNativeRequest(body.query, request.signal, history, true)) ||
       (await answerVoiceUsageQuestion(body.query)) ||
