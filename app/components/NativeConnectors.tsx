@@ -930,6 +930,7 @@ function RepairPanel({
   }
   return (
     <section
+      id="repair"
       className="glass connector-repair"
       aria-label="Planejamento de correções"
     >
