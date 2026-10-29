@@ -785,6 +785,31 @@ export default function JarvisExperience() {
     e.preventDefault();
     const text = draft.trim();
     if (!text || ["connecting", "processing"].includes(state)) return;
+    const downloadIntent = conversationalDownloadIntent(text, !!pendingDownload && desktopDownloadCapable);
+    if (downloadIntent !== "other" && pendingDownload) {
+      const {id, file} = pendingDownload;
+      setPendingDownload(null);
+      setDraft("");
+      if (downloadIntent !== "decline") {
+        const url = URL.createObjectURL(file);
+        try {
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "jarvis-imagem-" + id.slice(0,8) + (file.type==="image/png"?".png":file.type==="image/jpeg"?".jpg":".webp");
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        } finally { window.setTimeout(() => URL.revokeObjectURL(url), 30000); }
+      }
+      const response = downloadIntent === "decline"
+        ? "Certo, não vou baixar esta imagem."
+        : "Solicitei o download ao navegador. Ele pode solicitar sua permissão.";
+      setMessages(items => [...items,
+        {id:crypto.randomUUID(),role:"user",text},
+        {id:crypto.randomUUID(),role:"assistant",text:response}
+      ]);
+      return;
+    }
     if (workspace.files.length) {
       if (workspace.recording) return;
       holoSession.close();
