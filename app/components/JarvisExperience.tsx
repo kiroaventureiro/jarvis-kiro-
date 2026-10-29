@@ -730,26 +730,6 @@ export default function JarvisExperience() {
       fileSpeech.current = null;
       setState("idle");
     }
-    const downloadIntent=conversationalDownloadIntent(text,!!pendingDownload && desktopDownloadCapable);
-    if (downloadIntent !== "other" && pendingDownload) {
-      const downloadId=pendingDownload.id;
-      const file=pendingDownload.file;
-      setPendingDownload(null);
-      setDraft("");
-      const response = downloadIntent === "decline"
-        ? "Certo, não vou baixar esta imagem."
-        : "Solicitei o download da imagem ao navegador. Confirme nas configurações do navegador se ele foi permitido.";
-      if (downloadIntent !== "decline") {
-        const url=URL.createObjectURL(file);
-        try {
-          const link=document.createElement("a");
-          link.href=url;link.download="jarvis-imagem-"+downloadId.slice(0,8)+(file.type==="image/png"?".png":file.type==="image/jpeg"?".jpg":".webp");
-          document.body.appendChild(link);link.click();link.remove();
-        } finally {window.setTimeout(()=>URL.revokeObjectURL(url),30000);}
-      }
-      setMessages(items=>[...items,{id:crypto.randomUUID(),role:"user",text},{id:crypto.randomUUID(),role:"assistant",text:response}]);
-      return;
-    }
     if (workspace.files.length) {
       await workspace.voiceInstruction();
       return;
