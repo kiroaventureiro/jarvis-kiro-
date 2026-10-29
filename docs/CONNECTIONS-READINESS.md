@@ -38,10 +38,25 @@ roteada, sem chamada a um modelo pago. Pedidos de escrita retornam o limite da v
 | Microsoft Agenda | `Calendars.ReadBasic`: listar agendas |
 | OneDrive / Word / Excel / PowerPoint | `Files.Read`: listar arquivos, sem editar conteúdo |
 | Microsoft Contatos | `Contacts.Read`: listar metadados de contatos |
+| Google Tasks | `tasks.readonly`: listar listas de tarefas, sem concluir itens |
+| Google Forms | `drive.metadata.readonly`: listar arquivos Forms, sem perguntas ou respostas |
+| Google Meet | `meetings.space.readonly`: listar registros de conferências, sem entrar em chamadas |
+| Microsoft To Do | `Tasks.Read`: listar listas, sem editar ou concluir tarefas |
+| Microsoft Teams | `Team.ReadBasic.All`: equipes das quais o usuário é membro direto; conta corporativa/escolar |
+| SharePoint | `Sites.Read.All`: sites seguidos; conta corporativa/escolar com OneDrive for Business |
 
-Google Fotos, Meet, Tasks, Forms, Teams, To Do e SharePoint estão no catálogo, mas
-não herdam as capacidades acima. Dependem de adaptadores, escopos e políticas
-específicos; a interface não mostra consentimento pronto para eles.
+Google Fotos continua pendente de fluxo próprio de seleção e autorização;
+não herda acesso pela câmera ou pelo Drive. Os seis serviços adicionados acima
+reutilizam o OAuth existente, mas só são consultados se selecionados no consentimento.
+Tasks/To Do listam listas; Forms consulta metadados pelo Drive; Meet não participa de
+reuniões. Teams não retorna todas as equipes de canais compartilhados. A Microsoft
+publica uma limitação conhecida em followedSites que pode produzir resultados
+incompletos ou incorretos: a UI não apresenta essa leitura como inventário completo.
+Nenhuma conta privada nova foi autorizada nesta entrega.
+
+Serviços já autorizados aparecem selecionados ao reconectar, evitando perda
+acidental de acesso. Escopos iguais (Drive/Forms) são deduplicados; novos serviços
+permanecem opt-in e não recebem acesso apenas por terem sido adicionados ao catálogo.
 
 ### Bloqueio essencial antes da autorização real
 
@@ -109,3 +124,11 @@ Esses testes não são consentimento nem conexão real às contas do proprietár
 As capturas de teste em `/tmp/jarvis-workspace-evidence` contêm dados simulados.
 Build e TypeScript devem passar antes do push. Sem main, deploy de produção,
 ativação de cobrança ou acesso privado adicional.
+
+## Referências dos serviços adicionais
+
+- https://developers.google.com/workspace/tasks/reference/rest/v1/tasklists/list
+- https://developers.google.com/workspace/meet/api/reference/rest/v2/conferenceRecords/list
+- https://learn.microsoft.com/en-us/graph/api/todo-list-lists?view=graph-rest-1.0
+- https://learn.microsoft.com/en-us/graph/api/user-list-joinedteams?view=graph-rest-1.0
+- https://learn.microsoft.com/en-us/graph/api/sites-list-followed?view=graph-rest-1.0

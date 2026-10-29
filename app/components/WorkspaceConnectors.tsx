@@ -4,7 +4,7 @@ type View={providers:Array<{provider:"google"|"microsoft";authorizationReady:boo
 export default function WorkspaceConnectors(){
  const [view,setView]=useState<View|null>(null),[selected,setSelected]=useState<string[]>([]),[error,setError]=useState(""),[busy,setBusy]=useState(false),[results,setResults]=useState<Record<string,{checkedAt:string;items:Array<{id:string;name:string}>}>>({});
  async function load(){const r=await fetch("/api/director/workspace-connectors",{credentials:"same-origin",cache:"no-store"});const d=await r.json();if(!r.ok)throw Error(d.error);setView(d);}
- useEffect(()=>{const ac=new AbortController();fetch("/api/director/workspace-connectors",{credentials:"same-origin",cache:"no-store",signal:ac.signal}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);setView(d);}).catch(e=>{if(!ac.signal.aborted)setError(e.message);});return()=>ac.abort();},[]);
+ useEffect(()=>{const ac=new AbortController();fetch("/api/director/workspace-connectors",{credentials:"same-origin",cache:"no-store",signal:ac.signal}).then(async r=>{const d=await r.json();if(!r.ok)throw Error(d.error);setView(d);setSelected(d.providers.flatMap((p:View["providers"][number])=>p.services));}).catch(e=>{if(!ac.signal.aborted)setError(e.message);});return()=>ac.abort();},[]);
  async function action(body:Record<string,unknown>){setBusy(true);setError("");try{
   const r=await fetch("/api/director/workspace-connectors",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error);
   if(d.authorizationUrl){const u=new URL(d.authorizationUrl);if(u.protocol!=="https:"||!["accounts.google.com","login.microsoftonline.com"].includes(u.hostname))throw Error("Destino inválido.");window.location.assign(u.href);return;}
@@ -15,6 +15,9 @@ export default function WorkspaceConnectors(){
  return <section id="workspace-connectors" className="glass notice" aria-label="Conectar Google e Microsoft">
   <h2>Google e Microsoft · autorização por serviço</h2>
   <p>Selecione os serviços e autorize na tela oficial. Esta versão lista até cinco registros por consulta; não lê corpos de e-mail, não edita arquivos, não envia mensagens e não publica no YouTube.</p>
+  <p>Tasks e To Do listam listas, não seus itens. Forms lista arquivos, sem respostas. Meet lista registros, sem entrar em reuniões. Teams e SharePoint exigem conta corporativa/escolar; o administrador pode precisar aprovar os escopos.</p>
+  <p>SharePoint consulta apenas sites seguidos. A Microsoft informa uma limitação conhecida que pode causar resultados incompletos ou incorretos; não trate a consulta como inventário completo.</p>
+  <p>Ao reconectar, os serviços já autorizados aparecem marcados. A nova autorização substitui a seleção anterior; desmarque apenas se quiser retirar esse serviço do acesso do Jarvis.</p>
   <p>Docs, Sheets e Slides compartilham a listagem de arquivos do Drive; Word, Excel e PowerPoint compartilham a listagem do OneDrive. Isso não habilita edição de documentos.</p>
   {error?<p role="alert">{error}</p>:null}
   {!view&&!error?<p>Consultando configuração…</p>:null}

@@ -19,7 +19,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
      if(body.op==='read')return route.fulfill({json:{checkedAt:'2026-10-29T00:00:00Z',items:[{id:'file1',name:'Roteiro Kiro'}]}});
      if(body.op==='authorize')return route.fulfill({json:{authorizationUrl:'https://accounts.google.com/o/oauth2/v2/auth?state=fixture'}});
     }
-    return route.fulfill({json:{providers:[{provider:'google',authorizationReady:ready,missing:ready?[]:['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET'],connected:ready,services:ready?['google-drive']:[],verifiedAt:{},callback:'https://jarvis.example/api/director/workspace-connectors/google/callback'},{provider:'microsoft',authorizationReady:false,missing:['MICROSOFT_CLIENT_ID'],connected:false,services:[],verifiedAt:{},callback:null}],services:[{id:'google-drive',provider:'google',name:'Drive · Docs · Sheets · Slides',scope:'https://www.googleapis.com/auth/drive.metadata.readonly'},{id:'gmail',provider:'google',name:'Gmail',scope:'https://www.googleapis.com/auth/gmail.metadata'}]}});
+    return route.fulfill({json:{providers:[{provider:'google',authorizationReady:ready,missing:ready?[]:['GOOGLE_CLIENT_ID','GOOGLE_CLIENT_SECRET'],connected:ready,services:ready?['google-drive']:[],verifiedAt:{},callback:'https://jarvis.example/api/director/workspace-connectors/google/callback'},{provider:'microsoft',authorizationReady:false,missing:['MICROSOFT_CLIENT_ID'],connected:false,services:[],verifiedAt:{},callback:null}],services:[{id:'google-drive',provider:'google',name:'Drive · Docs · Sheets · Slides',scope:'https://www.googleapis.com/auth/drive.metadata.readonly'},{id:'gmail',provider:'google',name:'Gmail',scope:'https://www.googleapis.com/auth/gmail.metadata'},{id:'google-tasks',provider:'google',name:'Google Tasks · listas',scope:'https://www.googleapis.com/auth/tasks.readonly'},{id:'microsoft-todo',provider:'microsoft',name:'Microsoft To Do · listas',scope:'Tasks.Read'}]}});
    }
    return route.fulfill({status:401,json:{error:'Sessão de teste sem credenciais reais'}});
   });
@@ -34,6 +34,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await page.getByText('Roteiro Kiro',{exact:true}).waitFor();
   assert.deepEqual(payloads,[{op:'read',service:'google-drive'}]);
   const workspace=page.getByRole('region',{name:'Conectar Google e Microsoft'});
+  assert.equal(await workspace.getByRole('checkbox',{name:'Drive · Docs · Sheets · Slides',exact:true}).isChecked(),true,'existing authorizations stay selected');
+  await workspace.getByRole('checkbox',{name:'Google Tasks · listas',exact:true}).check();assert.equal(await workspace.getByRole('button',{name:'Verificar e listar Google Tasks · listas',exact:true}).count(),0,'unapproved service cannot be read');
   await workspace.getByRole('checkbox',{name:'Gmail',exact:true}).check();assert.equal(await google.isEnabled(),true);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await workspace.screenshot({path:'/tmp/jarvis-workspace-evidence/workspace-'+width+'.png'});

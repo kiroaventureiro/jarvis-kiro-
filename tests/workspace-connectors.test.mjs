@@ -72,3 +72,31 @@ test('Gmail reads only five bounded subject metadata records, never message bodi
  const f=fixture();await connect(f,'google',['gmail']);const result=await f.service.read('gmail');assert.equal(result.items[0].name,'Agenda Kiro TV');
  const detail=f.requests.find(r=>r.url.includes('/messages/'));assert.equal(new URL(detail.url).searchParams.get('format'),'metadata');assert.equal(new URL(detail.url).searchParams.get('metadataHeaders'),'Subject');assert.equal(detail.options.method,'GET');
 });
+
+test('Tasks, Forms, Meet, To Do, Teams and SharePoint use fixed read-only official adapters',async()=>{
+ const cases=[
+  ['google','google-tasks',{items:[{id:'list-1',title:'Programação Kiro TV'}]},'Programação Kiro TV','tasks.googleapis.com','/tasks/v1/users/@me/lists'],
+  ['google','google-forms',{files:[{id:'form-1',name:'Pesquisa Kiro'}]},'Pesquisa Kiro','www.googleapis.com','/drive/v3/files'],
+  ['google','google-meet',{conferenceRecords:[{name:'conferenceRecords/meeting-1'}]},'conferenceRecords/meeting-1','meet.googleapis.com','/v2/conferenceRecords'],
+  ['microsoft','microsoft-todo',{value:[{id:'todo-1',displayName:'Produção Kiro'}]},'Produção Kiro','graph.microsoft.com','/v1.0/me/todo/lists'],
+  ['microsoft','microsoft-teams',{value:[{id:'team-1',displayName:'Equipe Kiro'}]},'Equipe Kiro','graph.microsoft.com','/v1.0/me/joinedTeams'],
+  ['microsoft','sharepoint',{value:[{id:'site-1',displayName:'Site Kiro'}]},'Site Kiro','graph.microsoft.com','/v1.0/me/followedSites'],
+ ];
+ for(const [provider,service,payload,name,host,path]of cases){
+  const f=fixture();await connect(f,provider,[service]);let calls=0;
+  f.service.fetcher=async(url,options)=>{calls++;const u=new URL(url);assert.equal(u.hostname,host);assert.equal(u.pathname,path);assert.equal(options.method,'GET');assert.equal(options.redirect,'error');assert.equal(options.body,undefined);
+   if(service==='google-forms')assert.equal(u.searchParams.get('q'),"mimeType='application/vnd.google-apps.form' and trashed=false");
+   if(service==='microsoft-teams')assert.equal(u.search,'','joinedTeams does not support OData query parameters');
+   return Response.json(payload);
+  };
+  const result=await f.service.read(service);assert.equal(calls,1);assert.equal(result.items[0].name,name);assert.equal(result.writesEnabled,false);
+ }
+});
+test('shared Google Drive scopes are deduplicated and new service permissions stay opt-in',async()=>{
+ const f=fixture();const initial=await f.service.start('google',['google-drive','google-forms'],99999999);
+ assert.equal(new URL(initial.authorizationUrl).searchParams.get('scope'),'https://www.googleapis.com/auth/drive.metadata.readonly');
+ await connect(f,'microsoft',['outlook']);const before=f.requests.length;await assert.rejects(f.service.read('microsoft-teams'),/SCOPE_REQUIRED/);assert.equal(f.requests.length,before);
+ const {workspaceReadIntent}=load('lib/connectors/workspace.ts');
+ for(const [message,service]of [['liste minhas listas do Google Tasks','google-tasks'],['quais formulários no Forms','google-forms'],['consulte os registros do Meet','google-meet'],['mostre minhas listas do To Do','microsoft-todo'],['liste minhas equipes no Teams','microsoft-teams'],['quais sites sigo no SharePoint','sharepoint']])assert.equal(workspaceReadIntent(message).service,service);
+ assert.equal(workspaceReadIntent('conclua a lista do To Do').writeRequested,true);
+});
