@@ -75,6 +75,7 @@ export async function POST(request: Request) {
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     localReply: async (message, signal) =>
+      (await answerNativeRequest(message, signal)) ||
       (await answerVoiceUsageQuestion(message)) ||
       (await answerAbacusAgentQuestion(message, signal)) ||
       (await answerVoiceStudioQuestion(message, signal)) ||
@@ -86,7 +87,6 @@ export async function POST(request: Request) {
       answerPlaceReference(message) ||
       (await answerImages(message, signal)) ||
       (await answerResearch(message, signal)) ||
-      (await answerNativeRequest(message, signal)) ||
       (await answerOperationalQuestion(message, signal)) ||
       localVisualReference(message) ||
       (await answerWebResearch(message, signal)) ||
