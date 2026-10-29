@@ -541,11 +541,10 @@ function ProviderCard({
             </button>
           </div>
           <details>
-            <summary>Escopo de projetos e permissões</summary>
+            <summary>Opções avançadas de recursos (opcional)</summary>
             <p>
-              Selecione até 100 recursos autorizados. GitHub permite carregar mais páginas,
-              até 1.000 repositórios consultados. Vercel lista até 100 projetos e Supabase até 200;
-              os limites não concedem acesso adicional no provedor.
+              Os recursos identificados são adicionados automaticamente após validar a conta.
+              Não é necessário selecioná-los novamente. Use esta área apenas para vinculações específicas.
             </p>
             {nextPage!==null ? <button type="button" disabled={busy} onClick={moreProjects}>Carregar mais repositórios GitHub</button> : null}
             {(available.length ? available : c.resources).map((r) => (
@@ -658,8 +657,8 @@ function ProviderCard({
               ))}
             </fieldset>
             <p>
-              Escrita também depende da allowlist de desenvolvimento do
-              servidor. Recursos liberados nela:{" "}
+              Operações de escrita ainda respeitam as políticas de segurança do
+              servidor. Recursos liberados para alterações:{" "}
               {v.writeAllowlist.join(", ") || "nenhum"}.
             </p>
             <button

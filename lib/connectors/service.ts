@@ -255,6 +255,22 @@ export class ConnectorService {
         current.providerScopes = [
           ...new Set([...current.providerScopes, ...result.providerScopes]),
         ];
+        // The provider's authorization is the source of truth. Populate
+        // resources automatically; users need not repeat a per-project grant.
+        const discovered = result.resources || [];
+        const known = new Map(current.resources.map((r) => [r.id, r]));
+        for (const resource of discovered) {
+          const previous = known.get(resource.id);
+          known.set(resource.id, previous
+            ? { ...resource, ...(previous.kiroProject ? { kiroProject: previous.kiroProject } : {}) }
+            : resource);
+        }
+        current.resources = [...known.values()];
+        // The upstream API remains authoritative: unsupported operations
+        // still fail at the provider, never via fabricated permissions.
+        current.grants = (p === "vercel"
+          ? ["read", "deploy", "configure"]
+          : ["read", "write"]) as Grant[];
         delete current.lastError;
         audit(s, "connection_test", "verified", { provider: p });
       });
