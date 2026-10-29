@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     // No cross-repository drafts until an explicit scope-authorization workflow exists.
     if (plan.repository !== "kiroaventureiro/jarvis-kiro-" || plan.baseBranch !== "feature/diretor-tecnico-agent")
       return NextResponse.json({error:"Repositório ou branch ainda não autorizados para esta integração"}, {status:403});
-    const saved = await createCodexTask({ repository: plan.repository, branch: plan.baseBranch });
+    const saved = await createCodexTask({ repository: plan.repository, branch: plan.baseBranch, kind: plan.kind, instruction: plan.task });
     return NextResponse.json({plan, task: saved, queued:false, started:false}, {
       headers:{"Cache-Control":"private, no-store"}
     });
