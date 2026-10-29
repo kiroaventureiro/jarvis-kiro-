@@ -88,7 +88,7 @@ export function requestedProject(
   // Mentioning a provider without a project name means discovering its authorized
   // resources, not that a project named "GitHub" or "Vercel" was requested.
   const serviceOnly = /\b(github|git hub|vercel|versel|supabase|supa base)\b/.test(n) &&
-    (/\b(entre|entrar|acesse|acessar|abra|abrir|olhar|consulte|consultar|verifique|verificar)\b/.test(n) ||
+    (/\b(entre|entra|entrar|acesse|acessar|abra|abrir|olhar|consulte|consultar|verifique|verificar)\b/.test(n) ||
       /\bo que (?:tem|ha) no\b/.test(n)) &&
     !/\b(projeto|repositorio|site)\s+(?:chamado\s+)?[a-z0-9_-]{4,}/.test(n) &&
     !/\b(?:consulte|verifique|analise|abra|entre)\s+[a-z0-9_-]{4,}\s+(?:na|no)\s+(?:vercel|github|supabase)\b/.test(n);
