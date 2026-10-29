@@ -47,6 +47,7 @@ import { voiceAction } from "../../lib/voice/local-intents";
 import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
 import { codexDraftIntent } from "../../lib/codex/chat-intent";
 import { codexStatusIntent } from "../../lib/codex/status-intent";
+import { describeCodexDispatchResponse } from "../../lib/codex/dispatch-response";
 import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
 import { useFileWorkspace } from "./useFileWorkspace";
 import {
@@ -866,7 +867,13 @@ export default function JarvisExperience() {
       });
       const data=await response.json();
       if(!response.ok||data.started!==false||data.queued!==false||data.task?.state!=="approved")throw Error("INVALID_APPROVAL_RESPONSE");
-      return {text:"Aprovação da tarefa Codex "+taskId.slice(0,8)+" registrada. O executor ainda não está conectado; nada foi executado.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+      const dispatch=await fetch("/api/director/codex/dispatch",{
+        method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({taskId})
+      });
+      const dispatchData=await dispatch.json().catch(()=>null);
+      const preflight=describeCodexDispatchResponse(dispatch.status,dispatchData);
+      return {text:"Aprovação da tarefa Codex "+taskId.slice(0,8)+" registrada. "+preflight.message,model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
     }catch{
       return {text:"Não foi possível confirmar a aprovação desta tarefa. Nenhuma execução foi iniciada.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
     }
