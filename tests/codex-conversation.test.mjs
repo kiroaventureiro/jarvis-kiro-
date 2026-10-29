@@ -28,3 +28,10 @@ test("Conversational planning is wired to existing chat and research routes",()=
   assert.match(chat,/answerCodexPlanning\(message\)/);
   assert.match(research,/answerCodexPlanning\(body\.query\)/);
 });
+
+test("Codex planner never interprets negation or a different named repository as a Jarvis task",()=>{
+  assert.equal(mod.answerCodexPlanning("Não peça ao Codex revisar o Jarvis"),null);
+  assert.equal(mod.answerCodexPlanning("Como pedir ao Codex para revisar o Jarvis?"),null);
+  assert.equal(mod.answerCodexPlanning("Peça ao Codex revisar o repo outra-conta/outro-projeto"),null);
+  assert.equal(mod.answerCodexPlanning("Peça ao Codex revisar o repo kiroaventureiro/jarvis-kiro-")?.codexPlan.repository,"kiroaventureiro/jarvis-kiro-");
+});
