@@ -27,7 +27,7 @@ function normalize(input: string) {
     .toLowerCase();
 }
 const readIntent =
-  /\b(consult|verifi[cq]|analis|diagnosti[cq]|listar|liste|mostr|acesse|abra|pesquis|status|situacao|meus projetos|minhas conexoes)\w*/;
+  /\b(consult|verifi[cq]|analis|diagnosti[cq]|listar|liste|mostr|entre|entrar|acesse|acessar|abra|abrir|pesquis|status|situacao|meus projetos|minhas conexoes)\w*/;
 /** Convert provider responses into bounded, non-sensitive observations. Never send raw rows to speech. */
 function observation(provider: Provider, data: unknown): string {
   const items = Array.isArray(data) ? data : null;
@@ -126,10 +126,13 @@ export async function conversationalConnectorRead(
     const failedNames: string[] = [];
     const findings: string[] = [];
     const panels: Array<{ label: string; detail: string }> = [];
-    const selection = requestedProject(
+    const selected = requestedProject(
       message,
       providers.flatMap((p) => state.connections[p]?.resources || []),
     );
+    // Provider-only commands mean discover authorized resources, not a named project.
+    const selection = providerOnly && selected.kind === "unresolved"
+      ? {kind:"all" as const} : selected;
     if (selection.kind === "unresolved")
       return {
         text:
