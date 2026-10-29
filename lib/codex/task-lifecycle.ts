@@ -8,6 +8,8 @@ export type CodexTaskRecord = {
   state: CodexTaskState;
   repository: string;
   branch: string;
+  kind?: "review" | "test" | "implement";
+  instruction?: string;
   createdAt: string;
   updatedAt: string;
   resultReference?: string;
