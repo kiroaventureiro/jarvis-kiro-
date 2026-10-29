@@ -25,3 +25,14 @@ test("Navi route requires authentication and same origin", () => {
   assert.match(route, /safeNaviHistory/);
   assert.match(route, /private, no-store/);
 });
+
+test("Navi routing is explicit and preserved in chat/research", () => {
+  const router = readFileSync(new URL("../lib/openai/navi-router.ts", import.meta.url), "utf8");
+  const chat = readFileSync(new URL("../app/api/director/abacus/route.ts", import.meta.url), "utf8");
+  const research = readFileSync(new URL("../app/api/director/research/route.ts", import.meta.url), "utf8");
+  assert.match(router, /answerNaviRequest/);
+  assert.match(router, /if \(!match\) return null/);
+  assert.match(router, /askNavi\(/);
+  assert.match(chat, /answerNaviRequest\(message, input\.history \|\| \[\], signal\)/);
+  assert.match(research, /answerNaviRequest\(body\.query, history, request\.signal\)/);
+});
