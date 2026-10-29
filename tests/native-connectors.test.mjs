@@ -352,14 +352,25 @@ test("resource scope, server allowlist, production and protected branches are en
       }),
     ),
   );
+  // A production-hosted Jarvis may write to an explicitly approved dev resource.
   f.service.options.environment = () => "production";
+  const developmentPlan = await f.service.plan("approved development write", [
+    action("branch", { branch: "jk/repair", baseSha: A }),
+  ]);
+  assert.equal(developmentPlan.status, "draft");
+  // Targeting an actual production resource is still forbidden.
+  await f.store.update((state) => {
+    state.connections.github.resources[0].environment = "production";
+  });
   await assert.rejects(
-    f.service.plan("write", [
+    f.service.plan("production resource", [
       action("branch", { branch: "jk/repair", baseSha: A }),
     ]),
     (e) => e.code === "PRODUCTION_BLOCKED",
   );
-  f.service.options.environment = () => "preview";
+  await f.store.update((state) => {
+    state.connections.github.resources[0].environment = "development";
+  });
   f.service.options.writeResources = () => ({});
   await assert.rejects(
     f.service.plan("write", [
