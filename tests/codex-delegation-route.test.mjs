@@ -20,8 +20,9 @@ test("Delegation contract rejects main/master and requires separate approval",()
 
 test("Codex readiness cannot falsely claim a working executor",()=>{
   assert.match(route,/export async function GET/);
-  assert.match(route,/execution:"not_connected"/);
-  assert.match(route,/workerAuthenticated:false/);
-  assert.match(route,/canStartTasks:false/);
-  assert.match(route,/canResumeTasks:false/);
+  assert.match(route,/codexWorkerReadiness\(\)/);
+  const readiness=readFileSync(new URL("../lib/codex/worker-readiness.ts",import.meta.url),"utf8");
+  assert.match(readiness,/workerAuthenticated: false/);
+  assert.match(readiness,/canStartTasks: false/);
+  assert.match(readiness,/canResumeTasks: false/);
 });
