@@ -16,6 +16,8 @@ import {
 } from "../../../../lib/connectors/security";
 import { ConnectorError } from "../../../../lib/connectors/types";
 import { oauthApps } from "../../../../lib/connectors/oauth";
+import { abacusHub } from "../../../../lib/abacus/hub-server";
+import { inspectVoiceStudio } from "../../../../lib/voice/voicestudio";
 export const dynamic = "force-dynamic";
 export const maxDuration = 180;
 const headers = {
@@ -61,8 +63,24 @@ export async function POST(request: Request) {
       session = (await cookies()).get(cookieName)!.value,
       sessionId = hash(session);
     const op = data.op;
-    if (op === "verify_saved")
-      return NextResponse.json(await connectors.verifySavedConnections(), {headers});
+    if (op === "verify_saved") {
+      // Each integration is independent: an unavailable vault must not prevent
+      // a read-only Abacus/VoiceStudio probe with its existing server config.
+      const [native,abacus,studio]=await Promise.allSettled([
+        connectors.verifySavedConnections(),
+        abacusHub(true,request.signal),
+        inspectVoiceStudio(process.env,request.signal),
+      ]);
+      const hub=abacus.status==="fulfilled"?abacus.value:null;
+      return NextResponse.json({
+        results:native.status==="fulfilled"?native.value.results:
+          (["github","supabase","vercel"] as const).map(provider=>({provider,state:"failed"})),
+        abacus:{state:hub?.state||"unavailable",models:hub?.discovery?.models.length||0,
+          tools:hub?.discovery?.tools.length||0,toolsState:hub?.discovery?.toolsState||"not_verified",
+          checkedAt:hub?.discovery?.checkedAt||null,generationTested:false},
+        voiceStudio:{state:studio.status==="fulfilled"?studio.value.state:"unavailable",speechVerified:false},
+      }, {headers});
+    }
     if (op === "plan")
       return NextResponse.json(
         await connectors.plan(data.title, data.actions),

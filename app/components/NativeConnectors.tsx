@@ -79,6 +79,8 @@ export default function NativeConnectors() {
   const [view, setView] = useState<Overview | null>(null),
     [error, setError] = useState(""),
     [verification, setVerification] = useState<Array<{provider:Provider;state:"verified"|"not_connected"|"failed"}>>([]),
+    [abacusVerification,setAbacusVerification]=useState<{state:string;models:number;tools:number;toolsState:string;checkedAt:string|null}|null>(null),
+    [studioVerification,setStudioVerification]=useState<string|null>(null),
     [loading, setLoading] = useState(false);
   async function load() {
     const r = await fetch("/api/director/connectors", {
@@ -125,10 +127,12 @@ export default function NativeConnectors() {
     }
   }
   async function verifySaved() {
-    setLoading(true);setError("");setVerification([]);
+    setLoading(true);setError("");setVerification([]);setAbacusVerification(null);setStudioVerification(null);
     try {
       const result=await api({op:"verify_saved"});
       setVerification(result.results);
+      setAbacusVerification(result.abacus);
+      setStudioVerification(result.voiceStudio?.state||null);
       await load();
     } catch(e) {
       setError(e instanceof Error?e.message:"Não foi possível verificar as conexões salvas.");
@@ -148,10 +152,18 @@ export default function NativeConnectors() {
           Atualizar conectores
         </button>
       </div>
-      <button type="button" onClick={verifySaved} disabled={loading || !view?.configured}>
-        {loading ? "Consultando conexões…" : "Verificar contas já autorizadas"}
+      <button type="button" onClick={verifySaved} disabled={loading || !view}>
+        {loading ? "Consultando conexões…" : "Verificar Abacus e contas já autorizadas"}
       </button>
-      <p>Verifica GitHub, Supabase e Vercel com as autorizações já salvas. Não solicita novos tokens, não altera permissões e não inicia tarefas ou deploys.</p>
+      <p>Consulta Abacus, GitHub, Supabase, Vercel e VoiceStudio com a configuração já salva. Não solicita novos tokens, não gera conteúdo pago, não altera permissões e não inicia tarefas ou deploys.</p>
+      {abacusVerification ? <div role="status">
+        <p>Abacus: {abacusVerification.state==="verified"
+          ? `catálogo autenticado verificado (${abacusVerification.models} modelos). ${abacusVerification.toolsState==="verified"?`${abacusVerification.tools} ferramentas listadas.`:"Ferramentas não verificadas."}`
+          :abacusVerification.state==="not_configured"?"chave não configurada neste ambiente":"não foi possível confirmar o acesso"}</p>
+        {abacusVerification.checkedAt ? <p>Consulta do catálogo: {new Date(abacusVerification.checkedAt).toLocaleString("pt-BR")}.</p> : null}
+        <p>Geração de conteúdo e execução de agentes não testadas. Conectores do ChatLLM não são transferidos ao Jarvis.</p>
+      </div> : null}
+      {studioVerification ? <p role="status">VoiceStudio: {studioVerification==="read_verified"?"descoberta e leitura verificadas; geração de voz não testada":studioVerification==="not_configured"?"serviço não configurado":"acesso não confirmado ("+studioVerification+")"}.</p> : null}
       {verification.length ? <ul aria-label="Resultado da verificação de contas" role="status">
         {verification.map(item=><li key={item.provider}>{names[item.provider]}: {item.state==="verified"?"acesso verificado agora":item.state==="not_connected"?"autorização ainda não cadastrada":"verificação falhou; consulte o conector abaixo"}</li>)}
       </ul> : null}
