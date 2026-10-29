@@ -17,3 +17,11 @@ test("Delegation contract rejects main/master and requires separate approval",()
   assert.match(plan,/executionStarted: false/);
   assert.match(plan,/productionAllowed: false/);
 });
+
+test("Codex readiness cannot falsely claim a working executor",()=>{
+  assert.match(route,/export async function GET/);
+  assert.match(route,/execution:"not_connected"/);
+  assert.match(route,/workerAuthenticated:false/);
+  assert.match(route,/canStartTasks:false/);
+  assert.match(route,/canResumeTasks:false/);
+});
