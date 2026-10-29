@@ -24,6 +24,7 @@ test("catalog covers social media, voice, video and automation without claiming 
 });
 test("catalog endpoint is authenticated and no secrets are collected", () => {
   assert.match(api, /await authorized\(\)/);
-  assert.match(ui, /disabled\s+title=/);
+  assert.match(ui, /option.status/);
+  assert.match(ui, /Sem autorização disponível nesta versão/);
   assert.doesNotMatch(ui, /type="password"/);
 });

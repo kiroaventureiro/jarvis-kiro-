@@ -93,7 +93,7 @@ const expiry = String(Date.now() + 600000),
       assert.equal(memory.state, "operational_authorized");
       assert.ok(memory.checks.includes("encrypted_read"));
       assert.ok(!memory.checks.includes("encrypted_write"));
-      assert.equal(snapshot.catalog.total, 188);
+      assert.ok(snapshot.catalog.total >= 188);
       const director = await (
         await page.request.get(base + "/api/director")
       ).json();
@@ -149,7 +149,7 @@ const expiry = String(Date.now() + 600000),
       const catalog = await (
         await page.request.get(base + "/api/director/connections")
       ).json();
-      assert.equal(catalog.items.length, 188);
+      assert.equal(catalog.items.length, snapshot.catalog.total);
       await page.goto(base);
       await page
         .getByRole("button", { name: "Escrever mensagem", exact: true })
@@ -221,7 +221,7 @@ const expiry = String(Date.now() + 600000),
         upstreams: "test fixtures only",
         fiveQuestions: true,
         states: true,
-        catalog188: true,
+        catalogAvailable: true,
         noModelCalls: true,
         desktopVoiceOnly: !mobile,
         mobileTranscript: mobile,

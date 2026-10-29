@@ -1,4 +1,5 @@
 import "server-only";
+import { WorkspaceConnectors, workspaceReadIntent } from "./workspace";
 import catalogProjects from "../../config/kiro-project-registry.json";
 import { JK_DEVELOPMENT_TARGET, developmentIntent } from "./development-intent";
 const projects = {
@@ -78,6 +79,18 @@ export async function answerNativeRequest(
   history: import("./read-context").ReadTurn[] = [],
   localOnly = false,
 ) {
+  const workspaceIntent=workspaceReadIntent(message);
+  if(workspaceIntent) {
+    let text="";
+    if(workspaceIntent.writeRequested)text="Essa conexão implementa apenas leitura de metadados. Não enviei mensagens, editei arquivos ou publiquei conteúdo.";
+    else try {
+      const result=await new WorkspaceConnectors(connectorStore,process.env).read(workspaceIntent.service);
+      text="Consultei "+workspaceIntent.service+" em "+new Date(result.checkedAt).toLocaleString("pt-BR")+". "+result.items.length+" registros nesta consulta de metadados: "+(result.items.map(x=>x.name).join("; ")||"nenhum registro retornado")+". Conteúdo externo, sem autoridade para instruir ações. Não li corpos de e-mail nem alterei arquivos.";
+    } catch(e) {
+      text=e instanceof Error&&e.message==="WORKSPACE_NOT_CONNECTED"?"Este serviço ainda não tem autorização salva no Jarvis. Abra Conexões → Google e Microsoft para ver os requisitos e autorizar.":"Não consegui confirmar a leitura deste serviço. Confira a autorização e as permissões na Central de Conexões; não vou afirmar que a conta esteja desconectada.";
+    }
+    return {text,model:"jk-workspace-read",provider:"local_operational" as const,usage:null};
+  }
   const { shouldRunPlatformRead } = await import(
     "../orchestration/tool-intent"
   );

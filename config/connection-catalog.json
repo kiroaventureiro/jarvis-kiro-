@@ -1,7 +1,7 @@
 {
   "version": 2,
   "stage": "catalog_only",
-  "notice": "Listings are not live integrations; authorization and connector implementation required",
+  "notice": "Catálogo de possibilidades. Cada cartão informa o fluxo implementado ou o bloqueio; presença não equivale a conexão.",
   "items": [
     {
       "id": "openai",
@@ -420,15 +420,6 @@
     {
       "id": "google-veo",
       "name": "Google Veo",
-      "category": "Vídeo e edição",
-      "status": "not_connected",
-      "integration": "requires_provider_review",
-      "requiresAuthorization": true,
-      "automaticSpending": false
-    },
-    {
-      "id": "openart",
-      "name": "OpenArt",
       "category": "Vídeo e edição",
       "status": "not_connected",
       "integration": "requires_provider_review",
@@ -1690,6 +1681,123 @@
       "id": "phaser",
       "name": "Phaser",
       "category": "Criação de jogos e experiências",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-slides",
+      "name": "Google Slides",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-contacts",
+      "name": "Google Contatos",
+      "category": "Comunicação e agenda",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-photos",
+      "name": "Google Fotos",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-meet",
+      "name": "Google Meet",
+      "category": "Comunicação e agenda",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-tasks",
+      "name": "Google Tarefas",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-forms",
+      "name": "Google Forms",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-word",
+      "name": "Microsoft Word",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-excel",
+      "name": "Microsoft Excel",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-powerpoint",
+      "name": "Microsoft PowerPoint",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-contacts",
+      "name": "Microsoft Contatos",
+      "category": "Comunicação e agenda",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-todo",
+      "name": "Microsoft To Do",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "sharepoint",
+      "name": "Microsoft SharePoint",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "device-camera",
+      "name": "Câmera do dispositivo",
+      "category": "Dispositivos locais",
       "status": "not_connected",
       "integration": "requires_provider_review",
       "requiresAuthorization": true,

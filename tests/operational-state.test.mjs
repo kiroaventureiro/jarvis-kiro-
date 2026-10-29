@@ -248,7 +248,7 @@ test("the five requested questions use explicit registry facts and preserve proj
       /nenhuma integração ativa|todos.{0,20}desconectados/i,
     );
   }
-  assert.equal(s.catalog.total, 188);
+  assert.equal(s.catalog.total, JSON.parse(fs.readFileSync("config/connection-catalog.json", "utf8")).items.length);
   assert.ok(s.projects.some((p) => p.name === "KIRO TV"));
   assert.match(operationalAnswer("projects", s), /Código Zero/);
   assert.match(operationalAnswer("memory", s), /descriptografia/);

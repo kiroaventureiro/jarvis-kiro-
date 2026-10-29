@@ -10,6 +10,12 @@ revisar meus testes”, “pergunte ao Navi sobre minha ideia” ou “pesquise 
 sobre energia solar”. O Jarvis prepara o pedido/link; você abre e envia no destino.
 Esses atalhos não concedem acesso às contas nem controle remoto do navegador.
 
+Na Central de Conexões, Google/Microsoft têm seleção de serviços e fluxo OAuth
+de leitura de metadados, bloqueado até o cadastro administrativo dos aplicativos.
+A câmera usa permissão local do navegador. Os cartões priorizam Kiro/Grok/OBS e
+informam os requisitos das integrações ainda pendentes.
+[Estado das conexões e configuração necessária](docs/CONNECTIONS-READINESS.md).
+
 Para acesso do próprio Jarvis aos serviços, use **Conexões** e os conectores
 autenticados. **Verificar Abacus e contas já autorizadas** consulta o catálogo
 Abacus, GitHub, Supabase, Vercel e a descoberta VoiceStudio em uma ação,

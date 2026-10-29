@@ -140,6 +140,7 @@ export default function NativeConnectors() {
   }
   return (
     <section
+      id="native-connectors"
       className="native-connectors"
       aria-label="Conectores nativos de desenvolvimento"
     >

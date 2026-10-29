@@ -4,6 +4,9 @@ import Link from "next/link";
 import AbacusHub from "../components/AbacusHub";
 import AbacusStatus from "../components/AbacusStatus";
 import NativeConnectors from "../components/NativeConnectors";
+import WorkspaceConnectors from "../components/WorkspaceConnectors";
+import DeviceCamera from "../components/DeviceCamera";
+import { connectionOption } from "../../lib/connection-options";
 import { APP_SHORTCUTS } from "../../lib/codex/app-handoff";
 type Item = {
   id: string;
@@ -42,7 +45,7 @@ export default function ConnectionsPage() {
       x.name
         .toLocaleLowerCase("pt-BR")
         .includes(query.toLocaleLowerCase("pt-BR")),
-  );
+  ).sort((a,b)=>connectionOption(a.id,a.category).priority-connectionOption(b.id,b.category).priority);
   return (
     <main
       style={{
@@ -65,6 +68,8 @@ export default function ConnectionsPage() {
       <AbacusStatus />
       <AbacusHub />
       <NativeConnectors />
+      <WorkspaceConnectors />
+      <DeviceCamera />
       <section
         className="glass notice"
         aria-label="Consultas públicas integradas"
@@ -110,9 +115,7 @@ export default function ConnectionsPage() {
       </p>
       <p>
         <strong>
-          {items.length} opções catalogadas ·{" "}
-          {items.filter((x) => x.status === "connected").length} conectadas
-          neste catálogo
+          {items.length} serviços catalogados · autorizações reais exibidas nos conectores acima
         </strong>
       </p>
       <div
@@ -150,22 +153,16 @@ export default function ConnectionsPage() {
           gap: 12,
         }}
       >
-        {shown.map((x) => (
-          <article key={x.id} className="glass card" style={{ padding: 18 }}>
+        {shown.map((x) => { const option=connectionOption(x.id,x.category); return (
+          <article key={x.id} id={"catalog-"+x.id} className="glass card" style={{ padding: 18 }}>
             <h2 style={{ fontSize: "1.1rem" }}>{x.name}</h2>
             <p>{x.category}</p>
-            <p>
-              <small>Aguardando conector e autorização</small>
-            </p>
-            <button
-              type="button"
-              disabled
-              title="Integração ainda não implementada; nenhuma credencial pode ser enviada"
-            >
-              Conectar em breve
-            </button>
+            <p><strong>{option.status}</strong></p>
+            <p>{option.requirement}</p>
+            <p>Prioridade {option.priority === 0 ? "imediata" : option.priority === 1 ? "Kiro / contas principais" : option.priority === 2 ? "seguinte" : "posterior"}</p>
+            {option.href ? <a href={option.href} {...(option.href.startsWith("https:") ? {target:"_blank",rel:"noopener noreferrer"} : {})}>{option.action}</a> : <p><small>Sem autorização disponível nesta versão.</small></p>}
           </article>
-        ))}
+        );})}
       </div>
     </main>
   );

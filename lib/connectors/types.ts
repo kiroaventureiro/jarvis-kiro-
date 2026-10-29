@@ -105,7 +105,7 @@ export type PersistentProject = {
   createdAt: string;
   updatedAt: string;
 };
-export type VaultState = {
+export type VaultState = import("./workspace").WorkspaceState & {
   voiceUsage?: import("../voice/ledger").VoiceUsageState;
   persistentProjects?: Record<string, PersistentProject>;
 
