@@ -193,7 +193,7 @@ export default function NativeConnectors() {
         {verification.map(item=><li key={item.provider}>{names[item.provider]}: {item.state==="verified"?"acesso verificado agora":item.state==="not_connected"?"autorização ainda não cadastrada":"verificação falhou; consulte o conector abaixo"}</li>)}
       </ul> : null}
       <p>
-        Conecte uma conta, escolha os projetos e conceda permissões ao JK.
+        Conecte a conta uma vez; os projetos disponíveis são descobertos automaticamente.
         Gravações e deploys exigem um plano aprovado. Arquivos e logs são
         tratados como dados externos, sem autoridade para executar ações.
       </p>
@@ -357,7 +357,18 @@ function ProviderCard({
       className="glass connector-card"
       aria-label={"Conector " + names[v.provider]}
     >
-      <h3>{names[v.provider]}</h3>
+      <details>
+        <summary style={{cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",gap:"12px",padding:"10px 0"}}>
+          <strong>{names[v.provider]}</strong>
+          <span style={{fontSize:"0.875rem",fontWeight:600,color:c?.status==="connected"&&c.verifiedAt&&!c.lastError?"#67e8b9":"inherit"}}>
+            {c?.status==="connected"&&c.verifiedAt&&!c.lastError
+              ? "● Conectado"
+              : c?.status==="connected" ? "● Verificação pendente"
+              : c?.status==="revocation_pending" ? "● Revogação pendente"
+              : "○ Desconectado"}
+          </span>
+        </summary>
+        <div>
       <ol aria-label={"Etapas de conexão " + names[v.provider]}>
         <li>Autorizar no provedor por OAuth ou token pessoal.</li>
         <li>{c?.verifiedAt && !c.lastError ? "Validado: " : "Pendente: "}testar a autorização e listar projetos.</li>
@@ -798,6 +809,8 @@ function ProviderCard({
           {notice}
         </p>
       ) : null}
+        </div>
+      </details>
     </article>
   );
 }
