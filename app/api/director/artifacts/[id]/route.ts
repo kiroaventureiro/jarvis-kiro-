@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { authorized } from "../../../../../../lib/auth";
-import { artifactUnavailableMessage, validJarvisArtifactId } from "../../../../../../lib/orchestration/artifact-access";
+import { authorized } from "../../../../../lib/auth";
+import { artifactUnavailableMessage, validJarvisArtifactId } from "../../../../../lib/orchestration/artifact-access";
 export const dynamic="force-dynamic";
 /** No backing artifact storage is connected yet: never return a fabricated file. */
 export async function GET(_request:Request, context:{params:Promise<{id:string}>}) {
