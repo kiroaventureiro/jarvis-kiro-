@@ -218,3 +218,10 @@ test("provider-only Vercel query runs connected deployment read",async()=>{
   assert.ok(result?.text.includes("consulta de leitura"),result?.text);
   assert.equal(mock.calls[0]?.op,"deployments");
 });
+
+test("shared project resolver understands service mention without fixed phrasing",()=>{
+  for(const phrase of ["Entra no GitHub e dá uma olhada","Quero olhar a Vercel","O que tem no Supabase?"]) {
+    assert.equal(requestedProject(phrase,unrelated).kind,"all",phrase);
+  }
+  assert.equal(requestedProject("Verifique o projeto Jarvis Kiro no GitHub",unrelated).kind,"target");
+});
