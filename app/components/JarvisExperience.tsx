@@ -79,7 +79,7 @@ export default function JarvisExperience() {
     setDesktopDownloadCapable(supported);
     if(supported)setAutoDownload(readAutoDownloadPreference(window.localStorage));
   },[]);
-  const [generatedImages, setGeneratedImages] = useState<Array<{messageId:string;file:File;label:string}>>([]);
+  const [generatedImages, setGeneratedImages] = useState<Array<{messageId:string;file:File;label:string;autoDownloadOnArrival:boolean}>>([]);
   const [unifiedResults, setUnifiedResults] = useState<Array<{ messageId: string; result: JarvisUnifiedResult }>>([]);
   const [voiceSnapshot, setVoiceSnapshot] = useState<VoiceSnapshot>({
     phase: "off",
@@ -819,7 +819,7 @@ export default function JarvisExperience() {
           onGeneratedMedia: (items) => {
             holoSession.rememberMedia(items);
             const image=items.find(item=>["image/png","image/jpeg","image/webp"].includes(item.file.type) && item.file.size <= 8_000_000);
-            if (image && !requestController.signal.aborted) setGeneratedImages(previous=>[...previous.slice(-7),{messageId:assistantId,file:image.file,label:image.label}]);
+            if (image && !requestController.signal.aborted) setGeneratedImages(previous=>[...previous.slice(-7),{messageId:assistantId,file:image.file,label:image.label,autoDownloadOnArrival:desktopDownloadCapable && autoDownload}]);
           },
           history: messages.map(({ role, text }) => ({ role, content: text })),
           signal: requestController.signal,
@@ -1105,7 +1105,7 @@ export default function JarvisExperience() {
                   {item.role === "user" ? "Você" : "Jarvis"}
                 </span>
                 {item.role === "assistant" && unifiedResults.some(entry => entry.messageId === item.id)
-                  ? <>{unifiedResults.filter(entry => entry.messageId === item.id).map(entry => <JarvisResultPanel key={entry.messageId} result={entry.result} />)}{generatedImages.filter(image=>image.messageId === item.id).map(image=><JarvisGeneratedImage key={image.messageId} id={image.messageId} file={image.file} label={image.label} autoDownload={desktopDownloadCapable && autoDownload} />)}</>
+                  ? <>{unifiedResults.filter(entry => entry.messageId === item.id).map(entry => <JarvisResultPanel key={entry.messageId} result={entry.result} />)}{generatedImages.filter(image=>image.messageId === item.id).map(image=><JarvisGeneratedImage key={image.messageId} id={image.messageId} file={image.file} label={image.label} autoDownload={image.autoDownloadOnArrival} />)}</>
                   : <p>{item.text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1")}</p>}
               </article>
             ))}
