@@ -402,6 +402,7 @@ export class ConnectorService {
         : this.run;
       result = await run(action, connection.credentials!, resource);
       if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
+      const checkedAt = new Date(this.now()).toISOString();
       await this.options.store.update((state) => {
         const current = state.connections[provider];
         if (
@@ -409,7 +410,7 @@ export class ConnectorService {
           current.revision === connection.revision &&
           current.status === "connected"
         ) {
-          current.lastReadAt = new Date(this.now()).toISOString();
+          current.lastReadAt = checkedAt;
           current.lastReadOperation = operationId;
         }
         return audit(state, "conversation:" + operationId, "done", {
@@ -430,7 +431,7 @@ export class ConnectorService {
       provider,
       resource: resource.id,
       operation: operationId,
-      checkedAt: new Date(this.now()).toISOString(),
+      checkedAt,
       data: redact(result, [
         connection.credentials!.accessToken,
         connection.credentials!.refreshToken || "",
