@@ -33,3 +33,10 @@ test("Navi text adapter returns only genuine text and no fabricated media",()=>{
 test("Codex adapter refuses a non-draft task record",()=>{
  assert.throws(()=>exports.codexDraftResult({id:"task-1",state:"running",repository:"kiroaventureiro/jarvis-kiro-",branch:"feature/diretor-tecnico-agent"}),/CODEX_TASK_NOT_DRAFT/);
 });
+
+test("Navi API exposes a unified result only after a real provider response",()=>{
+ const api=readFileSync(new URL("../app/api/director/navi/route.ts",import.meta.url),"utf8");
+ assert.match(api,/result: naviTextResult\(/);
+ assert.match(api,/text:result\.text/);
+ assert.match(api,/await askNavi\(/);
+});
