@@ -23,6 +23,5 @@ export function JarvisGeneratedImage({ file, label, id, autoDownload=false }: {f
   return url ? <figure>
     <img src={url} alt={label} style={{maxWidth:"100%",maxHeight:400,objectFit:"contain"}} />
     <figcaption>{label}</figcaption>
-    <a href={url} download={`jarvis-imagem-${id.slice(0,8)}.${extension}`} aria-label="Salvar imagem gerada">Salvar imagem</a>
   </figure>:null;
 }
