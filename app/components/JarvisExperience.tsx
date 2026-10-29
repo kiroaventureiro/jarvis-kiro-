@@ -207,6 +207,26 @@ export default function JarvisExperience() {
         messages.map(({ id, role, text }) => ({ id, role, text })),
       );
   }, [messages, retainHistory, historyLoaded]);
+  // One brief, nonintrusive arrival update. Authentication is checked by the API.
+  // Never auto-start the microphone or audio without a user gesture.
+  const arrivalRequested = useRef(false);
+  useEffect(() => {
+    if (!historyLoaded || arrivalRequested.current) return;
+    arrivalRequested.current = true;
+    const controller = new AbortController();
+    void fetch("/api/director/arrival-briefing", {
+      credentials: "same-origin", cache: "no-store", signal: controller.signal,
+    }).then(async (response) => {
+      if (!response.ok) return;
+      const data: unknown = await response.json();
+      if (!data || typeof data !== "object" || !("text" in data) ||
+          typeof data.text !== "string" || !data.text.trim()) return;
+      setMessages((items) => [...items, {
+        id: crypto.randomUUID(), role: "assistant", text: data.text.slice(0, 3500),
+      }]);
+    }).catch(() => { /* No false status if a connector is unavailable. */ });
+    return () => controller.abort();
+  }, [historyLoaded]);
   const [typingRequest, setTypingRequest] = useState(false);
   const [desktopVoice, setDesktopVoice] = useState(false);
   const browserReplyId = useRef<string | null>(null);
