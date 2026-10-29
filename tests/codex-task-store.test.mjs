@@ -14,3 +14,9 @@ test("Persistent task creation rejects production branches",()=>{
   assert.match(source, /\["main","master"\]/);
   assert.match(source,/INVALID_SCOPE/);
 });
+
+test("Persistent task record contains the actual Codex instruction and kind",()=>{
+  assert.match(source,/kind:input\.kind,instruction:input\.instruction\.trim\(\)/);
+  assert.match(source,/input\.instruction\.length > 1500/);
+  assert.match(source,/\["review", "test", "implement"\]\.includes\(input\.kind\)/);
+});
