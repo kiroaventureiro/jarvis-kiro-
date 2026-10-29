@@ -8,6 +8,8 @@ import {
 import { abacusEvidenceScene } from "../../lib/abacus/voice-evidence";
 import { conversationAction } from "../../lib/holo/conversation-actions";
 import HoloResponseHUD from "./holo/HoloResponseHUD";
+import { JarvisResultPanel } from "../../components/jarvis-result-panel";
+import type { JarvisUnifiedResult } from "../../lib/orchestration/unified-result";
 import { useHoloSession } from "./holo/HoloSession";
 import {
   composeScene,
@@ -68,6 +70,7 @@ export default function JarvisExperience() {
     [error, setError] = useState(""),
     [hidden, setHidden] = useState(false),
     [dragging, setDragging] = useState(false);
+  const [latestUnified, setLatestUnified] = useState<{ messageId: string; result: JarvisUnifiedResult } | null>(null);
   const [voiceSnapshot, setVoiceSnapshot] = useState<VoiceSnapshot>({
     phase: "off",
     enabled: false,
@@ -822,6 +825,17 @@ export default function JarvisExperience() {
           },
         }));
       if (requestController.signal.aborted) return;
+      setLatestUnified({
+        messageId: assistantId,
+        result: {
+          requestId: assistantId,
+          source: result.provider === "openai_navi" ? "navi" : "other",
+          status: "completed",
+          messages: [result.text],
+          artifacts: [],
+          provenance: {provider: result.provider || "jarvis"},
+        },
+      });
       const rawVisual = local ? null : composeScene(text, result);
       const visual = desktopVoice
         ? complementaryScene(rawVisual, result.text)
@@ -1069,11 +1083,9 @@ export default function JarvisExperience() {
                 <span className="message-author">
                   {item.role === "user" ? "Você" : "Jarvis"}
                 </span>
-                <p>
-                  {item.text
-                    .replace(/\*\*([^*]+)\*\*/g, "$1")
-                    .replace(/\*([^*]+)\*/g, "$1")}
-                </p>
+                {item.role === "assistant" && latestUnified?.messageId === item.id
+                  ? <JarvisResultPanel result={latestUnified.result} />
+                  : <p>{item.text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1")}</p>}
               </article>
             ))}
           </div>
