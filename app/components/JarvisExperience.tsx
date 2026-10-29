@@ -45,6 +45,7 @@ import { getVoiceManager } from "../../lib/voice/speech-output";
 import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voice-preferences";
 import { voiceAction } from "../../lib/voice/local-intents";
 import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
+import { codexDraftIntent } from "../../lib/codex/chat-intent";
 import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
 import { useFileWorkspace } from "./useFileWorkspace";
 import {
@@ -807,6 +808,29 @@ export default function JarvisExperience() {
       visual: undefined,
     };
   }
+  async function conversationalCodexDraft(text:string) {
+    const intent=codexDraftIntent(text);
+    if(!intent)return null;
+    try {
+      const response=await fetch("/api/director/codex",{
+        method:"POST",
+        credentials:"same-origin",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+          task:intent.task,
+          kind:intent.kind,
+          repository:"kiroaventureiro/jarvis-kiro-",
+          branch:"feature/diretor-tecnico-agent"
+        })
+      });
+      if(!response.ok)return {text:"Não consegui registrar o rascunho Codex. Nenhuma execução foi iniciada.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+      const data=await response.json();
+      if(data.started!==false||data.queued!==false||data.task?.state!=="draft")throw Error("INVALID_CODEX_STATE");
+      return {text:"Registrei o pedido como rascunho Codex ("+String(data.task.id).slice(0,8)+"). O executor ainda não está conectado: nenhuma programação ou teste começou.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+    } catch {
+      return {text:"O rascunho Codex não foi confirmado. Nenhuma execução foi iniciada.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
+  }
   async function conversationalCapabilityReply(text:string) {
     const topic=capabilityQuestion(text);
     if(!topic)return null;
@@ -882,7 +906,7 @@ export default function JarvisExperience() {
     try {
       const voiceFirst =
         desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
-      const local = localConversationReply(text) || await conversationalCapabilityReply(text);
+      const local = localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexDraft(text);
       let generatedForThisResponse=false;
       const result =
         local ||
@@ -1322,7 +1346,7 @@ export default function JarvisExperience() {
               );
             }}
             onMessage={async (spoken, signal) => {
-              const local = localConversationReply(spoken) || await conversationalCapabilityReply(spoken);
+              const local = localConversationReply(spoken) || await conversationalCapabilityReply(spoken) || await conversationalCodexDraft(spoken);
               if (local) return { ...local, provider: "local_action" };
               if (spoken.length > 1500)
                 throw new Error(
