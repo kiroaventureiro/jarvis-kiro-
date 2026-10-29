@@ -83,7 +83,7 @@ export async function answerNativeRequest(
   const greeting = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   if (
     /\b(boletim(?: diario)?|resumo do dia|briefing)\b/.test(greeting) ||
-    /^(?:oi[,]?\\s*)?(?:bom dia|boa tarde|boa noite)[,! ]*jarvis[!?. ]*$/.test(greeting)
+    /^(?:oi[,]?\s*)?(?:bom dia|boa tarde|boa noite)[,! ]*jarvis[!?. ]*$/.test(greeting)
   ) {
     const { arrivalBriefing } = await import("./arrival-briefing");
     return arrivalBriefing(connectorStore);
