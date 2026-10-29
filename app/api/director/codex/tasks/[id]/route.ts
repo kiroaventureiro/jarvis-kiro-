@@ -18,7 +18,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const result = {
       requestId:task.id,
       source:"codex" as const,
-      status:task.state === "draft" ? "draft" as const : "needs_authorization" as const,
+      status:task.state === "approved" ? "needs_authorization" as const : task.state === "cancelled" ? "failed" as const : task.state,
       messages:[task.state === "draft"
         ? "Tarefa registrada como rascunho. Nenhum executor foi acionado."
         : "Estado registrado: " + task.state + ". A execução remota ainda não está conectada."],
