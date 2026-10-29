@@ -218,7 +218,7 @@ export class DevelopmentPlanner {
         .toLowerCase();
     const n = normalize(message);
     const self = developmentIntent(message);
-    if (!self && !/\b(verifique|diagnostique|corrija|analise o site)\b/.test(n))
+    if (!self && !/\b(verifique|diagnostique|corrija|corrige|conserte|conserta|ajuste|ajusta|melhore|melhora|implemente|implementa|desenvolva|desenvolve|crie|cria|analise)\b/.test(n))
       return null;
     const project = self
       ? this.projects.find((p) => p.id === self.project)
