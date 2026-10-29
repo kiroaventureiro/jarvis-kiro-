@@ -22,3 +22,10 @@ export function planToolIntent(input: string): PlannedTool {
     "Ferramenta especializada requer capacidade verificada e autorização específica antes da execução.";
   return {domain,mode,approvalRequired:mode==="modify"||mode==="generate",executableNow,reason};
 }
+
+/** Route only a read that has an existing, verified executor. Other domains
+ * remain advice-only until explicitly wired and approved. */
+export function shouldRunPlatformRead(input: string): boolean {
+  const p = planToolIntent(input);
+  return p.domain === "account" && p.mode === "read";
+}
