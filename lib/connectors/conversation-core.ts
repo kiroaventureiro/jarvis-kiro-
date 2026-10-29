@@ -8,11 +8,11 @@ import type { HoloScene } from "../holo/types";
 const READ_PROVIDERS: Record<Provider, { aliases: string[]; summary: string }> =
   {
     github: {
-      aliases: ["github", "repositorio", "repositorios", "codigo", "commits"],
+      aliases: ["github", "repositorio", "repositorios", "codigo", "commits", "commit", "branch", "branches"],
       summary: "Repositórios, código e commits",
     },
     vercel: {
-      aliases: ["vercel", "deploy", "deployments", "implantacoes"],
+      aliases: ["vercel", "deploy", "deployments", "implantacoes", "publicacoes", "build"],
       summary: "Projetos e deployments",
     },
     supabase: {
@@ -100,6 +100,7 @@ export async function conversationalConnectorRead(
   const mentioned = (Object.keys(READ_PROVIDERS) as Provider[]).filter((p) =>
     READ_PROVIDERS[p].aliases.some((alias) => n.includes(alias)),
   );
+  const detailedGitHub = /\\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes)\\b/.test(n);
   const all =
     /\b(todos|todas|tudo|conexoes|integracoes|plataformas)\b/.test(n) ||
     /meus projetos|minhas conexoes/.test(n);
@@ -201,7 +202,27 @@ export async function conversationalConnectorRead(
           );
           successful++;
           verifiedNames.push(resource.name);
-          const finding = observation(provider, checked.data);
+          let finding = observation(provider, checked.data);
+          if (provider === "github" && detailedGitHub) {
+            const detailOperation = /\\b(branch|branches)\\b/.test(n) ? "branches" :
+              /\\b(issues|problemas abertos)\\b/.test(n) ? "issues" :
+              /\\b(pulls|pull requests)\\b/.test(n) ? "pulls" : "commits";
+            try {
+              const detail = await connectors.readAuthorized(provider, resource.id, detailOperation);
+              const rows = Array.isArray(detail.data) ? detail.data.slice(0, 5) : [];
+              const names = rows.flatMap(item => {
+                if (!item || typeof item !== "object") return [];
+                const entry = item as Record<string, unknown>;
+                const label = typeof entry.message === "string" ? entry.message :
+                  typeof entry.title === "string" ? entry.title :
+                  typeof entry.name === "string" ? entry.name : null;
+                return label ? [label.replace(/[\\u0000-\\u001f]/g," ").slice(0,100)] : [];
+              });
+              finding += " "+detailOperation+": "+(names.join("; ") || rows.length+" registros sem título");
+            } catch {
+              finding += " A consulta adicional de "+detailOperation+" não foi concluída.";
+            }
+          }
           findings.push(displayName(resource.name) + ": " + finding);
           results.push(
             "- " +
@@ -260,7 +281,7 @@ export async function conversationalConnectorRead(
         "."
       : ".";
     const focused =
-      /detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnostic|analis/.test(
+      /commits?|branches|issues|pulls|historico|alteracoes recentes|detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnostic|analis/.test(
         n,
       );
     const selectedFindings = focused ? findings.slice(0, 3) : [];
