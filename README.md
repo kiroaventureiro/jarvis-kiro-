@@ -33,6 +33,11 @@ exige serviço próprio configurado. [Demonstração e limites](docs/CODEX-APP-H
 
 [Diagnóstico e limites da integração Jarvis ↔ Codex Cloud](docs/CODEX-CLOUD-INTEGRATION.md)
 
+[Autonomia, autocorreção e rotina de manutenção](docs/AUTONOMY-AND-MAINTENANCE.md).
+Execute `npm run maintenance:check` para gerar o relatório local de vulnerabilidades,
+testes e tipos. Isso não ativa agendamento, alterações automáticas de código ou
+atualização diária de leis.
+
 ## Estado verificado (29/10/2026)
 
 - Interface, arquivos, projeções e fluxos locais possuem testes automatizados; contas e dispositivos reais exigem validação própria.

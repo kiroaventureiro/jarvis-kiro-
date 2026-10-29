@@ -10,7 +10,8 @@
     "diagnose:codex": "node scripts/codex-cloud-diagnostic.mjs",
     "test:ui": "node tests/browser/hud-smoke.cjs",
     "test:files": "node tests/browser/attachments-smoke.cjs",
-    "test:voice": "node tests/browser/voice-smoke.cjs"
+    "test:voice": "node tests/browser/voice-smoke.cjs",
+    "maintenance:check": "node scripts/jarvis-maintenance.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",
@@ -26,5 +27,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "playwright": "1.62.1"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.32"
+    }
   }
 }
