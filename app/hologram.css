@@ -1,4 +1,4 @@
-/* JK identity: live geometry, stable metal monogram, depth and restrained ambient light. */
+/* Jarvis presence: live geometry, depth and restrained ambient light. */
 .jarvis-stage {
   background: #020713;
 }
@@ -42,7 +42,7 @@
   animation-delay: -3s;
 }
 .presence {
-  width: min(94vw, 1020px, calc(112dvh - 230px));
+  width: min(96vw, 1320px, calc(145dvh - 240px));
   top: 43%;
 }
 .jk-core {
@@ -118,16 +118,6 @@
   height: 61%;
   background: radial-gradient(ellipse at bottom, #42dfff38, transparent 70%);
   filter: blur(10px);
-}
-.jk-monogram {
-  position: absolute;
-  z-index: 4;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: 34%;
-  height: auto;
-  overflow: visible;
 }
 .jk-emitter {
   position: absolute;
@@ -303,7 +293,7 @@
 @media (max-width: 850px) {
   .presence {
     top: 39%;
-    width: min(100vw, 650px, calc(100dvh - 200px));
+    width: min(98vw, 720px, calc(120dvh - 200px));
   }
   .state-indicator {
     font-size: 10px;
@@ -320,9 +310,6 @@
   }
   .has-attachments:has(.response-hud) .presence {
     opacity: 0.5;
-  }
-  .jk-monogram {
-    width: 35%;
   }
 }
 @media (max-height: 600px) {

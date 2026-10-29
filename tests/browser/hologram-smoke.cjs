@@ -161,14 +161,10 @@ async function readGpu(p) {
       page.on("pageerror", (e) => errors.push(e.message));
       await page.goto(base);
       await page.locator(".jk-core[data-renderer=webgl]").waitFor();
-      const bounds = await page.locator(".jk-monogram").boundingBox(),
-        core = await page.locator(".jk-core").boundingBox();
-      assert.ok(
-        Math.abs(bounds.x + bounds.width / 2 - core.x - core.width / 2) < 1,
-      );
-      assert.ok(
-        Math.abs(bounds.y + bounds.height / 2 - core.y - core.height / 2) < 1,
-      );
+      assert.equal(await page.locator(".jk-monogram").count(), 0);
+      assert.equal(await page.locator(".jarvis-glass-shards polygon").count(), 14);
+      const core = await page.locator(".jk-core").boundingBox();
+      assert.ok(core.width >= width * (width < 600 ? .9 : .7));
       assert.equal(
         await page.evaluate(
           () => document.documentElement.scrollWidth > innerWidth,
@@ -194,7 +190,8 @@ async function readGpu(p) {
       results.push({
         scenario: name,
         webgl: true,
-        centeredJK: true,
+        letterlessCore: true,
+        fracturedGlass: true,
         noHorizontalScroll: true,
         reducedMotionStatic: true,
         noNewMicrophone: true,
@@ -239,6 +236,8 @@ async function readGpu(p) {
       assert.ok(frameEstimate <= 44);
       assert.equal((await readGpu(page)).buffers, buffers);
       await page.emulateMedia({ reducedMotion: "reduce" });
+      // Desktop controls are intentionally revealed by approaching the bottom edge.
+      await page.mouse.move(720, 990);
       await page
         .getByRole("button", { name: "Ativar escuta por Jarvis", exact: true })
         .click();
@@ -246,6 +245,8 @@ async function readGpu(p) {
         .getByRole("button", { name: "Ativar escuta", exact: true })
         .click();
       await page.locator(".jk-core[data-phase=waiting]").waitFor();
+      await page.mouse.move(20, 100);
+      assert.equal(await page.locator(".interaction-dock").evaluate(el => getComputedStyle(el).pointerEvents), "auto", "active listening keeps stop controls reachable");
       await screenshot(page, "waiting");
       await page.evaluate(() => window.__recs.at(-1).onspeechstart?.());
       await page.locator(".jk-core[data-phase=listening]").waitFor();
@@ -281,7 +282,7 @@ async function readGpu(p) {
         .click();
       await page
         .getByRole("textbox", { name: "Mensagem para o Jarvis" })
-        .fill("Pedido por teclado");
+        .fill("Sugira nomes para meu documentário");
       await page
         .getByRole("button", { name: "Enviar mensagem", exact: true })
         .click();
@@ -404,7 +405,7 @@ async function readGpu(p) {
       results.push({
         scenario: "no-webgl-and-error",
         vectorFallback: true,
-        JKVisible: true,
+        letterlessFallback: true,
         errorPreservesControls: true,
         noNewMicrophone: true,
       });

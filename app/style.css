@@ -1200,6 +1200,7 @@ details summary .badge {
     height: 24px;
   }
   .jarvis-stage.jarvis-desktop-focus:has(.jarvis-dock-hotzone:hover) .interaction-dock,
+  .jarvis-stage.jarvis-desktop-focus .interaction-dock:has(button[data-voice-phase][aria-pressed="true"]),
   .jarvis-stage.jarvis-desktop-focus .interaction-dock:hover,
   .jarvis-stage.jarvis-desktop-focus .interaction-dock:focus-within {
     opacity: 1;

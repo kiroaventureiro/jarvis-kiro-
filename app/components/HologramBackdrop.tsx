@@ -8,6 +8,16 @@ const nodes = Array.from({ length: 80 }, (_, i) => ({
   y: Math.round(random(i + 101) * 960),
   r: i % 9 === 0 ? 3 : 1.3,
 }));
+// Separated facets leave a calm opening behind the core; static SVG avoids another render loop.
+const shards = [
+  "0,0 510,0 630,300 340,220", "525,0 1020,0 890,240 650,305",
+  "1040,0 1600,0 1285,240 910,240", "1600,20 1600,440 1300,350 1295,255",
+  "1600,460 1600,960 1205,705 1310,370", "1590,960 1060,960 1005,740 1190,720",
+  "1040,960 505,960 650,755 980,750", "485,960 0,960 325,690 630,745",
+  "0,940 0,450 300,370 315,675", "0,430 0,20 325,235 310,350",
+  "350,240 620,325 505,495 325,350", "920,260 1270,260 1285,350 1110,480",
+  "330,390 490,515 600,720 340,670", "1130,510 1290,390 1180,690 1015,720",
+];
 const edges = nodes.flatMap((a, i) =>
   nodes
     .slice(i + 1)
@@ -26,8 +36,16 @@ function HologramBackdrop() {
             <stop stopColor="#087bff" stopOpacity=".12" />
             <stop offset="1" stopColor="#020713" stopOpacity="0" />
           </radialGradient>
+          <linearGradient id="jarvis-glass" x1="0" y1="0" x2="1" y2="1">
+            <stop stopColor="#b8ebff" stopOpacity=".12" />
+            <stop offset=".45" stopColor="#16384e" stopOpacity=".025" />
+            <stop offset="1" stopColor="#66cfff" stopOpacity=".08" />
+          </linearGradient>
         </defs>
         <ellipse cx="800" cy="450" rx="650" ry="470" fill="url(#jk-distance)" />
+        <g className="jarvis-glass-shards" fill="url(#jarvis-glass)" stroke="#b4e6ff" strokeWidth=".8" strokeOpacity=".22">
+          {shards.map((points, i) => <polygon key={i} points={points} />)}
+        </g>
         <g className="jk-architecture" fill="none" stroke="#4fcfff">
           <path d="M0 180H190L280 90H490M1600 180H1410L1320 90H1110M0 640H140L245 750H420M1600 640H1460L1355 750H1180" />
           <path d="M60 0V125L145 210V520L70 595V960M1540 0V125L1455 210V520L1530 595V960" />

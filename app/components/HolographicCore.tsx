@@ -1,6 +1,5 @@
 "use client";
 import { memo, useEffect, useId, useRef, useState } from "react";
-import JKMonogram from "./JKMonogram";
 import { observeAudio, type AudioEnvelope } from "../../lib/hologram/audio";
 import {
   AdaptiveResolution,
@@ -311,7 +310,6 @@ function HolographicCore(props: Props) {
       <div className="jk-light-column" />
       <canvas ref={canvas} className="jk-canvas" />
       <ShellFallback />
-      <JKMonogram />
       <div className="jk-emitter">
         <i />
         <i />
