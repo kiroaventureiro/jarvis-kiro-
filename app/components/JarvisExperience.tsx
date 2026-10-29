@@ -960,7 +960,7 @@ export default function JarvisExperience() {
   return (
     <main
       className={
-        "jarvis-stage " +
+        "jarvis-stage jarvis-desktop-focus " +
         (hidden ? "is-hidden " : "") +
         (holoSession.current ? "has-holo " : "") +
         (workspace.files.length ? "has-attachments " : "") +
@@ -1147,6 +1147,7 @@ export default function JarvisExperience() {
           </button>
         </div>
       ) : null}
+      <div className="jarvis-dock-hotzone" aria-hidden="true" />
       <div className="interaction-dock">
         <details className="dock-preferences">
           <summary aria-label="Preferências da conversa">Preferências</summary>
