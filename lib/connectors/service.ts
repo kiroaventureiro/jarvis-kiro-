@@ -268,9 +268,9 @@ export class ConnectorService {
         current.resources = [...known.values()];
         // The upstream API remains authoritative: unsupported operations
         // still fail at the provider, never via fabricated permissions.
-        current.grants = p === "vercel"
+        current.grants = (p === "vercel"
           ? ["read", "deploy", "configure"]
-          : ["read", "write"];
+          : ["read", "write"]) as Grant[];
         delete current.lastError;
         audit(s, "connection_test", "verified", { provider: p });
       });
