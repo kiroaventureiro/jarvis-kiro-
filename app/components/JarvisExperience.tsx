@@ -82,6 +82,31 @@ export default function JarvisExperience() {
   useEffect(()=>{
     setDesktopDownloadCapable(desktopDownloadsSupported(navigator.userAgent,window.matchMedia("(pointer: coarse)").matches));
   },[]);
+  const [trackedCodexIds,setTrackedCodexIds]=useState<string[]>([]);
+  const seenCodexAlerts=useRef<Set<string>>(new Set());
+  useEffect(()=>{
+    if(!trackedCodexIds.length)return;
+    let alive=true;
+    async function check(){
+      if(document.hidden)return;
+      for(const id of trackedCodexIds){
+        try {
+          const response=await fetch("/api/director/codex/tasks/"+encodeURIComponent(id),{credentials:"same-origin",cache:"no-store"});
+          if(!response.ok)continue;
+          const data=await response.json();
+          if(!alive||!data.alert||data.alert.source!=="codex"||data.alert.subjectId!==id)continue;
+          const alert=data.alert as {id:string;kind:string;speech:string;visual:string};
+          if(!["queued","running","completed","failed","approval_required"].includes(alert.kind)||seenCodexAlerts.current.has(alert.id))continue;
+          seenCodexAlerts.current.add(alert.id);
+          setMessages(items=>[...items,{id:crypto.randomUUID(),role:"assistant",text:alert.speech}]);
+          if(alert.kind==="completed"||alert.kind==="failed")setTrackedCodexIds(ids=>ids.filter(item=>item!==id));
+        } catch { /* Fail silently; no fabricated notification. */ }
+      }
+    }
+    void check();
+    const timer=window.setInterval(()=>{void check();},20000);
+    return ()=>{alive=false;window.clearInterval(timer);};
+  },[trackedCodexIds]);
   const [generatedImages, setGeneratedImages] = useState<Array<{messageId:string;file:File;label:string;autoDownloadOnArrival:boolean}>>([]);
   const [unifiedResults, setUnifiedResults] = useState<Array<{ messageId: string; result: JarvisUnifiedResult }>>([]);
   const [voiceSnapshot, setVoiceSnapshot] = useState<VoiceSnapshot>({
@@ -841,6 +866,7 @@ export default function JarvisExperience() {
       if(!response.ok)return {text:"Não consegui registrar o rascunho Codex. Nenhuma execução foi iniciada.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
       const data=await response.json();
       if(data.started!==false||data.queued!==false||data.task?.state!=="draft")throw Error("INVALID_CODEX_STATE");
+      if(typeof data.task.id==="string" && /^[0-9a-f-]{36}$/i.test(data.task.id))setTrackedCodexIds(ids=>[...ids.filter(id=>id!==data.task.id).slice(-9),data.task.id]);
       return {text:"Registrei o pedido como rascunho Codex ("+String(data.task.id).slice(0,8)+"). O executor ainda não está conectado: nenhuma programação ou teste começou.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
     } catch {
       return {text:"O rascunho Codex não foi confirmado. Nenhuma execução foi iniciada.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
