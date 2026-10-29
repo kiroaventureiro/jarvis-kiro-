@@ -1,3 +1,4 @@
+import { requestOriginAllowed } from "../../../../lib/request-origin";
 import { NextResponse } from "next/server";
 import { naviTextResult } from "../../../../lib/orchestration/unified-result";
 import { randomUUID } from "node:crypto";
@@ -7,9 +8,8 @@ import { askNavi, NaviError, safeNaviHistory } from "../../../../lib/openai/navi
 export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   if (!(await authorized())) return NextResponse.json({ error: "Sessão necessária" }, {status:401});
-  const origin = request.headers.get("origin");
-  if ((origin && origin !== new URL(request.url).origin) || request.headers.get("sec-fetch-site") === "cross-site")
-    return NextResponse.json({error:"Origem inválida"}, {status:403});
+  if (!requestOriginAllowed(request, process.env.JARVIS_CONNECTOR_ORIGIN, false))
+return NextResponse.json({error:"Origem inválida"}, {status:403});
   if (Number(request.headers.get("content-length") || 0) > 36000)
     return NextResponse.json({error:"Pedido muito grande"}, {status:413});
   let body: unknown;

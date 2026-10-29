@@ -6,6 +6,7 @@ import {
 } from "../../../../../../../lib/connectors/server";
 import { provider } from "../../../../../../../lib/connectors/security";
 import { oauthApps } from "../../../../../../../lib/connectors/oauth";
+import { callbackHostAllowed } from "../../../../../../../lib/request-origin";
 export const dynamic = "force-dynamic";
 export async function GET(
   request: Request,
@@ -17,7 +18,7 @@ export async function GET(
     const p = provider((await context.params).provider),
       url = new URL(request.url),
       binding = (await cookies()).get("jk_dev_oauth")?.value;
-    if (url.origin !== apps.origin || url.searchParams.has("error"))
+    if (!callbackHostAllowed(request, apps.origin) || url.searchParams.has("error"))
       throw Error();
     const result = await connectorOAuth.finish(
       p,

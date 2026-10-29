@@ -1,3 +1,4 @@
+import { requestOriginAllowed } from "../../../../../lib/request-origin";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../../lib/auth";
 import { getCodexTask } from "../../../../../lib/codex/task-store";
@@ -8,9 +9,8 @@ export const dynamic="force-dynamic";
 /** Records a scoped user approval; never dispatches or executes the Codex task. */
 export async function POST(request:Request) {
  if(!(await authorized()))return NextResponse.json({error:"Sessão necessária"},{status:401});
- const origin=request.headers.get("origin");
- if((origin&&origin!==new URL(request.url).origin)||request.headers.get("sec-fetch-site")==="cross-site")
-  return NextResponse.json({error:"Origem inválida"},{status:403});
+ if (!requestOriginAllowed(request, process.env.JARVIS_CONNECTOR_ORIGIN, false))
+return NextResponse.json({error:"Origem inválida"},{status:403});
  if(Number(request.headers.get("content-length")||0)>1024)return NextResponse.json({error:"Pedido grande demais"},{status:413});
  let body:unknown;
  try{const raw=await request.text();if(raw.length>1024)throw Error("TOO_LARGE");body=JSON.parse(raw);}

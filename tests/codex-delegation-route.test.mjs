@@ -5,7 +5,7 @@ const plan=readFileSync(new URL("../lib/codex/delegation-plan.ts",import.meta.ur
 const route=readFileSync(new URL("../app/api/director/codex/route.ts",import.meta.url),"utf8");
 test("Codex draft endpoint is authenticated, origin-bound and non-executing",()=>{
   assert.match(route,/await authorized\(\)/);
-  assert.match(route,/sec-fetch-site/);
+  assert.match(route,/requestOriginAllowed\(request, process.env.JARVIS_CONNECTOR_ORIGIN, false\)/);
   assert.match(route,/planCodexDelegation\(/);
   assert.match(route,/queued:false, started:false/);
   assert.doesNotMatch(route,/exec\(|spawn\(|fetch\(/);

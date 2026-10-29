@@ -7,7 +7,7 @@ import NativeConnectors from "../components/NativeConnectors";
 import WorkspaceConnectors from "../components/WorkspaceConnectors";
 import ObsConnection from "../components/ObsConnection";
 import DeviceCamera from "../components/DeviceCamera";
-import { connectionOption } from "../../lib/connection-options";
+import { connectionOption, connectionInstructions } from "../../lib/connection-options";
 import { APP_SHORTCUTS } from "../../lib/codex/app-handoff";
 type Item = {
   id: string;
@@ -161,6 +161,7 @@ export default function ConnectionsPage() {
             <p>{x.category}</p>
             <p><strong>{option.status}</strong></p>
             <p>{option.requirement}</p>
+            <details><summary>Como preparar esta conexão</summary><ol>{connectionInstructions(x.id,x.category).map(step=><li key={step}>{step}</li>)}</ol></details>
             <p>Prioridade {option.priority === 0 ? "imediata" : option.priority === 1 ? "Kiro / contas principais" : option.priority === 2 ? "seguinte" : "posterior"}</p>
             {option.href ? <a href={option.href} {...(option.href.startsWith("https:") ? {target:"_blank",rel:"noopener noreferrer"} : {})}>{option.action}</a> : <p><small>Sem autorização disponível nesta versão.</small></p>}
           </article>

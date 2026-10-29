@@ -1,3 +1,4 @@
+import { requestOriginAllowed } from "../../../../lib/request-origin";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
 import { codexDraftResult } from "../../../../lib/orchestration/unified-result";
@@ -9,9 +10,8 @@ export const dynamic = "force-dynamic";
 /** Draft-only endpoint. It does not execute or queue a remote Codex worker. */
 export async function POST(request: Request) {
   if (!(await authorized())) return NextResponse.json({error:"Sessão necessária"}, {status:401});
-  const origin=request.headers.get("origin");
-  if ((origin && origin!==new URL(request.url).origin) || request.headers.get("sec-fetch-site")==="cross-site")
-    return NextResponse.json({error:"Origem não autorizada"}, {status:403});
+  if (!requestOriginAllowed(request, process.env.JARVIS_CONNECTOR_ORIGIN, false))
+return NextResponse.json({error:"Origem não autorizada"}, {status:403});
   if (Number(request.headers.get("content-length")||0)>4096)
     return NextResponse.json({error:"Pedido muito grande"}, {status:413});
   let data: unknown;

@@ -1,3 +1,4 @@
+import { requestOriginAllowed } from "../../../../../lib/request-origin";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../../lib/auth";
 import { connectorStore } from "../../../../../lib/connectors/server";
@@ -12,9 +13,7 @@ export async function GET() {
 }
 export async function PUT(request: Request) {
   if (!(await authorized())) return NextResponse.json({error:"Não autorizado"}, {status:401,headers});
-  if (request.headers.get("Origin") && request.headers.get("Origin") !== new URL(request.url).origin)
-    return NextResponse.json({error:"Origem não autorizada"}, {status:403,headers});
-  if (request.headers.get("Sec-Fetch-Site") === "cross-site")
+  if (!requestOriginAllowed(request, process.env.JARVIS_CONNECTOR_ORIGIN, false))
     return NextResponse.json({error:"Origem não autorizada"}, {status:403,headers});
   if (!connectorStore.configured()) return NextResponse.json({error:"Cofre indisponível"}, {status:503,headers});
   try {

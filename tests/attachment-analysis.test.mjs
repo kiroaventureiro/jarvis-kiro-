@@ -12,13 +12,15 @@ const uri = (source) =>
       },
     }).outputText,
   ).toString("base64");
+const originURL = uri(fs.readFileSync("lib/request-origin.ts", "utf8"));
 const policyURL = uri(fs.readFileSync("lib/attachment-policy.ts", "utf8"));
 const policy = await import(policyURL);
 const service = await import(
   uri(
     fs
       .readFileSync("lib/attachment-analysis.ts", "utf8")
-      .replace(/["']\.\/attachment-policy["']/, JSON.stringify(policyURL)),
+      .replace(/["']\.\/attachment-policy["']/, JSON.stringify(policyURL))
+      .replace(/["']\.\/request-origin["']/, JSON.stringify(originURL)),
   )
 );
 const request = (

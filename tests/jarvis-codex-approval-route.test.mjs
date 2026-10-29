@@ -4,7 +4,7 @@ import {readFileSync} from "node:fs";
 const src=readFileSync(new URL("../app/api/director/codex/approve/route.ts",import.meta.url),"utf8");
 test("Codex approval requires user authentication, same origin and exact task affirmation",()=>{
  assert.match(src,/await authorized\(\)/);
- assert.match(src,/sec-fetch-site/);
+ assert.match(src,/requestOriginAllowed\(request, process.env.JARVIS_CONNECTOR_ORIGIN, false\)/);
  assert.match(src,/v\.confirmation!=="autorizo esta tarefa"/);
  assert.match(src,/task\.state!=="draft"/);
  assert.match(src,/task\.repository!=="kiroaventureiro\/jarvis-kiro-"/);

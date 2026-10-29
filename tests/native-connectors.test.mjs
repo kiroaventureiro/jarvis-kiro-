@@ -1105,3 +1105,26 @@ test('batch verification skips unconnected accounts without provider requests',a
  assert.ok(result.results.every(item=>item.state==='not_connected'));
  assert.deepEqual(f.calls,[]);
 });
+
+test("explicit GitHub selections can include later pages without trusting browser-supplied repositories",async()=>{
+ const f=fixture();const original=f.service.options.call;
+ f.service.options.call=async(p,c,url,o)=>{
+  if(p==='github'&&url.startsWith('/user/repos?')){
+   const page=Number(new URL('https://api.github.test'+url).searchParams.get('page'));
+   return Array.from({length:page===1?100:1},(_,i)=>({id:page*1000+i,full_name:'owner/repo-'+page+'-'+i,default_branch:'main'}));
+  }
+  return original(p,c,url,o);
+ };
+ await f.service.connect('github',{accessToken:TOKEN},'token');
+ await f.service.scope('github',[{id:'owner/repo-2-0'}],['read']);
+ assert.equal(f.store.state.connections.github.resources[0].id,'owner/repo-2-0');
+ await assert.rejects(()=>f.service.scope('github',[{id:'attacker/not-authorized'}],['read']),/PERMISSION_DENIED/);
+ assert.equal(f.store.state.connections.github.resources[0].id,'owner/repo-2-0');
+});
+
+test("addressing Jarvis preserves the explicitly named project's authorized diagnosis",async()=>{
+ const f=fixture();await setup(f,['github','vercel']);let modelCalls=0;
+ const planner=new DevelopmentPlanner(f.service,[{id:'universo-kiro',name:'Guardiões da Origem'},{id:'jarvis-kiro',name:'Jarvis Kiro'}],async()=>{modelCalls++;return ''});
+ const reply=await planner.intent('Jarvis, verifique o site Guardiões da Origem');
+ assert.equal(reply.result.kind,'connector_plan');assert.match(reply.text,/Guardiões da Origem/);assert.equal(modelCalls,0);
+});

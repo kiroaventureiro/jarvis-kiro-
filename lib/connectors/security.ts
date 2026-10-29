@@ -147,21 +147,7 @@ export function actionDigest(
 ) {
   return hash(canonical({ actions, revisions, environment }));
 }
-export function originAllowed(request: Request, canonicalOrigin?: string) {
-  const origin = request.headers.get("origin");
-  const actualOrigin = new URL(request.url).origin;
-  const allowedOrigins = new Set([
-    canonicalOrigin || actualOrigin,
-    "https://jarvis-kiro.vercel.app",
-    "https://jarvis-kiro-umiversokiro.vercel.app",
-  ]);
-  return (
-    !!origin &&
-    origin === actualOrigin &&
-    allowedOrigins.has(origin) &&
-    request.headers.get("sec-fetch-site") !== "cross-site"
-  );
-}
+export { requestOriginAllowed as originAllowed, requestOriginStatus } from "../request-origin";
 export async function jsonBody(request: Request, max = 180000) {
   const reader = request.body?.getReader();
   if (!reader) throw new ConnectorError("BODY_INVALID");

@@ -73,10 +73,24 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
       ).status(),
       403,
     );
+    const setupResponse=await request.get(base+"/api/director/connectors?diagnostics=1");
+    assert.equal(setupResponse.status(),200);const setup=await setupResponse.json();assert.equal(setup.noProviderCalls,true);assert.equal(setup.vaultConfigured,true);assert.equal(JSON.stringify(setup).includes('fixture-only-vault-key'),false);
+    const proxyResponse=await request.post(base+"/api/director/connectors",{headers:{Origin:"https://jarvis-kiro.vercel.app","sec-fetch-site":"same-origin"},data:{op:"unknown",provider:"github"}});
+    assert.equal(proxyResponse.status(),400,'trusted public origin reaches validation behind an internal URL');
     pass("Owner authentication and mutation origin enforced by real route");
     const page = await context.newPage(),
       errors = [];
     page.on("pageerror", (e) => errors.push(e.message));
+    const setupUrl=base+"/api/director/connectors";
+    const withoutOAuth=await (await request.get(setupUrl)).json();
+    withoutOAuth.providers=withoutOAuth.providers.map(p=>({...p,oauthConfigured:false}));
+    const manualOverview=route=>route.request().method()==='GET'?route.fulfill({json:withoutOAuth}):route.continue();
+    await page.route(setupUrl,manualOverview);
+    await page.goto(base+"/conexoes");
+    await page.getByRole('button',{name:'Conectar GitHub com token',exact:true}).click();
+    assert.equal(await page.getByLabel('Token administrativo de GitHub',{exact:true}).isVisible(),true);
+    await page.unroute(setupUrl,manualOverview);
+    pass('Primary connection button offers the secure token form when OAuth is unavailable');
     await page.goto(base + "/conexoes");
     await page
       .getByRole("heading", { name: "Contas e projetos do JK" })
@@ -282,6 +296,7 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
     assert.equal(response.status(), 403);
     pass("Model proposal requires separate cost authorization");
     await page.goto(base);
+    await page.getByRole("button", { name: "Escrever mensagem", exact: true }).focus();
     await page
       .getByRole("button", { name: "Escrever mensagem", exact: true })
       .click();

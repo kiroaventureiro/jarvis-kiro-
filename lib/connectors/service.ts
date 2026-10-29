@@ -276,7 +276,7 @@ export class ConnectorService {
   async scope(p: Provider, selection: unknown, grants: unknown) {
     if (
       !Array.isArray(selection) ||
-      selection.length > 20 ||
+      selection.length > 100 ||
       !Array.isArray(grants) ||
       !grants.includes("read") ||
       grants.some(
@@ -288,8 +288,15 @@ export class ConnectorService {
       )
     )
       throw new ConnectorError("SCOPE_INVALID");
-    const c = await this.connection(p),
-      available = (await this.test(p)).resources;
+    const c = await this.connection(p);
+    let page = 1, discovery = await this.test(p), available = discovery.resources;
+    // Never trust resource IDs submitted by the browser. Check later GitHub pages
+    // too, with a hard bound, before saving an explicitly selected scope.
+    while (p === "github" && discovery.truncated && page < 10 &&
+      selection.some(x => !available.some(r => r.id === record(x).id))) {
+      discovery = await this.test(p, ++page);
+      available = [...available, ...discovery.resources];
+    }
     const resources: Resource[] = selection.map((x) => {
       const r = record(x),
         found = available.find((a) => a.id === r.id);

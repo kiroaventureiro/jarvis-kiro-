@@ -1,3 +1,4 @@
+import { requestOriginAllowed } from "../../../../lib/request-origin";
 import { answerCodexPlanning } from "../../../../lib/codex/conversation";
 import { answerNaviRequest } from "../../../../lib/openai/navi-router";
 import { answerNativeRequest } from "../../../../lib/connectors/server";
@@ -22,12 +23,8 @@ export const dynamic = "force-dynamic";
 export async function POST(request: Request) {
   if (!(await authorized()))
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  const origin = request.headers.get("origin");
-  if (
-    (origin && origin !== new URL(request.url).origin) ||
-    request.headers.get("Sec-Fetch-Site") === "cross-site"
-  )
-    return NextResponse.json({ error: "Origem inválida" }, { status: 403 });
+  if (!requestOriginAllowed(request, process.env.JARVIS_CONNECTOR_ORIGIN, false))
+return NextResponse.json({ error: "Origem inválida" }, { status: 403 });
   if (Number(request.headers.get("content-length") || 0) > 8000)
     return NextResponse.json(
       { error: "Consulta muito extensa" },

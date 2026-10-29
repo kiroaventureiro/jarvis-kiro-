@@ -6,12 +6,14 @@ export function developmentIntent(text: string) {
   const n = text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+    .toLowerCase().trim();
+  // Addressing the assistant is not a request to modify the assistant itself.
+  const target = n.replace(/^(?:oi[,\s]+)?jarvis(?:\s*[,!:]\s*|\s+)/, "");
   if (
     !/\b(melhore|melhora|encontre|diagnostique|verifique|proponha|corrija|corrige|conserte|conserta|ajuste|ajusta|implemente|implementa|desenvolva|desenvolve|crie|cria|analise)\b/.test(
       n,
     ) ||
-    !/\b(sua|seu|jarvis|jk)\b/.test(n)
+    !/\b(sua|seu|jarvis|jk)\b/.test(target)
   )
     return null;
   const area = /voz|audio|fala|narracao/.test(n)
