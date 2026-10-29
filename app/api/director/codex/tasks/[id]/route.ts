@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../../../lib/auth";
+import { jarvisResultView } from "../../../../../../lib/orchestration/result-view";
 import { getCodexTask } from "../../../../../../lib/codex/task-store";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,17 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const task=await getCodexTask(id);
     if (!task)
       return NextResponse.json({error:"Tarefa não encontrada"},{status:404,headers:{"Cache-Control":"no-store"}});
-    return NextResponse.json({task,executorConnected:false},{headers:{"Cache-Control":"private, no-store"}});
+    const result = {
+      requestId:task.id,
+      source:"codex" as const,
+      status:task.state === "draft" ? "draft" as const : "needs_authorization" as const,
+      messages:[task.state === "draft"
+        ? "Tarefa registrada como rascunho. Nenhum executor foi acionado."
+        : "Estado registrado: " + task.state + ". A execução remota ainda não está conectada."],
+      artifacts:[],
+      provenance:{provider:"codex-task-store",taskReference:task.id},
+    };
+    return NextResponse.json({task,view:jarvisResultView(result),executorConnected:false},{headers:{"Cache-Control":"private, no-store"}});
   } catch {
     return NextResponse.json({error:"Armazenamento indisponível"},{status:503,headers:{"Cache-Control":"no-store"}});
   }
