@@ -100,7 +100,7 @@ export async function conversationalConnectorRead(
   const mentioned = (Object.keys(READ_PROVIDERS) as Provider[]).filter((p) =>
     READ_PROVIDERS[p].aliases.some((alias) => n.includes(alias)),
   );
-  const detailedGitHub = /\\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes)\\b/.test(n);
+  const detailedGitHub = /\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes)\\b/.test(n);
   const all =
     /\b(todos|todas|tudo|conexoes|integracoes|plataformas)\b/.test(n) ||
     /meus projetos|minhas conexoes/.test(n);
@@ -131,8 +131,7 @@ export async function conversationalConnectorRead(
       providers.flatMap((p) => state.connections[p]?.resources || []),
     );
     // Provider-only commands mean discover authorized resources, not a named project.
-    const selection = providerOnly && selected.kind === "unresolved"
-      ? {kind:"all" as const} : selected;
+    const selection = selected;
     if (selection.kind === "unresolved")
       return {
         text:
@@ -207,9 +206,9 @@ export async function conversationalConnectorRead(
           verifiedNames.push(resource.name);
           let finding = observation(provider, checked.data);
           if (provider === "github" && detailedGitHub) {
-            const detailOperation = /\\b(branch|branches)\\b/.test(n) ? "branches" :
-              /\\b(issues|problemas abertos)\\b/.test(n) ? "issues" :
-              /\\b(pulls|pull requests)\\b/.test(n) ? "pulls" : "commits";
+            const detailOperation = /\b(branch|branches)\\b/.test(n) ? "branches" :
+              /\b(issues|problemas abertos)\\b/.test(n) ? "issues" :
+              /\b(pulls|pull requests)\\b/.test(n) ? "pulls" : "commits";
             try {
               const detail = await connectors.readAuthorized(provider, resource.id, detailOperation);
               const rows = Array.isArray(detail.data) ? detail.data.slice(0, 5) : [];
