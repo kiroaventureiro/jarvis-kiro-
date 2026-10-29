@@ -46,7 +46,7 @@ import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voic
 import { voiceAction } from "../../lib/voice/local-intents";
 import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
 import { codexDraftIntent } from "../../lib/codex/chat-intent";
-import { codexStatusIntent } from "../../lib/codex/status-intent";
+import { codexStatusIntent, codexRecentStatusIntent } from "../../lib/codex/status-intent";
 import { describeCodexDispatchResponse } from "../../lib/codex/dispatch-response";
 import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
 import { useFileWorkspace } from "./useFileWorkspace";
@@ -85,6 +85,7 @@ export default function JarvisExperience() {
   },[]);
   const [trackedCodexIds,setTrackedCodexIds]=useState<string[]>([]);
   const [pendingCodexApproval,setPendingCodexApproval]=useState<string|null>(null);
+  const [recentCodexTaskId,setRecentCodexTaskId]=useState<string|null>(null);
   const [codexAlertVisual,setCodexAlertVisual]=useState<"attention"|"activity"|"success"|"error"|null>(null);
   const seenCodexAlerts=useRef<Set<string>>(new Set());
   useEffect(()=>{
@@ -879,7 +880,7 @@ export default function JarvisExperience() {
     }
   }
   async function conversationalCodexStatus(text:string) {
-    const id=codexStatusIntent(text);
+    const id=codexStatusIntent(text) || codexRecentStatusIntent(text,recentCodexTaskId);
     if(!id)return null;
     try {
       const response=await fetch("/api/director/codex/tasks/"+encodeURIComponent(id),{credentials:"same-origin",cache:"no-store"});
@@ -913,6 +914,7 @@ export default function JarvisExperience() {
       if(typeof data.task.id==="string" && /^[0-9a-f-]{36}$/i.test(data.task.id)){
         setTrackedCodexIds(ids=>[...ids.filter(id=>id!==data.task.id).slice(-9),data.task.id]);
         setPendingCodexApproval(data.task.id);
+        setRecentCodexTaskId(data.task.id);
       }
       return {text:"Registrei o pedido como rascunho Codex ("+String(data.task.id).slice(0,8)+"). Você autoriza registrar a aprovação desta tarefa? Nenhuma programação ou teste começará agora.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
     } catch {
