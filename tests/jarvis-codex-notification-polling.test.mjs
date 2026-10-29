@@ -11,7 +11,7 @@ test("Only tracked authenticated Codex tasks generate conversational alerts",()=
  assert.match(ui,/document\.hidden/);
 });
 test("Drafts are tracked but never announced as completed",()=>{
- assert.match(ui,/data\.task\.state!=="draft"/);
+ assert.match(ui,/data\.task\.state\s*!==\s*"draft"/);
  assert.match(ui,/setTrackedCodexIds\(/);
  assert.match(ui,/alert\.kind==="completed"/);
 });
