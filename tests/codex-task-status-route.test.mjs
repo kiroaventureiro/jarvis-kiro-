@@ -14,3 +14,10 @@ test("Nested route resolves server modules from the repository root",()=>{
   assert.match(source,/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/lib\/auth/);
   assert.match(source,/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/lib\/codex\/task-store/);
 });
+
+test("Codex status API returns a view model with truthful state",()=>{
+ assert.match(source,/jarvisResultView\(result\)/);
+ assert.match(source,/task\.state === "cancelled"/);
+ assert.match(source,/task\.state === "approved"/);
+ assert.match(source,/executorConnected:false/);
+});
