@@ -204,3 +204,17 @@ test("missing read permission and disconnected accounts cannot produce verified 
   assert.equal(f.calls.length, 0);
   assert.match(reply.visual.modules[0].body, /não autorizada|sem conexão/);
 });
+
+test("provider-only GitHub navigation discovers authorized projects without guessing name",async()=>{
+  const mock=fixture({github:connection([r("kiroaventureiro/jarvis-kiro-","kiroaventureiro/jarvis-kiro-")])});
+  const result=await conversationalConnectorRead("Jarvis, entre no GitHub",mock.dependencies);
+  assert.ok(result?.text.includes("consulta de leitura"),result?.text);
+  assert.equal(mock.calls[0]?.provider,"github");
+  assert.equal(mock.calls[0]?.op,"repo");
+});
+test("provider-only Vercel query runs connected deployment read",async()=>{
+  const mock=fixture({vercel:connection([r("vercel-project-id","jarvis-kiro")])});
+  const result=await conversationalConnectorRead("Abra a Vercel e verifique",mock.dependencies);
+  assert.ok(result?.text.includes("consulta de leitura"),result?.text);
+  assert.equal(mock.calls[0]?.op,"deployments");
+});
