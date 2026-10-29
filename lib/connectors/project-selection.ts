@@ -87,8 +87,8 @@ export function requestedProject(
     };
   // Mentioning a provider without a project name means discovering its authorized
   // resources, not that a project named "GitHub" or "Vercel" was requested.
-  const serviceOnly = /\\b(github|git hub|vercel|versel|supabase|supa base)\\b/.test(n) &&
-    !/\\b(projeto|repositorio|site)\\s+(?:chamado\\s+)?[a-z0-9_-]{4,}/.test(n);
+  const serviceOnly = /\b(github|git hub|vercel|versel|supabase|supa base)\\b/.test(n) &&
+    !/\b(projeto|repositorio|site)\s+(?:chamado\\s+)?[a-z0-9_-]{4,}/.test(n);
   if (serviceOnly) return {kind:"all"};
   if (
     /todos|todas|tudo|meus projetos|minhas conexoes|integracoes|plataformas|conexoes/.test(
