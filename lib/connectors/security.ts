@@ -149,10 +149,16 @@ export function actionDigest(
 }
 export function originAllowed(request: Request, canonicalOrigin?: string) {
   const origin = request.headers.get("origin");
-  const allowed = canonicalOrigin || new URL(request.url).origin;
+  const actualOrigin = new URL(request.url).origin;
+  const allowedOrigins = new Set([
+    canonicalOrigin || actualOrigin,
+    "https://jarvis-kiro.vercel.app",
+    "https://jarvis-kiro-umiversokiro.vercel.app",
+  ]);
   return (
     !!origin &&
-    origin === allowed &&
+    origin === actualOrigin &&
+    allowedOrigins.has(origin) &&
     request.headers.get("sec-fetch-site") !== "cross-site"
   );
 }
