@@ -19,7 +19,7 @@ export async function POST(request:Request) {
   return NextResponse.json({error:"Identificador inválido"},{status:400});
  try{
   const task=await getCodexTask(b.taskId);
-  if(!task||task.state!=="approved")return NextResponse.json({error:"Tarefa não aprovada"},{status:409});
+  if(!task||task.state!=="approved"||task.repository!=="kiroaventureiro/jarvis-kiro-"||task.branch!=="feature/diretor-tecnico-agent")return NextResponse.json({error:"Tarefa não aprovada ou fora do escopo autorizado"},{status:409});
   const readiness=codexWorkerReadiness();
   if(!readiness.canStartTasks||!readiness.workerAuthenticated)
    return NextResponse.json({error:"Executor Codex ainda não conectado",started:false,queued:false,readiness},{status:503,headers:{"Cache-Control":"private, no-store"}});
