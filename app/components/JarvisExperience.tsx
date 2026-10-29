@@ -101,6 +101,13 @@ export default function JarvisExperience() {
           seenCodexAlerts.current.add(alert.id);
           if(["attention","activity","success","error"].includes(alert.visual)) setCodexAlertVisual(alert.visual as "attention"|"activity"|"success"|"error");
           setMessages(items=>[...items,{id:crypto.randomUUID(),role:"assistant",text:alert.speech}]);
+          // Do not interrupt an active voice exchange; use visual/text alert instead.
+          if(document.visibilityState==="visible" && !muteRef.current &&
+             readVoicePreferences().volume>0 && !getVoiceManager().isSpeaking() &&
+             !typingAbort.current && !fileSpeech.current && !connected) {
+            const noticeController=new AbortController();
+            void getVoiceManager().speak(alert.speech,noticeController.signal).catch(()=>{});
+          }
           if(alert.kind==="completed"||alert.kind==="failed")setTrackedCodexIds(ids=>ids.filter(item=>item!==id));
         } catch { /* Fail silently; no fabricated notification. */ }
       }
