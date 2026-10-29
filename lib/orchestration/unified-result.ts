@@ -30,3 +30,22 @@ export function codexDraftResult(task: {
     provenance:{provider:"codex-planner",taskReference:task.id},
   };
 }
+
+/** Display-only Navi response adapter; no provider API call or invented media. */
+export function naviTextResult(input: {
+  requestId: string;
+  text: string;
+  provider: string;
+}): JarvisUnifiedResult {
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(input.requestId) || !input.text.trim() || input.text.length > 20000 ||
+      !/^[a-zA-Z0-9._-]{1,100}$/.test(input.provider))
+    throw Error("INVALID_NAVI_RESULT");
+  return {
+    requestId: input.requestId,
+    source: "navi",
+    status: "completed",
+    messages: [input.text],
+    artifacts: [],
+    provenance: { provider: input.provider },
+  };
+}
