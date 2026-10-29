@@ -72,7 +72,7 @@ export default function JarvisExperience() {
     [hidden, setHidden] = useState(false),
     [dragging, setDragging] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<Array<{messageId:string;file:File;label:string}>>([]);
-  const [latestUnified, setLatestUnified] = useState<{ messageId: string; result: JarvisUnifiedResult } | null>(null);
+  const [unifiedResults, setUnifiedResults] = useState<Array<{ messageId: string; result: JarvisUnifiedResult }>>([]);
   const [voiceSnapshot, setVoiceSnapshot] = useState<VoiceSnapshot>({
     phase: "off",
     enabled: false,
@@ -831,7 +831,7 @@ export default function JarvisExperience() {
           },
         }));
       if (requestController.signal.aborted) return;
-      setLatestUnified({
+      setUnifiedResults(previous => [...previous.slice(-31), {
         messageId: assistantId,
         result: {
           requestId: assistantId,
@@ -841,7 +841,7 @@ export default function JarvisExperience() {
           artifacts: [],
           provenance: {provider: result.provider || "jarvis"},
         },
-      });
+      }]);
       const rawVisual = local ? null : composeScene(text, result);
       const visual = desktopVoice
         ? complementaryScene(rawVisual, result.text)
@@ -1089,8 +1089,8 @@ export default function JarvisExperience() {
                 <span className="message-author">
                   {item.role === "user" ? "Você" : "Jarvis"}
                 </span>
-                {item.role === "assistant" && latestUnified?.messageId === item.id
-                  ? <><JarvisResultPanel result={latestUnified.result} />{generatedImages.filter(image=>image.messageId === item.id).map(image=><JarvisGeneratedImage key={image.messageId} file={image.file} label={image.label} />)}</>
+                {item.role === "assistant" && unifiedResults.some(entry => entry.messageId === item.id)
+                  ? <>{unifiedResults.filter(entry => entry.messageId === item.id).map(entry => <JarvisResultPanel key={entry.messageId} result={entry.result} />)}{generatedImages.filter(image=>image.messageId === item.id).map(image=><JarvisGeneratedImage key={image.messageId} file={image.file} label={image.label} />)}</>
                   : <p>{item.text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1")}</p>}
               </article>
             ))}
