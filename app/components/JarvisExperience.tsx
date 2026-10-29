@@ -83,6 +83,7 @@ export default function JarvisExperience() {
     setDesktopDownloadCapable(desktopDownloadsSupported(navigator.userAgent,window.matchMedia("(pointer: coarse)").matches));
   },[]);
   const [trackedCodexIds,setTrackedCodexIds]=useState<string[]>([]);
+  const [codexAlertVisual,setCodexAlertVisual]=useState<"attention"|"activity"|"success"|"error"|null>(null);
   const seenCodexAlerts=useRef<Set<string>>(new Set());
   useEffect(()=>{
     if(!trackedCodexIds.length)return;
@@ -98,6 +99,7 @@ export default function JarvisExperience() {
           const alert=data.alert as {id:string;kind:string;speech:string;visual:string};
           if(!["queued","running","completed","failed","approval_required"].includes(alert.kind)||seenCodexAlerts.current.has(alert.id))continue;
           seenCodexAlerts.current.add(alert.id);
+          if(["attention","activity","success","error"].includes(alert.visual)) setCodexAlertVisual(alert.visual as "attention"|"activity"|"success"|"error");
           setMessages(items=>[...items,{id:crypto.randomUUID(),role:"assistant",text:alert.speech}]);
           if(alert.kind==="completed"||alert.kind==="failed")setTrackedCodexIds(ids=>ids.filter(item=>item!==id));
         } catch { /* Fail silently; no fabricated notification. */ }
@@ -107,6 +109,11 @@ export default function JarvisExperience() {
     const timer=window.setInterval(()=>{void check();},20000);
     return ()=>{alive=false;window.clearInterval(timer);};
   },[trackedCodexIds]);
+  useEffect(()=>{
+    if(!codexAlertVisual)return;
+    const timer=window.setTimeout(()=>setCodexAlertVisual(null),5500);
+    return ()=>window.clearTimeout(timer);
+  },[codexAlertVisual]);
   const [generatedImages, setGeneratedImages] = useState<Array<{messageId:string;file:File;label:string;autoDownloadOnArrival:boolean}>>([]);
   const [unifiedResults, setUnifiedResults] = useState<Array<{ messageId: string; result: JarvisUnifiedResult }>>([]);
   const [voiceSnapshot, setVoiceSnapshot] = useState<VoiceSnapshot>({
@@ -1078,6 +1085,7 @@ export default function JarvisExperience() {
         (dragging ? "is-dragging" : "")
       }
       data-state={state}
+      data-codex-alert={codexAlertVisual || "none"}
       data-holo-scene={holoSession.current?.mode || "none"}
       data-holo-state={
         state === "error"
