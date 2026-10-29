@@ -29,7 +29,7 @@ test("Codex readiness cannot falsely claim a working executor",()=>{
 
 test("Codex planning persists drafts and never reports execution",()=>{
   assert.match(route,/createCodexTask\(\{ repository: plan\.repository, branch: plan\.baseBranch, kind: plan\.kind, instruction: plan\.task \}\)/);
-  assert.match(route,/task: saved, queued:false, started:false/);
+  assert.match(route,/task: saved, result: codexDraftResult\(saved\), queued:false, started:false/);
   assert.match(route,/Não foi possível registrar a tarefa no armazenamento persistente/);
 });
 
