@@ -79,6 +79,15 @@ export async function answerNativeRequest(
   history: import("./read-context").ReadTurn[] = [],
   localOnly = false,
 ) {
+  // Explicit daily briefing or a direct greeting to Jarvis. No background polling.
+  const greeting = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  if (
+    /\b(boletim(?: diario)?|resumo do dia|briefing)\b/.test(greeting) ||
+    /^(?:oi[,]?\\s*)?(?:bom dia|boa tarde|boa noite)[,! ]*jarvis[!?. ]*$/.test(greeting)
+  ) {
+    const { arrivalBriefing } = await import("./arrival-briefing");
+    return arrivalBriefing(connectorStore);
+  }
   const workspaceIntent=workspaceReadIntent(message);
   if(workspaceIntent) {
     let text="";
