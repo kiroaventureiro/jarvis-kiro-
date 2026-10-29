@@ -18,3 +18,11 @@ test("Jarvis view rejects non-HTTPS media URLs",()=>{
  ]});
  assert.equal(view.artifacts[0].previewUrl,undefined);
 });
+
+test("Jarvis artifacts accept only authenticated same-origin preview route",()=>{
+ const make=(url)=>exports.jarvisResultView({requestId:"r3",source:"image",status:"completed",messages:[],artifacts:[{type:"image",name:"Imagem",mimeType:"image/png",storageKey:"private",previewUrl:url}]}).artifacts[0].previewUrl;
+ assert.equal(make("/api/director/artifacts/abcDEF1234567890"),"/api/director/artifacts/abcDEF1234567890");
+ assert.equal(make("https://untrusted.example.com/payload"),undefined);
+ assert.equal(make("/api/director/artifacts/../../admin"),undefined);
+ assert.equal(make("/api/director/artifacts/abcDEF1234567890?token=secret"),undefined);
+});
