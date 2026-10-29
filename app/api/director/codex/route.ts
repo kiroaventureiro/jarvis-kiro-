@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
+import { codexWorkerReadiness } from "../../../../lib/codex/worker-readiness";
 import { planCodexDelegation, type CodexTaskKind } from "../../../../lib/codex/delegation-plan";
 
 export const dynamic = "force-dynamic";
@@ -41,11 +42,7 @@ export async function GET() {
   if (!(await authorized())) return NextResponse.json({error:"Sessão necessária"}, {status:401,headers:{"Cache-Control":"no-store"}});
   return NextResponse.json({
     provider:"codex",
-    planner:"available",
-    execution:"not_connected",
-    workerAuthenticated:false,
-    canStartTasks:false,
-    canResumeTasks:false,
+    ...codexWorkerReadiness(),
     detail:"O JK prepara tarefas, mas ainda não possui executor Codex autenticado. Nenhuma execução remota foi iniciada.",
   },{headers:{"Cache-Control":"private, no-store"}});
 }
