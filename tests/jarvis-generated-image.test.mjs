@@ -5,7 +5,7 @@ const chat=readFileSync(new URL("../app/components/JarvisExperience.tsx",import.
 const image=readFileSync(new URL("../app/components/JarvisGeneratedImage.tsx",import.meta.url),"utf8");
 test("Jarvis attaches only actual locally generated images to the relevant response",()=>{
  assert.match(chat,/holoSession\.rememberMedia\(items\)/);
- assert.match(chat,/setGeneratedImages\(previous=>\[\.\.\.previous\.slice\(-7\),\{messageId:assistantId,file:image\.file,label:image\.label\}\]\)/);
+ assert.match(chat,/setGeneratedImages\(previous=>\[\.\.\.previous\.slice\(-7\),\{messageId:assistantId,file:image\.file,label:image\.label,autoDownloadOnArrival:desktopDownloadCapable && autoDownload\}\]\)/);
  assert.match(chat,/generatedImages\.filter\(image=>image\.messageId === item\.id\)/);
  assert.match(chat,/<JarvisGeneratedImage/);
 });
@@ -26,4 +26,10 @@ test("Generated images can be saved locally using temporary object URLs",()=>{
  assert.match(image,/download=/);
  assert.match(image,/file\.size === 0/);
  assert.doesNotMatch(image,/localStorage|dangerouslySetInnerHTML/);
+});
+
+test("Auto download opt-in only applies to images generated after enabling",()=>{
+ assert.match(chat,/autoDownloadOnArrival:desktopDownloadCapable && autoDownload/);
+ assert.match(chat,/autoDownload=\{image\.autoDownloadOnArrival\}/);
+ assert.match(image,/claimAutomaticDownload\(id\)/);
 });
