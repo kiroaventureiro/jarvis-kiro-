@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "status": "architecture_only",
+  "features": [
+    {
+      "id": "iphone_pwa",
+      "purpose": "Acesso a interface pelo Safari e tela inicial; notificacoes futuras com permissao",
+      "requirements": [
+        "HTTPS",
+        "web_app_manifest",
+        "service_worker_for_push"
+      ],
+      "connected": false
+    },
+    {
+      "id": "apple_sign_in",
+      "purpose": "Autenticar na central com Conta Apple; nao concede acesso ao iCloud",
+      "requirements": [
+        "Apple Developer App ID",
+        "Services ID",
+        "Team ID",
+        "server private key",
+        "verified redirect domain",
+        "state nonce and ID-token verification"
+      ],
+      "connected": false
+    },
+    {
+      "id": "icloud_mail",
+      "purpose": "Consultar e-mail @icloud.com via IMAP com senha especifica de app guardada em cofre no servidor",
+      "requirements": [
+        "imap.mail.me.com TLS port 993",
+        "app-specific password",
+        "encrypted credential storage"
+      ],
+      "connected": false
+    },
+    {
+      "id": "device_companion",
+      "purpose": "Voz e comandos locais voluntarios no iPhone via mecanismos consentidos",
+      "requirements": [
+        "iOS user permissions",
+        "explicit per-action approvals"
+      ],
+      "connected": false
+    }
+  ]
+}

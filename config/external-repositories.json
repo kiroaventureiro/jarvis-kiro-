@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-10-29",
+  "policy": {
+    "automaticInstall": false,
+    "defaultExecution": "disabled",
+    "requiresOwnerApprovalFor": "installation, model download, hosting, network exposure, paid generation and publishing",
+    "productionChanges": false
+  },
+  "repositories": [
+    {
+      "slug": "wshobson/agents",
+      "url": "https://github.com/wshobson/agents",
+      "domain": "engineering-skills",
+      "license": "MIT",
+      "adoption": "adapt-guidance",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "Pinned engineering guidance is selected by task in JK; Codex native plugins are installed separately. External multi-agent runtime is not enabled."
+    },
+    {
+      "slug": "ayghri/i-have-adhd",
+      "url": "https://github.com/ayghri/i-have-adhd",
+      "domain": "interaction",
+      "license": "MIT",
+      "adoption": "adapt-guidance",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "compact, scannable responses; do not install Python skill in web runtime"
+    },
+    {
+      "slug": "openai/math",
+      "url": "https://github.com/openai/math",
+      "domain": "formal-verification",
+      "license": "Apache-2.0",
+      "adoption": "reference-only",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "Lean formal mathematics; not a chat/vision model or generic cognitive upgrade"
+    },
+    {
+      "slug": "google/elephant-goldfish-model",
+      "url": "https://github.com/google/elephant-goldfish-model",
+      "domain": "engineering",
+      "license": "Apache-2.0",
+      "adoption": "adapt-guidance",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "agent engineering and design/review practices for Codex QA"
+    },
+    {
+      "slug": "microsoft/JARVIS",
+      "url": "https://github.com/microsoft/JARVIS",
+      "domain": "orchestration",
+      "license": "MIT",
+      "adoption": "reference-only",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "research architecture for LLM routing to specialized tools; not our JK"
+    },
+    {
+      "slug": "melgarafael/james_painel_de_voz",
+      "url": "https://github.com/melgarafael/james_painel_de_voz",
+      "domain": "voice",
+      "license": "unverified",
+      "adoption": "audit-license",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "study interruption/transcription/UI flow; license absent from API metadata"
+    },
+    {
+      "slug": "duixcom/Duix-Avatar",
+      "url": "https://github.com/duixcom/Duix-Avatar",
+      "domain": "avatar",
+      "license": "complex",
+      "adoption": "isolated-experiment",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "heavy local digital-avatar inference; audit model licenses and consent"
+    },
+    {
+      "slug": "Wan-Video/Wan2.1",
+      "url": "https://github.com/Wan-Video/Wan2.1",
+      "domain": "video",
+      "license": "Apache-2.0",
+      "adoption": "isolated-experiment",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "GPU-intensive local video; prefer controlled remote worker, not Vercel runtime"
+    },
+    {
+      "slug": "Comfy-Org/ComfyUI",
+      "url": "https://github.com/Comfy-Org/ComfyUI",
+      "domain": "media-pipeline",
+      "license": "GPL-3.0",
+      "adoption": "isolated-service",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "external GPU workflow server API, not embedded in Next.js or copied sources"
+    },
+    {
+      "slug": "JustVugg/colibri",
+      "url": "https://github.com/JustVugg/colibri",
+      "domain": "local-llm",
+      "license": "Apache-2.0",
+      "adoption": "benchmark-only",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "MoE C runtime hardware benchmarking; not needed for current production"
+    },
+    {
+      "slug": "leacho73/panalume",
+      "url": "https://github.com/leacho73/panalume",
+      "domain": "ui-reference",
+      "license": "MIT",
+      "adoption": "reference-only",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "Home Assistant dashboard reference; avoid new JK dashboard"
+    },
+    {
+      "slug": "karpathy/llm-council",
+      "url": "https://github.com/karpathy/llm-council",
+      "domain": "deliberation",
+      "license": "unverified",
+      "adoption": "independent-implementation",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "Native JK council uses existing Abacus budget with explicit server opt-in; upstream code not embedded and independent models not verified."
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+.studio {
+  display: grid;
+  gap: 1.5rem;
+  max-width: 1200px;
+}
+.studio section {
+  padding: clamp(16px, 3vw, 30px);
+  border: 1px solid #227990;
+  border-radius: 20px;
+  background: #071a26cc;
+  min-width: 0;
+}
+.studio label {
+  display: block;
+  margin-block: 12px;
+}
+.studio textarea {
+  display: block;
+  width: 100%;
+  min-height: 150px;
+  margin-block: 8px;
+  padding: 14px;
+  border: 1px solid #407b90;
+  border-radius: 10px;
+  background: #06121d;
+  color: #e8f4ff;
+  font: inherit;
+}
+.studio .code {
+  min-height: 340px;
+  font-family: monospace;
+}
+.studio button {
+  padding: 10px 16px;
+  border: 1px solid #48cce6;
+  border-radius: 10px;
+  background: #0a2638;
+  color: #e8f4ff;
+  cursor: pointer;
+}
+.studio button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.studio button[aria-pressed="true"] {
+  background: #125a73;
+}
+.studio button:focus-visible,
+.studio textarea:focus-visible {
+  outline: 3px solid #80ecff;
+  outline-offset: 3px;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.reference {
+  max-width: 100%;
+  max-height: 320px;
+  object-fit: contain;
+  display: block;
+  margin-block: 16px;
+}
+.studio iframe {
+  width: 100%;
+  height: 600px;
+  border: 1px solid #326e80;
+  border-radius: 12px;
+  background: white;
+}
+.studio pre {
+  max-height: 420px;
+  overflow: auto;
+  padding: 14px;
+  background: #020e17;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.wire {
+  font-size: 12px;
+}
+.studio small {
+  color: #b4d7e2;
+}
+.studio summary {
+  cursor: pointer;
+  padding: 12px 0;
+}
+@media (max-width: 600px) {
+  .studio iframe {
+    height: 480px;
+  }
+  .studio section {
+    padding: 14px;
+  }
+}

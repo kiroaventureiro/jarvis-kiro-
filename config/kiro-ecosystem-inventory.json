@@ -1,0 +1,222 @@
+{
+  "version": 1,
+  "stage": "architecture_only",
+  "services": [
+    {
+      "name": "Suno",
+      "category": "music_creation",
+      "connectionStrategy": "API de parceiros / acesso a confirmar",
+      "purpose": "Gerar trilhas, consultar produções, aprovação de custo e uso",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "LIVEPX",
+      "category": "live_monetization",
+      "connectionStrategy": "verificar API/webhooks autorizados",
+      "purpose": "Acompanhar Pix, alertas, metas e TTS; nunca movimentar valores automaticamente",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Instagram",
+      "category": "social",
+      "connectionStrategy": "Meta API sujeito às permissões",
+      "purpose": "Métricas e postagem somente com aprovação",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "CapCut",
+      "category": "video_editing",
+      "connectionStrategy": "exportação manual ou integração oficial a verificar",
+      "purpose": "Fluxo de montagem de vídeos",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Canva",
+      "category": "design",
+      "connectionStrategy": "integração oficial/autorizada",
+      "purpose": "Artes e identidade visual",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Grok",
+      "category": "ai_video",
+      "connectionStrategy": "API ou integração disponível a verificar",
+      "purpose": "Prompts e vídeos",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Hostinger",
+      "category": "hosting",
+      "connectionStrategy": "API/painel autorizado a verificar",
+      "purpose": "Sites e domínios",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "GitHub",
+      "category": "development",
+      "connectionStrategy": "token de leitura",
+      "purpose": "Projetos e versões",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Vercel",
+      "category": "deployment",
+      "connectionStrategy": "token de leitura",
+      "purpose": "Deploys e logs",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Supabase",
+      "category": "database",
+      "connectionStrategy": "credencial de servidor",
+      "purpose": "Dados do Jarvis",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "OBS",
+      "category": "streaming",
+      "connectionStrategy": "consulta autenticada do WebSocket v5 pelo navegador no mesmo aparelho; sem controle remoto",
+      "purpose": "Status e cenas",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "KIRO TV",
+      "category": "broadcast",
+      "connectionStrategy": "agente Windows controlado",
+      "purpose": "Grade e programação",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "n8n",
+      "category": "automation",
+      "connectionStrategy": "API autorizada",
+      "purpose": "Fluxos",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "YouTube",
+      "category": "social",
+      "connectionStrategy": "Google OAuth",
+      "purpose": "Métricas e conteúdo",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "TikTok",
+      "category": "social",
+      "connectionStrategy": "OAuth/API autorizada",
+      "purpose": "Métricas",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Google Drive/Gmail/Calendar",
+      "category": "productivity",
+      "connectionStrategy": "OAuth",
+      "purpose": "Arquivos, e-mail e agenda",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Microsoft 365",
+      "category": "productivity",
+      "connectionStrategy": "Microsoft Graph OAuth",
+      "purpose": "OneDrive e Outlook",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Apple/iCloud",
+      "category": "mobile",
+      "connectionStrategy": "Sign in with Apple e autorização separada para Mail",
+      "purpose": "iPhone e e-mail",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "InVideo",
+      "category": "video_creation",
+      "connectionStrategy": "API/conector a confirmar",
+      "purpose": "Produção de vídeo",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Linktree",
+      "category": "distribution",
+      "connectionStrategy": "API ou integração a confirmar",
+      "purpose": "Links públicos",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Hotmart",
+      "category": "commerce",
+      "connectionStrategy": "API autorizada",
+      "purpose": "Produtos digitais e vendas",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Spotify",
+      "category": "distribution",
+      "connectionStrategy": "API adequada a verificar",
+      "purpose": "Presença e métricas",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "Google Analytics 4",
+      "category": "analytics",
+      "connectionStrategy": "Google OAuth",
+      "purpose": "Métricas dos sites",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    },
+    {
+      "name": "OpenAI",
+      "category": "ai_video",
+      "connectionStrategy": "Sessão efêmera pelo servidor, após autenticação",
+      "purpose": "Conversa por voz e texto com o Jarvis",
+      "status": "planned_not_connected",
+      "requiresUserAuthorization": true,
+      "automaticWrites": false
+    }
+  ]
+}

@@ -1,0 +1,343 @@
+/* Jarvis presence: live geometry, depth and restrained ambient light. */
+.jarvis-stage {
+  background: #020713;
+}
+.jk-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse at 50% 46%,
+    #041b3c 0,
+    #020b1b 40%,
+    #020713 77%
+  );
+}
+.jk-backdrop svg {
+  width: 100%;
+  height: 100%;
+  opacity: 0.8;
+  mask-image: radial-gradient(ellipse at center, transparent 14%, #000 55%);
+}
+.jk-distant-light {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  background: #bfefff;
+  border-radius: 50%;
+  box-shadow:
+    0 0 13px 3px #087bff,
+    0 0 45px 6px #7255ff55;
+  animation: jk-twinkle 6s ease-in-out infinite;
+}
+.light-one {
+  left: 14%;
+  top: 28%;
+}
+.light-two {
+  right: 12%;
+  top: 65%;
+  animation-delay: -3s;
+}
+.presence {
+  width: min(96vw, 1320px, calc(145dvh - 240px));
+  top: 43%;
+}
+.jk-core {
+  --jk-energy: 0.8;
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1.5;
+  pointer-events: none;
+  isolation: isolate;
+}
+.jk-canvas,
+.jk-fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+}
+.jk-canvas {
+  filter: drop-shadow(0 0 3px #25bfff99);
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.jk-core[data-renderer="webgl"] .jk-canvas {
+  opacity: 1;
+}
+.jk-core[data-renderer="webgl"] .jk-fallback {
+  visibility: hidden;
+}
+.jk-fallback {
+  filter: drop-shadow(0 0 3px #087bff);
+  opacity: 0.9;
+}
+.jk-fallback-orbit {
+  transform-origin: 0 0;
+  animation: jk-orbit-drift 18s ease-in-out infinite alternate;
+}
+.jk-fallback-orbit-1 {
+  animation-duration: 23s;
+  animation-direction: alternate-reverse;
+}
+.jk-fallback-orbit-2 {
+  animation-duration: 29s;
+}
+.jk-fallback-orbit-3 {
+  animation-duration: 34s;
+  animation-direction: alternate-reverse;
+}
+.jk-aura {
+  position: absolute;
+  width: 71%;
+  height: 96%;
+  left: 14.5%;
+  top: 2%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    #42dfff20 0,
+    #087bff19 24%,
+    #087bff08 51%,
+    transparent 70%
+  );
+  filter: blur(12px);
+  opacity: var(--jk-energy);
+  animation: jk-breathe 7s ease-in-out infinite;
+}
+.jk-light-column {
+  position: absolute;
+  z-index: 1;
+  left: 43%;
+  top: 34%;
+  width: 14%;
+  height: 61%;
+  background: radial-gradient(ellipse at bottom, #42dfff38, transparent 70%);
+  filter: blur(10px);
+}
+.jk-emitter {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 89%;
+  width: 58%;
+  height: 13%;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    #e2faffdd 0,
+    #42dfff88 4%,
+    #087bff33 15%,
+    #087bff08 44%,
+    transparent 71%
+  );
+  filter: brightness(var(--jk-energy));
+}
+.jk-emitter:before {
+  content: "";
+  position: absolute;
+  left: 47.6%;
+  width: 4.8%;
+  height: 120%;
+  top: -40%;
+  background: radial-gradient(
+    ellipse,
+    #e2faff 0,
+    #42dfff80 21%,
+    transparent 66%
+  );
+  filter: blur(2px);
+}
+.jk-emitter i {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 32%;
+  bottom: 32%;
+  border: 1px solid #42dfff44;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #087bff22;
+}
+.jk-emitter i:nth-child(2) {
+  left: 0;
+  right: 0;
+  top: 12%;
+  bottom: 12%;
+  opacity: 0.45;
+}
+.jk-emitter i:nth-child(3) {
+  left: -13%;
+  right: -13%;
+  top: -8%;
+  bottom: -8%;
+  opacity: 0.2;
+}
+.jk-core[data-phase="waiting"] .jk-aura {
+  animation-duration: 3.5s;
+}
+.jk-core[data-phase="listening"] .jk-aura {
+  animation-duration: 1.8s;
+}
+.jk-core[data-phase="responding"] .jk-aura {
+  animation: jk-voice 1.3s ease-in-out infinite;
+}
+.jk-core[data-phase="processing"] .jk-fallback-orbit {
+  animation-duration: 5s;
+}
+.jk-core[data-phase="error"] {
+  filter: saturate(0.65);
+  opacity: 0.62;
+}
+.jk-core[data-phase="error"] .jk-aura {
+  animation: none;
+  opacity: 0.4;
+}
+.is-hidden .jk-core *,
+.is-hidden .jk-backdrop * {
+  animation-play-state: paused !important;
+}
+.state-indicator {
+  position: relative;
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  color: #a8cfe6;
+}
+.state-indicator .connection-label {
+  color: #7c9eb5;
+}
+.dock-controls {
+  border-color: #42dfff30;
+  background: #041328de;
+  box-shadow:
+    0 0 32px #087bff09,
+    inset 0 1px #bdeeff0d;
+}
+.graphics-settings {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+.graphics-settings label {
+  font-size: 14px;
+  color: #c9eaf7;
+}
+.graphics-settings p {
+  font-size: 13px;
+  color: #a9c2ce;
+}
+@keyframes jk-breathe {
+  0%,
+  100% {
+    opacity: 0.65;
+    scale: 0.98;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.03;
+  }
+}
+@keyframes jk-voice {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  35% {
+    opacity: 1;
+  }
+  65% {
+    opacity: 0.82;
+  }
+}
+@keyframes jk-twinkle {
+  0%,
+  100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+@keyframes jk-orbit-drift {
+  from {
+    rotate: -5deg;
+  }
+  to {
+    rotate: 5deg;
+  }
+}
+@media (min-width: 1200px) {
+  .jarvis-stage:has(.response-hud) .presence {
+    left: 39%;
+    width: min(69vw, 900px, calc(105dvh - 220px));
+  }
+  .has-attachments .presence {
+    width: min(61vw, 800px, calc(100dvh - 220px));
+  }
+}
+@media (min-width: 851px) and (max-width: 1199px) {
+  .jarvis-stage:has(.response-hud) .presence {
+    left: 39%;
+    width: 68vw;
+  }
+  .has-attachments .presence {
+    left: 57%;
+    width: 65vw;
+  }
+}
+@media (max-width: 850px) {
+  .presence {
+    top: 39%;
+    width: min(98vw, 720px, calc(120dvh - 200px));
+  }
+  .state-indicator {
+    font-size: 10px;
+    gap: 6px;
+    margin-top: 20px;
+  }
+  .jarvis-stage:has(.response-hud) .presence {
+    top: 29%;
+    width: min(94vw, 490px);
+  }
+  .has-attachments .presence {
+    top: 44%;
+    width: min(91vw, 440px);
+  }
+  .has-attachments:has(.response-hud) .presence {
+    opacity: 0.5;
+  }
+}
+@media (max-height: 600px) {
+  .presence {
+    top: 40%;
+    width: min(65vw, calc(104dvh - 155px));
+  }
+  .jarvis-stage:has(.response-hud) .presence {
+    left: 30%;
+    top: 40%;
+    width: min(55vw, 480px);
+  }
+  .state-indicator {
+    margin-top: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jk-core *,
+  .jk-backdrop * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.jk-emitter {
+  filter: brightness(calc(1 + var(--jk-energy) * 0.3));
+}
+.jk-emitter:before {
+  box-shadow: 0 0 16px #42dfff66;
+  filter: drop-shadow(0 0 5px #42dfff);
+}

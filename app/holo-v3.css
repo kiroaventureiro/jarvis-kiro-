@@ -1,0 +1,256 @@
+.holo-experience-v2[data-spatial="true"] .cinema-primary > .holo-panel {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  overflow: visible;
+}
+.holo-experience-v2[data-spatial="true"] .cinema-primary .holo-panel-heading {
+  background: transparent;
+  border: 0;
+  padding-left: 20px;
+}
+.holo-experience-v2[data-spatial="true"] .holo-panel-corner {
+  display: none;
+}
+.holo-experience-v2[data-spatial="true"] .holo-panel-body {
+  background: radial-gradient(ellipse at 40% 40%, #05253e70, transparent 75%);
+  border: 0;
+}
+.holo-experience-v2[data-spatial="true"] .holo-map-viewport,
+.holo-experience-v2[data-spatial="true"] .holo-world-viewport {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.holo-experience-v2[data-spatial="true"] .cinema-primary {
+  animation: jk-spatial-arrive 0.8s ease both;
+}
+.holo-experience-v2[data-spatial="true"] .holo-media-frame {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.holo-experience-v2[data-spatial="true"] .holo-media img {
+  object-fit: contain;
+  max-height: 43dvh;
+  filter: drop-shadow(0 12px 22px #0008);
+}
+.holo-map-viewport g {
+  transition: transform 1.2s ease;
+  transform-origin: 0 0;
+}
+.holo-geography-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #b9cbd8;
+  display: block;
+  margin: 8px 0;
+}
+.cinema-root[data-closing="true"] {
+  opacity: 0;
+  transform: translateY(22px) scale(0.96);
+  transition:
+    opacity 0.7s,
+    transform 0.7s;
+  pointer-events: none;
+}
+.cinema-voice-recovery {
+  position: absolute;
+  z-index: 25;
+  top: 44px;
+  left: 8px;
+  max-width: 520px;
+  padding: 14px;
+  pointer-events: auto;
+  font: 14px/1.6 var(--holo-font);
+}
+.cinema-voice-recovery button {
+  margin-right: 10px;
+  font: inherit;
+}
+.dock-preferences {
+  position: relative;
+  pointer-events: auto;
+  font: 11px/1.5 var(--holo-font);
+  color: #a8c1cf;
+  text-align: center;
+}
+.dock-preferences > summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 5px 14px;
+}
+.dock-preferences > div {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  padding: 14px;
+  z-index: 80;
+  background: #041526f7;
+}
+.wake-status {
+  position: fixed;
+  left: 50%;
+  bottom: 125px;
+  transform: translateX(-50%);
+  max-width: min(480px, 90vw);
+  background: #041526ee;
+  border: 1px solid #6ed4f73b;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font: 12px/1.5 var(--holo-font);
+  text-align: center;
+  z-index: 35;
+}
+.state-indicator:has(.connection-label:empty) {
+  font-size: 12px;
+}
+.connection-label:empty {
+  display: none;
+}
+.dock-controls .icon-button svg {
+  width: 24px;
+  height: 24px;
+}
+@keyframes jk-spatial-arrive {
+  from {
+    opacity: 0;
+    transform: perspective(1000px) translateZ(-45px) translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 850px) {
+  .wake-status {
+    bottom: 115px;
+    font-size: 11px;
+  }
+  .holo-experience-v2[data-spatial="true"] .holo-panel-heading {
+    padding-left: 12px;
+  }
+  .holo-geography-note {
+    font-size: 11px;
+  }
+  .cinema-voice-recovery {
+    max-width: calc(100% - 16px);
+    font-size: 12px;
+  }
+  .dock-preferences {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-map-viewport g,
+  .holo-experience-v2[data-spatial="true"] .cinema-primary,
+  .cinema-root[data-closing="true"] {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.holo-reference-image {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  min-height: 100px;
+}
+.holo-reference-image img {
+  width: auto;
+  max-width: 100%;
+  max-height: 38dvh;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 15px 30px #0007);
+}
+.holo-reference-image figcaption {
+  font: 13px/1.6 var(--holo-font);
+  color: #bcd4e1;
+  max-width: 650px;
+}
+.holo-reference-image summary {
+  cursor: pointer;
+  font: inherit;
+  margin-top: 6px;
+}
+.holo-reference-image small {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.holo-reference-image a {
+  color: #a7deff;
+}
+@media (max-width: 850px) {
+  .holo-reference-image img {
+    max-height: 28dvh;
+  }
+  .holo-reference-image figcaption {
+    font-size: 12px;
+  }
+}
+
+.voice-comparison {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #5ac9e33b;
+}
+.voice-comparison summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.voice-candidate {
+  padding: 16px 0;
+  border-bottom: 1px solid #5ac9e320;
+}
+.voice-candidate small {
+  display: block;
+  color: #b5cbd7;
+  margin: 5px 0;
+}
+.voice-candidate > div {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.voice-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+.voice-comparison th,
+.voice-comparison td {
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+  border: 1px solid #5ac9e33b;
+}
+.voice-comparison caption {
+  text-align: left;
+  color: #a8c7d9;
+  margin-bottom: 8px;
+}
+.holo-prepared-export {
+  border-top: 1px solid #59c9e444;
+  padding: 10px 0;
+}
+@media (max-width: 650px) {
+  .voice-comparison table,
+  .voice-comparison tbody,
+  .voice-comparison tr,
+  .voice-comparison td,
+  .voice-comparison th {
+    display: block;
+  }
+  .voice-comparison thead {
+    display: none;
+  }
+}

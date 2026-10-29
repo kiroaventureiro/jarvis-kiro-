@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "status": "curated_seed_not_verified_live",
+  "rules": [
+    {
+      "project": "pai-filho-pai",
+      "id": "pfp-cast",
+      "severity": "hard",
+      "description": "Elenco recorrente: dois pais, um filho, Bombom e Benjamim; não introduzir novos personagens sem aprovação."
+    },
+    {
+      "project": "pai-filho-pai",
+      "id": "pfp-dogs",
+      "severity": "hard",
+      "description": "Bombom e Benjamim são cães da raça Shih Tzu; Benjamim nunca deve ser tratado como humano."
+    },
+    {
+      "project": "pai-filho-pai",
+      "id": "pfp-format",
+      "severity": "default",
+      "description": "Animação infantil 3D não realista. Formato principal 9:16; 16:9 quando solicitado."
+    },
+    {
+      "project": "pai-filho-pai",
+      "id": "pfp-visual",
+      "severity": "default",
+      "description": "Cenas limpas, sem balões, legendas ou numeração nas imagens; falas em português brasileiro."
+    },
+    {
+      "project": "universo-kiro",
+      "id": "kiro-fragments",
+      "severity": "hard",
+      "description": "A trama acompanha cinco fragmentos; novas revelações exigem consistência com a temporada."
+    },
+    {
+      "project": "universo-kiro",
+      "id": "kiro-villains",
+      "severity": "hard",
+      "description": "Não revelar antecipadamente segredos narrativos de Umbra ou suas relações sem confirmação editorial."
+    },
+    {
+      "project": "codigo-zero",
+      "id": "cz-cast",
+      "severity": "default",
+      "description": "Preservar o elenco Leo, Maya, Dan, Nina, Bia, Rafa, Lara e o cão Bolt."
+    },
+    {
+      "project": "kiro-tv",
+      "id": "tv-closing",
+      "severity": "hard",
+      "description": "Os programas devem finalizar com: Continue com a gente, na KIRO TV."
+    },
+    {
+      "project": "kiro-tv",
+      "id": "tv-media",
+      "severity": "default",
+      "description": "Vinhetas e motor contínuo sem narração; falas permitidas nos programas e comerciais."
+    }
+  ],
+  "reviewRequiredForNewCanon": true
+}

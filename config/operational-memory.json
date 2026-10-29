@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "records": [
+    {
+      "id": "jarvis-architecture-2026-10-25",
+      "project": "jarvis-kiro",
+      "scope": "Kiro",
+      "topic": "architecture",
+      "source": "owner_decision",
+      "recorded_at": "2026-10-25",
+      "confidence": "reported",
+      "summary": "Priorizar personalidade, voz, memória de decisões e catálogo de integrações; configuração privada do Supabase adiada até acesso por computador.",
+      "decision": "Prosseguir em branch isolada sem chaves privadas.",
+      "retrieval_reference": "docs/WORK_WITHOUT_SECRETS.md"
+    },
+    {
+      "id": "sistema-origem-supabase-legacy",
+      "project": "Sistema-Origem",
+      "scope": "Kiro",
+      "topic": "database-history",
+      "source": "owner_report",
+      "recorded_at": "2026-10-25",
+      "confidence": "reported",
+      "summary": "Supabase legado tornou-se desnecessário após reestruturações e redução do banco; limite anterior atingido. Destino exato dos dados ainda não confirmado.",
+      "decision": "Manter acesso histórico apenas de leitura quando possível; não reativar automaticamente.",
+      "retrieval_reference": "docs/legacy/SISTEMA_ORIGEM_SUPABASE.md"
+    },
+    {
+      "id": "jarvis-dedicated-database",
+      "project": "jarvis-kiro",
+      "scope": "Kiro",
+      "topic": "infrastructure",
+      "source": "supabase_connector",
+      "recorded_at": "2026-10-25",
+      "confidence": "verified_at_recording",
+      "summary": "Projeto dedicado jarvis-kiro criado; tabelas passkeys e challenges com RLS; credencial privada da aplicação ainda não configurada.",
+      "decision": "Não ativar passkeys antes de testes reais.",
+      "retrieval_reference": "supabase/migrations/20261025_passkeys.sql"
+    }
+  ]
+}

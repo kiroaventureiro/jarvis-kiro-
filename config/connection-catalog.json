@@ -1,0 +1,1807 @@
+{
+  "version": 2,
+  "stage": "catalog_only",
+  "notice": "Catálogo de possibilidades. Cada cartão informa o fluxo implementado ou o bloqueio; presença não equivale a conexão.",
+  "items": [
+    {
+      "id": "openai",
+      "name": "OpenAI",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "abacus-ai",
+      "name": "Abacus AI",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "anthropic-claude",
+      "name": "Anthropic Claude",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-gemini",
+      "name": "Google Gemini",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "xai-grok",
+      "name": "xAI Grok",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "deepseek",
+      "name": "DeepSeek",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "mistral-ai",
+      "name": "Mistral AI",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "hugging-face",
+      "name": "Hugging Face",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "openrouter",
+      "name": "OpenRouter",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "groq",
+      "name": "Groq",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "together-ai",
+      "name": "Together AI",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "fireworks-ai",
+      "name": "Fireworks AI",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "lm-studio",
+      "name": "LM Studio",
+      "category": "Conversas e agentes",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "elevenlabs",
+      "name": "ElevenLabs",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "cartesia",
+      "name": "Cartesia",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-cloud-text-to-speech",
+      "name": "Google Cloud Text-to-Speech",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "azure-ai-speech",
+      "name": "Azure AI Speech",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "openai-realtime",
+      "name": "OpenAI Realtime",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "deepgram",
+      "name": "Deepgram",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "assemblyai",
+      "name": "AssemblyAI",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "speechmatics",
+      "name": "Speechmatics",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "playht",
+      "name": "PlayHT",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "resemble-ai",
+      "name": "Resemble AI",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "amazon-polly",
+      "name": "Amazon Polly",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "whisper",
+      "name": "Whisper",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "picovoice",
+      "name": "Picovoice",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "suno",
+      "name": "Suno",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "udio",
+      "name": "Udio",
+      "category": "Voz e áudio",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "openai-images",
+      "name": "OpenAI Images",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "adobe-firefly",
+      "name": "Adobe Firefly",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "canva",
+      "name": "Canva",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "openart",
+      "name": "OpenArt",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "ideogram",
+      "name": "Ideogram",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "leonardo-ai",
+      "name": "Leonardo AI",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "stability-ai",
+      "name": "Stability AI",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "replicate",
+      "name": "Replicate",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "recraft",
+      "name": "Recraft",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "midjourney",
+      "name": "Midjourney",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "freepik",
+      "name": "Freepik",
+      "category": "Imagens e design",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "runway",
+      "name": "Runway",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "kling-ai",
+      "name": "Kling AI",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "pika",
+      "name": "Pika",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "luma-ai",
+      "name": "Luma AI",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-veo",
+      "name": "Google Veo",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "invideo",
+      "name": "InVideo",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "heygen",
+      "name": "HeyGen",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "synthesia",
+      "name": "Synthesia",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "capcut",
+      "name": "CapCut",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "descript",
+      "name": "Descript",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "veed",
+      "name": "VEED",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "pixverse",
+      "name": "PixVerse",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "higgsfield",
+      "name": "Higgsfield",
+      "category": "Vídeo e edição",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "youtube-studio",
+      "name": "YouTube Studio",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "instagram",
+      "name": "Instagram",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "facebook",
+      "name": "Facebook",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "facebook-pages",
+      "name": "Facebook Pages",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "tiktok",
+      "name": "TikTok",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "threads",
+      "name": "Threads",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "x",
+      "name": "X",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "linkedin",
+      "name": "LinkedIn",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "pinterest",
+      "name": "Pinterest",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "twitch",
+      "name": "Twitch",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "telegram",
+      "name": "Telegram",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "whatsapp-business",
+      "name": "WhatsApp Business",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "bluesky",
+      "name": "Bluesky",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "reddit",
+      "name": "Reddit",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "spotify-for-creators",
+      "name": "Spotify for Creators",
+      "category": "Redes sociais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "n8n",
+      "name": "n8n",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "make",
+      "name": "Make",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "zapier",
+      "name": "Zapier",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "ifttt",
+      "name": "IFTTT",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "manychat",
+      "name": "ManyChat",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-teams",
+      "name": "Microsoft Teams",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "resend",
+      "name": "Resend",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "gmail",
+      "name": "Gmail",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "outlook",
+      "name": "Outlook",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-calendar",
+      "name": "Google Calendar",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-calendar",
+      "name": "Microsoft Calendar",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "twilio",
+      "name": "Twilio",
+      "category": "Automação e comunicação",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "gitlab",
+      "name": "GitLab",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "netlify",
+      "name": "Netlify",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "hostinger",
+      "name": "Hostinger",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "firebase",
+      "name": "Firebase",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "convex",
+      "name": "Convex",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "wordpress",
+      "name": "WordPress",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-search-console",
+      "name": "Google Search Console",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-analytics-4",
+      "name": "Google Analytics 4",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-ads",
+      "name": "Google Ads",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-adsense",
+      "name": "Google AdSense",
+      "category": "Sites e desenvolvimento",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-drive",
+      "name": "Google Drive",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-sheets",
+      "name": "Google Sheets",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-docs",
+      "name": "Google Docs",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "dropbox",
+      "name": "Dropbox",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "onedrive",
+      "name": "OneDrive",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "airtable",
+      "name": "Airtable",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "trello",
+      "name": "Trello",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "asana",
+      "name": "Asana",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "clickup",
+      "name": "ClickUp",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "monday-com",
+      "name": "Monday.com",
+      "category": "Arquivos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "obs-studio",
+      "name": "OBS Studio",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "kiro-tv",
+      "name": "KIRO TV",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "kiro-gestao",
+      "name": "KIRO Gestão",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "guardioes-da-origem",
+      "name": "Guardiões da Origem",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "portal-origem",
+      "name": "Portal Origem",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "kiro-editor",
+      "name": "KIRO Editor",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "youtube-live",
+      "name": "YouTube Live",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "twitch-streaming",
+      "name": "Twitch Streaming",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "livepx",
+      "name": "LIVEPX",
+      "category": "KIRO e transmissão",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "hotmart",
+      "name": "Hotmart",
+      "category": "Negócio e vendas",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "shopify",
+      "name": "Shopify",
+      "category": "Negócio e vendas",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "woocommerce",
+      "name": "WooCommerce",
+      "category": "Negócio e vendas",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "mercado-livre",
+      "name": "Mercado Livre",
+      "category": "Negócio e vendas",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "category": "Negócio e vendas",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "paypal",
+      "name": "PayPal",
+      "category": "Negócio e vendas",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "mercado-pago",
+      "name": "Mercado Pago",
+      "category": "Negócio e vendas",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "nubank-pj",
+      "name": "Nubank PJ",
+      "category": "Negócio e vendas",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "visual-studio-code",
+      "name": "Visual Studio Code",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "windsurf",
+      "name": "Windsurf",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "replit",
+      "name": "Replit",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "lovable",
+      "name": "Lovable",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "bolt-new",
+      "name": "Bolt.new",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "v0-by-vercel",
+      "name": "v0 by Vercel",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "openai-codex",
+      "name": "OpenAI Codex",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "jetbrains-ides",
+      "name": "JetBrains IDEs",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "android-studio",
+      "name": "Android Studio",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "xcode",
+      "name": "Xcode",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "visual-studio",
+      "name": "Visual Studio",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "github-copilot",
+      "name": "GitHub Copilot",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "claude-code",
+      "name": "Claude Code",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "firebase-studio",
+      "name": "Firebase Studio",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "codesandbox",
+      "name": "CodeSandbox",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "stackblitz",
+      "name": "StackBlitz",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "glitch",
+      "name": "Glitch",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "railway",
+      "name": "Railway",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "render",
+      "name": "Render",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "docker",
+      "name": "Docker",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "postman",
+      "name": "Postman",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "insomnia",
+      "name": "Insomnia",
+      "category": "Desenvolvimento e IDEs",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "figma",
+      "name": "Figma",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "framer",
+      "name": "Framer",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "blender",
+      "name": "Blender",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "adobe-photoshop",
+      "name": "Adobe Photoshop",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "adobe-illustrator",
+      "name": "Adobe Illustrator",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "adobe-after-effects",
+      "name": "Adobe After Effects",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "adobe-premiere-pro",
+      "name": "Adobe Premiere Pro",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "davinci-resolve",
+      "name": "DaVinci Resolve",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "unreal-engine",
+      "name": "Unreal Engine",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "unity",
+      "name": "Unity",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "godot",
+      "name": "Godot",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "spline",
+      "name": "Spline",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "cinema-4d",
+      "name": "Cinema 4D",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "krita",
+      "name": "Krita",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "gimp",
+      "name": "GIMP",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "affinity-designer",
+      "name": "Affinity Designer",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "photopea",
+      "name": "Photopea",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "procreate",
+      "name": "Procreate",
+      "category": "Criação visual e 3D",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "neon",
+      "name": "Neon",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "mongodb-atlas",
+      "name": "MongoDB Atlas",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "planetscale",
+      "name": "PlanetScale",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "turso",
+      "name": "Turso",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "redis-cloud",
+      "name": "Redis Cloud",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "aws",
+      "name": "AWS",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-azure",
+      "name": "Microsoft Azure",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-cloud-platform",
+      "name": "Google Cloud Platform",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "digitalocean",
+      "name": "DigitalOcean",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "cloudinary",
+      "name": "Cloudinary",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "sentry",
+      "name": "Sentry",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "grafana",
+      "name": "Grafana",
+      "category": "Bancos e infraestrutura",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "roblox-studio",
+      "name": "Roblox Studio",
+      "category": "Criação de jogos e experiências",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "construct-3",
+      "name": "Construct 3",
+      "category": "Criação de jogos e experiências",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "gdevelop",
+      "name": "GDevelop",
+      "category": "Criação de jogos e experiências",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "gamemaker",
+      "name": "GameMaker",
+      "category": "Criação de jogos e experiências",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "playcanvas",
+      "name": "PlayCanvas",
+      "category": "Criação de jogos e experiências",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "three-js",
+      "name": "Three.js",
+      "category": "Criação de jogos e experiências",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "phaser",
+      "name": "Phaser",
+      "category": "Criação de jogos e experiências",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-slides",
+      "name": "Google Slides",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-contacts",
+      "name": "Google Contatos",
+      "category": "Comunicação e agenda",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-photos",
+      "name": "Google Fotos",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-meet",
+      "name": "Google Meet",
+      "category": "Comunicação e agenda",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-tasks",
+      "name": "Google Tarefas",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "google-forms",
+      "name": "Google Forms",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-word",
+      "name": "Microsoft Word",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-excel",
+      "name": "Microsoft Excel",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-powerpoint",
+      "name": "Microsoft PowerPoint",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-contacts",
+      "name": "Microsoft Contatos",
+      "category": "Comunicação e agenda",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "microsoft-todo",
+      "name": "Microsoft To Do",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "sharepoint",
+      "name": "Microsoft SharePoint",
+      "category": "Documentos e produtividade",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    },
+    {
+      "id": "device-camera",
+      "name": "Câmera do dispositivo",
+      "category": "Dispositivos locais",
+      "status": "not_connected",
+      "integration": "requires_provider_review",
+      "requiresAuthorization": true,
+      "automaticSpending": false
+    }
+  ]
+}
