@@ -18,3 +18,9 @@ test("Artifact endpoint fails closed without storage and checks session",()=>{
  assert.match(route,/validJarvisArtifactId\(id\)/);
  assert.doesNotMatch(route,/readFile|createReadStream|redirect\(/);
 });
+
+test("Nested artifact route resolves both protected server modules",()=>{
+ const route=readFileSync(new URL("../app/api/director/artifacts/[id]/route.ts",import.meta.url),"utf8");
+ assert.match(route,/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/lib\/auth/);
+ assert.match(route,/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/lib\/orchestration\/artifact-access/);
+});
