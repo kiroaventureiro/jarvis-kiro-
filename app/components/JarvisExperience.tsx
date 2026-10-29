@@ -42,7 +42,8 @@ import {
   visibleResponses,
 } from "../../lib/response-presentation";
 import { getVoiceManager } from "../../lib/voice/speech-output";
-import { readVoicePreferences } from "../../lib/voice/voice-preferences";
+import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voice-preferences";
+import { voiceAction } from "../../lib/voice/local-intents";
 import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
 import { useFileWorkspace } from "./useFileWorkspace";
 import {
@@ -749,7 +750,31 @@ export default function JarvisExperience() {
     });
     setMic(enabled);
   }
+  function selfControlReply(text:string) {
+    const action=voiceAction(text);
+    if(action==="none")return null;
+    let reply="";
+    if(action==="volume_up"||action==="volume_down"){
+      const prefs=readVoicePreferences();
+      const next=Math.max(0,Math.min(1,Math.round((prefs.volume+(action==="volume_up"?0.15:-0.15))*100)/100));
+      saveVoicePreferences({...prefs,volume:next});
+      if(audio.current)audio.current.volume=next;
+      reply="Volume ajustado para "+Math.round(next*100)+" por cento.";
+    } else if(action==="keyboard"){
+      setTyping(true);
+      reply="Campo de escrita aberto.";
+    } else if(action==="files"){
+      setTyping(true);
+      reply="Preparei a opção de anexar arquivos. Para selecionar um arquivo local, o navegador pode exigir um clique.";
+    } else {
+      getVoiceManager().cancel();
+      reply="Interrompi a fala atual.";
+    }
+    return {text:reply,model:"jk-local-action",provider:"local_operational" as const,usage:null,visual:undefined};
+  }
   function localConversationReply(text: string) {
+    const selfControl=selfControlReply(text);
+    if(selfControl)return selfControl;
     const action = conversationAction(text);
     if (!action) return null;
     if (action.kind === "external")
