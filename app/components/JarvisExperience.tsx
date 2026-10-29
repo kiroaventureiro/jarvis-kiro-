@@ -9,7 +9,8 @@ import { abacusEvidenceScene } from "../../lib/abacus/voice-evidence";
 import { conversationAction } from "../../lib/holo/conversation-actions";
 import HoloResponseHUD from "./holo/HoloResponseHUD";
 import { JarvisGeneratedImage } from "./JarvisGeneratedImage";
-import { desktopDownloadsSupported, readAutoDownloadPreference, saveAutoDownloadPreference } from "../../lib/downloads/automatic";
+import { desktopDownloadsSupported } from "../../lib/downloads/automatic";
+import { conversationalDownloadIntent } from "../../lib/downloads/conversation";
 import { JarvisResultPanel } from "../../components/jarvis-result-panel";
 import type { JarvisUnifiedResult } from "../../lib/orchestration/unified-result";
 import { useHoloSession } from "./holo/HoloSession";
@@ -72,12 +73,10 @@ export default function JarvisExperience() {
     [error, setError] = useState(""),
     [hidden, setHidden] = useState(false),
     [dragging, setDragging] = useState(false);
-  const [autoDownload, setAutoDownload] = useState(false);
   const [desktopDownloadCapable, setDesktopDownloadCapable] = useState(false);
+  const [pendingDownload, setPendingDownload] = useState<{id:string;file:File}|null>(null);
   useEffect(()=>{
-    const supported=desktopDownloadsSupported(navigator.userAgent,window.matchMedia("(pointer: coarse)").matches);
-    setDesktopDownloadCapable(supported);
-    if(supported)setAutoDownload(readAutoDownloadPreference(window.localStorage));
+    setDesktopDownloadCapable(desktopDownloadsSupported(navigator.userAgent,window.matchMedia("(pointer: coarse)").matches));
   },[]);
   const [generatedImages, setGeneratedImages] = useState<Array<{messageId:string;file:File;label:string;autoDownloadOnArrival:boolean}>>([]);
   const [unifiedResults, setUnifiedResults] = useState<Array<{ messageId: string; result: JarvisUnifiedResult }>>([]);
@@ -731,6 +730,26 @@ export default function JarvisExperience() {
       fileSpeech.current = null;
       setState("idle");
     }
+    const downloadIntent=conversationalDownloadIntent(text,!!pendingDownload && desktopDownloadCapable);
+    if (downloadIntent !== "other" && pendingDownload) {
+      const downloadId=pendingDownload.id;
+      const file=pendingDownload.file;
+      setPendingDownload(null);
+      setDraft("");
+      const response = downloadIntent === "decline"
+        ? "Certo, não vou baixar esta imagem."
+        : "Solicitei o download da imagem ao navegador. Confirme nas configurações do navegador se ele foi permitido.";
+      if (downloadIntent !== "decline") {
+        const url=URL.createObjectURL(file);
+        try {
+          const link=document.createElement("a");
+          link.href=url;link.download="jarvis-imagem-"+downloadId.slice(0,8)+(file.type==="image/png"?".png":file.type==="image/jpeg"?".jpg":".webp");
+          document.body.appendChild(link);link.click();link.remove();
+        } finally {window.setTimeout(()=>URL.revokeObjectURL(url),30000);}
+      }
+      setMessages(items=>[...items,{id:crypto.randomUUID(),role:"user",text},{id:crypto.randomUUID(),role:"assistant",text:response}]);
+      return;
+    }
     if (workspace.files.length) {
       await workspace.voiceInstruction();
       return;
@@ -819,7 +838,10 @@ export default function JarvisExperience() {
           onGeneratedMedia: (items) => {
             holoSession.rememberMedia(items);
             const image=items.find(item=>["image/png","image/jpeg","image/webp"].includes(item.file.type) && item.file.size <= 8_000_000);
-            if (image && !requestController.signal.aborted) setGeneratedImages(previous=>[...previous.slice(-7),{messageId:assistantId,file:image.file,label:image.label,autoDownloadOnArrival:desktopDownloadCapable && autoDownload}]);
+            if (image && !requestController.signal.aborted) {
+              setGeneratedImages(previous=>[...previous.slice(-7),{messageId:assistantId,file:image.file,label:image.label,autoDownloadOnArrival:false}]);
+              if (desktopDownloadCapable) setPendingDownload({id:assistantId,file:image.file});
+            }
           },
           history: messages.map(({ role, text }) => ({ role, content: text })),
           signal: requestController.signal,
@@ -1086,13 +1108,6 @@ export default function JarvisExperience() {
               </button>
             </div>
           </div>
-          {desktopDownloadCapable && <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,padding:"0 12px 8px"}}>
-            <input type="checkbox" checked={autoDownload} onChange={(event)=>{
-              const enabled=event.target.checked;
-              if(saveAutoDownloadPreference(window.localStorage,enabled))setAutoDownload(enabled);
-            }}/>
-            Baixar imagens automaticamente no PC
-          </label>}
           <div
             className="hud-content"
             ref={output}
