@@ -46,6 +46,7 @@ import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voic
 import { voiceAction } from "../../lib/voice/local-intents";
 import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
 import { codexDraftIntent } from "../../lib/codex/chat-intent";
+import { codexStatusIntent } from "../../lib/codex/status-intent";
 import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
 import { useFileWorkspace } from "./useFileWorkspace";
 import {
@@ -808,6 +809,20 @@ export default function JarvisExperience() {
       visual: undefined,
     };
   }
+  async function conversationalCodexStatus(text:string) {
+    const id=codexStatusIntent(text);
+    if(!id)return null;
+    try {
+      const response=await fetch("/api/director/codex/tasks/"+encodeURIComponent(id),{credentials:"same-origin",cache:"no-store"});
+      if(!response.ok)return {text:"Não consegui consultar essa tarefa Codex. Não iniciei nenhuma execução.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+      const data=await response.json();
+      const validStates=["draft","approved","queued","running","completed","failed","cancelled"];
+      const state=data.task?.state;
+      if(!validStates.includes(state))throw Error("INVALID_TASK_STATE");
+      const names:Record<string,string>={draft:"rascunho",approved:"aprovada",queued:"na fila",running:"em execução",completed:"concluída",failed:"falhou",cancelled:"cancelada"};
+      return {text:"A tarefa Codex "+id.slice(0,8)+" está registrada como "+names[state]+". "+(data.executorConnected===false?"O executor deste Jarvis ainda não está conectado.":"Consulte o resultado verificado antes de considerar qualquer ação concluída."),model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+    } catch {return {text:"O estado da tarefa Codex não pôde ser confirmado.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};}
+  }
   async function conversationalCodexDraft(text:string) {
     const intent=codexDraftIntent(text);
     if(!intent)return null;
@@ -906,7 +921,7 @@ export default function JarvisExperience() {
     try {
       const voiceFirst =
         desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
-      const local = localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexDraft(text);
+      const local = localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexStatus(text) || await conversationalCodexDraft(text);
       let generatedForThisResponse=false;
       const result =
         local ||
@@ -1346,7 +1361,7 @@ export default function JarvisExperience() {
               );
             }}
             onMessage={async (spoken, signal) => {
-              const local = localConversationReply(spoken) || await conversationalCapabilityReply(spoken) || await conversationalCodexDraft(spoken);
+              const local = localConversationReply(spoken) || await conversationalCapabilityReply(spoken) || await conversationalCodexStatus(spoken) || await conversationalCodexDraft(spoken);
               if (local) return { ...local, provider: "local_action" };
               if (spoken.length > 1500)
                 throw new Error(
