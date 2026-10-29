@@ -40,6 +40,11 @@ export async function withNativeConnectors(
       if (!c?.credentials || c.status === "disconnected") continue;
       const id: ServiceId = p === "supabase" ? "supabase-admin" : p,
         old = snapshot.integrations.find((s) => s.id === id);
+      const testedAt = c.lastTestAt || c.verifiedAt;
+      const readIsNewer =
+        !!c.lastReadAt &&
+        (!testedAt || Date.parse(c.lastReadAt) >= Date.parse(testedAt));
+      const evidenceAt = readIsNewer ? c.lastReadAt : testedAt;
       const result = serviceStatus(
         {
           id,
@@ -57,12 +62,16 @@ export async function withNativeConnectors(
             c.resources.length > 0,
           note: "Conector nativo; leitura limitada aos projetos escolhidos. Toda gravação exige plano aprovado. Memória Supabase é independente.",
         },
-        c.lastTestAt || c.verifiedAt
+        evidenceAt
           ? {
-              ok: !c.lastError && c.status === "connected",
-              checkedAt: Date.parse(c.lastTestAt || c.verifiedAt!),
-              checks: ["authorized_resource_listing"],
-              ...(c.lastError ? { failure: "permission" as const } : {}),
+              ok: (readIsNewer || !c.lastError) && c.status === "connected",
+              checkedAt: Date.parse(evidenceAt),
+              checks: readIsNewer
+                ? ["authorized_read:" + c.lastReadOperation]
+                : ["authorized_resource_listing"],
+              ...(!readIsNewer && c.lastError
+                ? { failure: "permission" as const }
+                : {}),
             }
           : undefined,
       );

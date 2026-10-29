@@ -16,6 +16,7 @@ type Dependencies = {
   localReply?: (
     message: string,
     signal: AbortSignal,
+    input: AbacusInput,
   ) => Promise<{ text: string; model: string; usage: unknown } | null>;
   permission: () => CostPermission;
   admit: (permission: CostPermission) => { allowed: boolean; reason: string };
@@ -115,7 +116,7 @@ export async function processAbacusRequest(
     );
   }
   if (deps.localReply) {
-    const local = await deps.localReply(message, request.signal);
+    const local = await deps.localReply(message, request.signal, input);
     if (local) return Response.json(local, { headers });
   }
   if (!deps.configured())

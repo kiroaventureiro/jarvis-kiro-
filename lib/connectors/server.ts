@@ -75,23 +75,33 @@ export async function developerPlanner() {
 export async function answerNativeRequest(
   message: string,
   signal?: AbortSignal,
+  history: import("./read-context").ReadTurn[] = [],
+  localOnly = false,
 ) {
-  const { shouldRunPlatformRead } = await import("../orchestration/tool-intent");
+  const { shouldRunPlatformRead } = await import(
+    "../orchestration/tool-intent"
+  );
   if (shouldRunPlatformRead(message)) {
-    const { answerAbacusPlatformQuestion } = await import("../abacus/platform-read");
+    const { answerAbacusPlatformQuestion } = await import(
+      "../abacus/platform-read"
+    );
     const platform = await answerAbacusPlatformQuestion(message, signal);
     if (platform) return platform;
   }
   // An explicit request to read connected systems must reach the real connector
   // before generic cognitive/planning status answers can intercept it.
   const { conversationalConnectorRead } = await import("./conversation");
-  const directRead = await conversationalConnectorRead(message);
+  const directRead = await conversationalConnectorRead(
+    message,
+    history,
+    signal,
+  );
   if (directRead) return directRead;
   const { answerWorkspaceQuestion } = await import("../workspace/conversation");
   const workspace = await answerWorkspaceQuestion(message);
   if (workspace) return workspace;
   const { answerCognitiveRequest } = await import("../cognitive/server");
-  const cognitive = await answerCognitiveRequest(message, signal);
+  const cognitive = await answerCognitiveRequest(message, signal, localOnly);
   if (cognitive) return cognitive;
   const intent = /\b(verifique|diagnostique|corrija|analise o site)\b/i.test(
     message,

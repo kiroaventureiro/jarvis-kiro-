@@ -1,4 +1,10 @@
 import { requestedProject, selectProjectResources } from "./project-selection";
+import {
+  contextualReadMessage,
+  isReadFollowup,
+  selfDiagnosticIntent,
+  type ReadTurn,
+} from "./read-context";
 import type { ConnectorService } from "./service";
 import type { StateStore } from "./types";
 import { type Provider } from "./types";
@@ -8,15 +14,33 @@ import type { HoloScene } from "../holo/types";
 const READ_PROVIDERS: Record<Provider, { aliases: string[]; summary: string }> =
   {
     github: {
-      aliases: ["github", "repositorio", "repositorios", "codigo", "commits", "commit", "branch", "branches"],
+      aliases: [
+        "github",
+        "git hub",
+        "repositorio",
+        "repositorios",
+        "codigo",
+        "commits",
+        "commit",
+        "branch",
+        "branches",
+      ],
       summary: "Repositórios, código e commits",
     },
     vercel: {
-      aliases: ["vercel", "deploy", "deployments", "implantacoes", "publicacoes", "build"],
+      aliases: [
+        "vercel",
+        "versel",
+        "deploy",
+        "deployments",
+        "implantacoes",
+        "publicacoes",
+        "build",
+      ],
       summary: "Projetos e deployments",
     },
     supabase: {
-      aliases: ["supabase", "banco de dados", "tabelas"],
+      aliases: ["supabase", "supa base", "banco de dados", "tabelas"],
       summary: "Schemas e diagnósticos",
     },
   };
@@ -93,20 +117,28 @@ export async function conversationalConnectorRead(
     connectors: Pick<ConnectorService, "readAuthorized">;
     connectorStore: Pick<StateStore, "configured" | "read">;
   },
+  history: ReadTurn[] = [],
+  signal?: AbortSignal,
 ) {
   const { connectors, connectorStore } = dependencies;
-  const n = normalize(message);
-  if (!readIntent.test(n)) return null;
+  if (selfDiagnosticIntent(message))
+    message = "Diagnostique Jarvis Kiro no GitHub, na Vercel e no Supabase";
+  let n = normalize(message);
+  const followup = isReadFollowup(message) && history.length > 0;
+  if (!readIntent.test(n) && !followup) return null;
   const mentioned = (Object.keys(READ_PROVIDERS) as Provider[]).filter((p) =>
     READ_PROVIDERS[p].aliases.some((alias) => n.includes(alias)),
   );
-  const detailedGitHub = /\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes)\b/.test(n);
+  const detailedGitHub =
+    /\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes)\b/.test(
+      n,
+    );
   const all =
     /\b(todos|todas|tudo|conexoes|integracoes|plataformas)\b/.test(n) ||
     /meus projetos|minhas conexoes/.test(n);
-  const providers = mentioned.length
+  let providers = mentioned.length
     ? mentioned
-    : all
+    : all || followup
       ? (Object.keys(READ_PROVIDERS) as Provider[])
       : [];
   if (!providers.length) return null;
@@ -119,6 +151,20 @@ export async function conversationalConnectorRead(
     };
   try {
     const state = await connectorStore.read();
+    if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
+    const contextual = contextualReadMessage(
+      message,
+      Object.values(state.connections).flatMap((c) => c?.resources || []),
+      history,
+    );
+    n = normalize(contextual);
+    if (followup) {
+      const services = (Object.keys(READ_PROVIDERS) as Provider[]).filter((p) =>
+        READ_PROVIDERS[p].aliases.some((alias) => n.includes(alias)),
+      );
+      if (services.length) providers = services;
+      else if (!all) return null;
+    }
     const results: string[] = [];
     let successful = 0;
     let failed = 0;
@@ -127,7 +173,7 @@ export async function conversationalConnectorRead(
     const findings: string[] = [];
     const panels: Array<{ label: string; detail: string }> = [];
     const selected = requestedProject(
-      message,
+      contextual,
       providers.flatMap((p) => state.connections[p]?.resources || []),
     );
     // Provider-only commands mean discover authorized resources, not a named project.
@@ -190,6 +236,7 @@ export async function conversationalConnectorRead(
         continue;
       }
       for (const resource of targets) {
+        if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
         const op =
           provider === "github"
             ? "repo"
@@ -201,31 +248,65 @@ export async function conversationalConnectorRead(
             provider,
             resource.id,
             op,
+            {},
+            signal,
           );
           successful++;
           verifiedNames.push(resource.name);
           let finding = observation(provider, checked.data);
           if (provider === "github" && detailedGitHub) {
-            const detailOperation = /\b(branch|branches)\b/.test(n) ? "branches" :
-              /\b(issues|problemas abertos)\b/.test(n) ? "issues" :
-              /\b(pulls|pull requests)\b/.test(n) ? "pulls" : "commits";
+            const detailOperation = /\b(branch|branches)\b/.test(n)
+              ? "branches"
+              : /\b(issues|problemas abertos)\b/.test(n)
+                ? "issues"
+                : /\b(pulls|pull requests)\b/.test(n)
+                  ? "pulls"
+                  : "commits";
             try {
-              const detail = await connectors.readAuthorized(provider, resource.id, detailOperation);
-              const rows = Array.isArray(detail.data) ? detail.data.slice(0, 5) : [];
-              const names = rows.flatMap(item => {
+              const detail = await connectors.readAuthorized(
+                provider,
+                resource.id,
+                detailOperation,
+                {},
+                signal,
+              );
+              const rows = Array.isArray(detail.data)
+                ? detail.data.slice(0, 5)
+                : [];
+              const names = rows.flatMap((item) => {
                 if (!item || typeof item !== "object") return [];
                 const entry = item as Record<string, unknown>;
-                const label = typeof entry.message === "string" ? entry.message :
-                  typeof entry.title === "string" ? entry.title :
-                  typeof entry.name === "string" ? entry.name : null;
-                return label ? [label.replace(/[\\u0000-\\u001f]/g," ").slice(0,100)] : [];
+                const label =
+                  typeof entry.message === "string"
+                    ? entry.message
+                    : typeof entry.title === "string"
+                      ? entry.title
+                      : typeof entry.name === "string"
+                        ? entry.name
+                        : null;
+                return label
+                  ? [label.replace(/[\u0000-\u001f]/g, " ").slice(0, 100)]
+                  : [];
               });
-              finding += " "+detailOperation+": "+(names.join("; ") || rows.length+" registros sem título");
+              finding +=
+                " " +
+                detailOperation +
+                ": " +
+                (names.join("; ") || rows.length + " registros sem título");
             } catch {
-              finding += " A consulta adicional de "+detailOperation+" não foi concluída.";
+              finding +=
+                " A consulta adicional de " +
+                detailOperation +
+                " não foi concluída.";
             }
           }
-          findings.push(displayName(resource.name) + ": " + finding);
+          findings.push(
+            provider.toUpperCase() +
+              " · " +
+              displayName(resource.name) +
+              ": " +
+              finding,
+          );
           results.push(
             "- " +
               resource.name +
@@ -242,6 +323,8 @@ export async function conversationalConnectorRead(
             detail: finding,
           });
         } catch {
+          if (signal?.aborted)
+            throw new DOMException("Cancelado", "AbortError");
           failed++;
           failedNames.push(resource.name);
           results.push(
@@ -262,7 +345,7 @@ export async function conversationalConnectorRead(
             " projetos autorizados não foram consultados nesta resposta para limitar tempo e volume. Solicite uma consulta específica.",
         );
     }
-    const sampleNames = verifiedNames
+    const sampleNames = [...new Set(verifiedNames)]
       .slice(0, 4)
       .map((name) => name.split("/").at(-1)!.replace(/[-_]/g, " "));
     const examples = sampleNames.length
@@ -283,7 +366,7 @@ export async function conversationalConnectorRead(
         "."
       : ".";
     const focused =
-      /commits?|branches|issues|pulls|historico|alteracoes recentes|detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnostic|analis/.test(
+      /commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes|detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnosti[cq]|analis/.test(
         n,
       );
     const selectedFindings = focused ? findings.slice(0, 3) : [];
@@ -291,15 +374,17 @@ export async function conversationalConnectorRead(
       (results.some((x) => x.includes("não está no escopo"))
         ? "O projeto solicitado não está autorizado em um dos provedores; consulte os detalhes no resultado. "
         : "") +
-      "Concluí " +
-      successful +
-      (successful === 1 ? " consulta de leitura." : " consultas de leitura.") +
-      examples +
-      (failed ? failureNote + failureDetail : "") +
       (selectedFindings.length
-        ? " Resultados: " + selectedFindings.join(" ")
-        : "") +
-      " Nenhuma alteração foi feita. Uma consulta concluída não comprova ausência de falhas no projeto.";
+        ? selectedFindings.join(" ")
+        : successful
+          ? "Fiz " +
+            successful +
+            (successful === 1
+              ? " consulta de leitura."
+              : " consultas de leitura.") +
+            examples
+          : results.slice(0, 3).join(" ")) +
+      (failed ? failureNote + failureDetail : "");
     const visual: HoloScene = {
       version: 1,
       id: "jk-connected-projects-" + Date.now(),
@@ -333,6 +418,7 @@ export async function conversationalConnectorRead(
       usage: null,
     };
   } catch {
+    if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
     return {
       text: "Não consegui consultar o cofre dos conectores agora. Não posso garantir que as contas estejam desconectadas.",
       model: "jk-tools",

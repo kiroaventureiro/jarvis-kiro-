@@ -1,5 +1,9 @@
 import { shouldRunPlatformRead } from "../orchestration/tool-intent";
 import { voiceUsageIntent } from "../voice/ledger";
+import {
+  isReadFollowup,
+  selfDiagnosticIntent,
+} from "../connectors/read-intent";
 import { voiceStudioIntent } from "../voice/voicestudio";
 import { abacusPlatformIntent } from "../abacus/platform-intent";
 import type { RealtimeEvent } from "../jarvis-realtime";
@@ -40,6 +44,7 @@ export function createOperationalVoiceTool(options: {
   isCurrent: () => boolean;
   onSnapshot?: (value: unknown) => void;
   question?: () => string;
+  history?: () => Array<{ role: "user" | "assistant"; content: string }>;
   allowPrivateAbacus?: () => boolean;
   onVisual?: (value: unknown) => void;
   fetcher?: typeof fetch;
@@ -108,7 +113,12 @@ export function createOperationalVoiceTool(options: {
             : shouldRunPlatformRead(question) ||
                 abacusPlatformIntent(question) ||
                 voiceUsageIntent(question) ||
-                voiceStudioIntent(question)
+                voiceStudioIntent(question) ||
+                /\b(github|git hub|vercel|versel|supabase|supa base)\b/i.test(
+                  question,
+                ) ||
+                isReadFollowup(question) ||
+                selfDiagnosticIntent(question)
               ? question
               : null;
         const researchCall = researchQuery !== null;
@@ -123,7 +133,20 @@ export function createOperationalVoiceTool(options: {
                 ? {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ query: researchQuery }),
+                    body: JSON.stringify({
+                      query: researchQuery,
+                      ...(options.history
+                        ? {
+                            history: options
+                              .history()
+                              .slice(-8)
+                              .map((t) => ({
+                                role: t.role,
+                                content: t.content.slice(0, 600),
+                              })),
+                          }
+                        : {}),
+                    }),
                   }
                 : {}),
               credentials: "same-origin",

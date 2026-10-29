@@ -6,8 +6,8 @@ test("third-party integration registry is an explicit, disabled allowlist",()=>{
   assert.equal(registry.schemaVersion,1);
   assert.equal(registry.policy.automaticInstall,false);
   assert.equal(registry.policy.productionChanges,false);
-  assert.equal(registry.repositories.length,10);
-  assert.equal(new Set(registry.repositories.map(x=>x.slug)).size,10);
+  assert.equal(registry.repositories.length,11);
+  assert.equal(new Set(registry.repositories.map(x=>x.slug)).size,11);
   for(const entry of registry.repositories){
     assert.match(entry.slug,/^[\w.-]+\/[\w.-]+$/);
     assert.equal(entry.url,"https://github.com/"+entry.slug);

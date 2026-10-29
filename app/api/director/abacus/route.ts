@@ -19,6 +19,7 @@ import { answerImages } from "../../../../lib/research/images";
 import { answerResearch } from "../../../../lib/research/server";
 import { localVisualReference } from "../../../../lib/holo/orchestrator";
 import { answerNativeRequest } from "../../../../lib/connectors/server";
+import { answerCouncilRequest } from "../../../../lib/orchestration/council-server";
 import {
   answerOperationalQuestion,
   operationalSnapshot,
@@ -74,8 +75,9 @@ export async function POST(request: Request) {
     configured: () => !!process.env.ABACUS_API_KEY,
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
-    localReply: async (message, signal) =>
-      (await answerNativeRequest(message, signal)) ||
+    localReply: async (message, signal, input) =>
+      (await answerCouncilRequest(message, signal)) ||
+      (await answerNativeRequest(message, signal, input.history)) ||
       (await answerVoiceUsageQuestion(message)) ||
       (await answerAbacusAgentQuestion(message, signal)) ||
       (await answerVoiceStudioQuestion(message, signal)) ||

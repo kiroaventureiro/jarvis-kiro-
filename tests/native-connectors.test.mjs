@@ -244,6 +244,43 @@ const action = (
 async function approve(f, p) {
   return f.service.approve(p.id, p.digest, p.confirmation, "owner-session");
 }
+
+test("a successful scoped read records fresh evidence without changing grants or credential verification", async () => {
+  const f = fixture();
+  await setup(f);
+  const before = await f.store.read();
+  const result = await f.service.readAuthorized(
+    "github",
+    "owner/project",
+    "repo",
+  );
+  const after = await f.store.read();
+  assert.equal(after.connections.github.lastReadAt, result.checkedAt);
+  assert.equal(after.connections.github.lastReadOperation, "repo");
+  assert.equal(
+    after.connections.github.verifiedAt,
+    before.connections.github.verifiedAt,
+  );
+  assert.deepEqual(
+    after.connections.github.grants,
+    before.connections.github.grants,
+  );
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(
+    f.service.readAuthorized(
+      "github",
+      "owner/project",
+      "repo",
+      {},
+      controller.signal,
+    ),
+  );
+  assert.equal(
+    (await f.store.read()).connections.github.lastReadAt,
+    result.checkedAt,
+  );
+});
 test("vault encryption authenticates environment and never stores plaintext", () => {
   const key = Buffer.alloc(32, 7),
     value = { accessToken: TOKEN };

@@ -43,6 +43,54 @@ const { admitVoiceSession, recordVoiceUsage, voiceUsageStats } = await load(
   "lib/voice/ledger.ts",
 );
 const { voiceSessionPolicy } = await load("lib/voice/session-policy.ts");
+
+test("voice follow-up forwards current bounded conversation without using it as authorization", async () => {
+  const calls = [],
+    sent = [];
+  let history = [{ role: "user", content: "Analise Jarvis Kiro no GitHub" }];
+  const tool = createOperationalVoiceTool({
+    signal: new AbortController().signal,
+    isCurrent: () => true,
+    send: (event) => sent.push(event),
+    history: () => history,
+    fetcher: async (url, options) => {
+      calls.push({ url, body: JSON.parse(options.body) });
+      return Response.json({
+        available: true,
+        text: "Leitura autorizada",
+        model: "jk-tools",
+      });
+    },
+  });
+  const event = (id) => ({
+    type: "response.done",
+    response: {
+      status: "completed",
+      output: [
+        {
+          type: "function_call",
+          name: "jarvis_operational_status",
+          call_id: id,
+          arguments: JSON.stringify({ query: "E na Vercel?" }),
+        },
+      ],
+    },
+  });
+  await tool.handle(event("context-first"));
+  assert.equal(calls[0].url, "/api/director/research");
+  assert.deepEqual(calls[0].body.history, history);
+  await tool.handle(event("context-first"));
+  assert.equal(calls.length, 1);
+  tool.resetTurn();
+  history = Array.from({ length: 12 }, () => ({
+    role: "user",
+    content: "x".repeat(900),
+  }));
+  await tool.handle(event("context-next"));
+  assert.equal(calls[1].body.history.length, 8);
+  assert.equal(calls[1].body.history[0].content.length, 600);
+  assert.equal("grants" in calls[1].body, false);
+});
 test("Audio-understood query routes platform reads even without local ASR transcription", async () => {
   const calls = [];
   const tool = createOperationalVoiceTool({

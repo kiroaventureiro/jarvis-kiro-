@@ -30,6 +30,8 @@ export type Connection = {
   providerScopes: string[];
   verifiedAt: string | null;
   lastTestAt?: string;
+  lastReadAt?: string;
+  lastReadOperation?: string;
   account: string;
   refreshLease?: string;
   lastError?: string;
@@ -104,7 +106,7 @@ export type PersistentProject = {
   updatedAt: string;
 };
 export type VaultState = {
-  voiceUsage?: import('../voice/ledger').VoiceUsageState;
+  voiceUsage?: import("../voice/ledger").VoiceUsageState;
   persistentProjects?: Record<string, PersistentProject>;
 
   abacusObservation?: import("../abacus/hub").AccountObservation;

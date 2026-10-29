@@ -31,8 +31,12 @@ export function requestedProject(
   message: string,
   resources: ProjectResource[],
 ): ProjectSelection {
-  const n = normalize(message),
-    flat = compact(message);
+  const expanded = message.replace(
+    /\b((?:veja|verifique|analise|diagnostique|consulte)\s+(?:o\s+)?|(?:projeto|site)\s+)jarvis\b(?![\s-]+kiro)/gi,
+    "$1Jarvis Kiro",
+  );
+  const n = normalize(expanded),
+    flat = compact(expanded);
   const canonical = projects.filter((p) =>
     p.names.some((name) => {
       const k = compact(name);
@@ -40,7 +44,7 @@ export function requestedProject(
       return (
         k.length >= 4 &&
         (new RegExp("(?:^|[^a-z0-9])" + phrase + "(?:$|[^a-z0-9])").test(
-          tokens(message).join(" "),
+          tokens(expanded).join(" "),
         ) ||
           new RegExp("(?:^|[^a-z0-9])" + k + "(?:$|[^a-z0-9])").test(n))
       );
@@ -87,12 +91,17 @@ export function requestedProject(
     };
   // Mentioning a provider without a project name means discovering its authorized
   // resources, not that a project named "GitHub" or "Vercel" was requested.
-  const serviceOnly = /\b(github|git hub|vercel|versel|supabase|supa base)\b/.test(n) &&
-    (/\b(entre|entra|entrar|acesse|acessar|abra|abrir|olhar|consulte|consultar|verifique|verificar)\b/.test(n) ||
+  const serviceOnly =
+    /\b(github|git hub|vercel|versel|supabase|supa base)\b/.test(n) &&
+    (/\b(entre|entra|entrar|acesse|acessar|abra|abrir|olhar|consulte|consultar|verifique|verificar)\b/.test(
+      n,
+    ) ||
       /\bo que (?:tem|ha) no\b/.test(n)) &&
     !/\b(projeto|repositorio|site)\s+(?:chamado\s+)?[a-z0-9_-]{4,}/.test(n) &&
-    !/\b(?:consulte|verifique|analise|abra|entre)\s+[a-z0-9_-]{4,}\s+(?:na|no)\s+(?:vercel|github|supabase)\b/.test(n);
-  if (serviceOnly) return {kind:"all"};
+    !/\b(?:consulte|verifique|analise|abra|entre)\s+[a-z0-9_-]{4,}\s+(?:na|no)\s+(?:vercel|github|supabase)\b/.test(
+      n,
+    );
+  if (serviceOnly) return { kind: "all" };
   if (
     /todos|todas|tudo|meus projetos|minhas conexoes|integracoes|plataformas|conexoes/.test(
       n,

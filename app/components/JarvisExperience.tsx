@@ -97,6 +97,10 @@ export default function JarvisExperience() {
     [],
   );
   const lastUserText = useRef("");
+  const conversationHistory = useRef(messages);
+  useEffect(() => {
+    conversationHistory.current = messages;
+  }, [messages]);
   const operationalProjection = useRef(false);
   const operationalVisual = useRef<ReturnType<typeof composeScene>>(null);
   const visualFiles = useRef<
@@ -421,6 +425,10 @@ export default function JarvisExperience() {
       channel.current = dc;
       const statusTool = createOperationalVoiceTool({
         question: () => lastUserText.current,
+        history: () =>
+          conversationHistory.current
+            .slice(-8)
+            .map(({ role, text }) => ({ role, content: text })),
         signal: controller.signal,
         isCurrent: () => attempt === generation.current,
         allowPrivateAbacus: () =>

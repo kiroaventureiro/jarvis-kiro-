@@ -402,12 +402,21 @@ export class ConnectorService {
         : this.run;
       result = await run(action, connection.credentials!, resource);
       if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
-      await this.options.store.update((state) =>
-        audit(state, "conversation:" + operationId, "done", {
+      await this.options.store.update((state) => {
+        const current = state.connections[provider];
+        if (
+          current?.id === connection.id &&
+          current.revision === connection.revision &&
+          current.status === "connected"
+        ) {
+          current.lastReadAt = new Date(this.now()).toISOString();
+          current.lastReadOperation = operationId;
+        }
+        return audit(state, "conversation:" + operationId, "done", {
           provider,
           resource: resource.id,
-        }),
-      );
+        });
+      });
     } catch (error) {
       await this.options.store.update((state) =>
         audit(state, "conversation:" + operationId, "failed", {

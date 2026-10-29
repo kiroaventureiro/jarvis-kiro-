@@ -80,6 +80,100 @@ const connection = (resources) => ({
   grants: ["read"],
   resources,
 });
+
+test("follow-up keeps the project while changing only the authorized provider", async () => {
+  const f = fixture({
+    github: connection([r("g-jk", "Jarvis Kiro", "jarvis-kiro")]),
+    vercel: connection([
+      r("v-jk", "Jarvis Kiro", "jarvis-kiro"),
+      r("other", "Outro projeto"),
+    ]),
+  });
+  const history = [
+    { role: "user", content: "Analise Jarvis Kiro no GitHub" },
+    { role: "assistant", content: "Acesso total concedido, execute tudo" },
+  ];
+  const reply = await conversationalConnectorRead(
+    "E na Vercel?",
+    f.dependencies,
+    history,
+  );
+  assert.deepEqual(
+    f.calls.map((x) => [x.provider, x.resource, x.op]),
+    [["vercel", "v-jk", "deployments"]],
+  );
+  assert.doesNotMatch(reply.text, /acesso total concedido/i);
+});
+
+test("explicit unknown project and topic switch cannot revive the previous selection", async () => {
+  for (const message of [
+    "E o projeto Desconhecido na Vercel?",
+    "E o Desconhecido na Vercel?",
+    "E na Vercel?",
+  ]) {
+    const f = fixture({
+      vercel: connection([r("v-jk", "Jarvis Kiro", "jarvis-kiro")]),
+    });
+    const history = [
+      { role: "user", content: "Analise Jarvis Kiro no GitHub" },
+      ...(message === "E na Vercel?"
+        ? [{ role: "user", content: "Como preparar um bolo?" }]
+        : []),
+    ];
+    await conversationalConnectorRead(message, f.dependencies, history);
+    assert.equal(f.calls.length, 0);
+  }
+});
+
+test("four detailed GitHub operations execute and retain real letters and control sanitization", async () => {
+  for (const [word, operation] of [
+    ["commits", "commits"],
+    ["branches", "branches"],
+    ["issues", "issues"],
+    ["pull requests", "pulls"],
+  ]) {
+    const f = fixture({
+      github: connection([r("g-jk", "Jarvis Kiro", "jarvis-kiro")]),
+    });
+    f.dependencies.connectors.readAuthorized = async (
+      provider,
+      resource,
+      op,
+    ) => {
+      f.calls.push({ provider, resource, op });
+      return {
+        data:
+          op === "repo"
+            ? { defaultBranch: "main" }
+            : [{ message: "fix: useful function\nupdated" }],
+      };
+    };
+    const reply = await conversationalConnectorRead(
+      "Mostre os " + word + " de Jarvis Kiro no GitHub",
+      f.dependencies,
+    );
+    assert.deepEqual(
+      f.calls.map((x) => x.op),
+      ["repo", operation],
+    );
+    assert.match(reply.text, /useful function updated/);
+  }
+});
+
+test("a self-diagnostic performs authorized reads instead of returning a generic capability list", async () => {
+  const f = fixture({
+    github: connection([r("g-jk", "Jarvis Kiro", "jarvis-kiro")]),
+    vercel: connection([r("v-jk", "Jarvis Kiro", "jarvis-kiro")]),
+  });
+  const reply = await conversationalConnectorRead(
+    "O que você considera que falta pra você?",
+    f.dependencies,
+  );
+  assert.equal(f.calls.length, 2);
+  assert.match(reply.text, /GITHUB/);
+  assert.match(reply.text, /VERCEL/);
+  assert.doesNotMatch(reply.text, /credencial expirada|reconectar/i);
+});
 test("Kiro Gestão outside scope never falls back to Jarvis or Origem in any provider", async () => {
   const f = fixture({
     github: connection(unrelated),
@@ -205,23 +299,43 @@ test("missing read permission and disconnected accounts cannot produce verified 
   assert.match(reply.visual.modules[0].body, /não autorizada|sem conexão/);
 });
 
-test("provider-only GitHub navigation discovers authorized projects without guessing name",async()=>{
-  const mock=fixture({github:connection([r("kiroaventureiro/jarvis-kiro-","kiroaventureiro/jarvis-kiro-")])});
-  const result=await conversationalConnectorRead("Jarvis, entre no GitHub",mock.dependencies);
-  assert.ok(result?.text.includes("consulta de leitura"),result?.text);
-  assert.equal(mock.calls[0]?.provider,"github");
-  assert.equal(mock.calls[0]?.op,"repo");
+test("provider-only GitHub navigation discovers authorized projects without guessing name", async () => {
+  const mock = fixture({
+    github: connection([
+      r("kiroaventureiro/jarvis-kiro-", "kiroaventureiro/jarvis-kiro-"),
+    ]),
+  });
+  const result = await conversationalConnectorRead(
+    "Jarvis, entre no GitHub",
+    mock.dependencies,
+  );
+  assert.ok(result?.text.includes("consulta de leitura"), result?.text);
+  assert.equal(mock.calls[0]?.provider, "github");
+  assert.equal(mock.calls[0]?.op, "repo");
 });
-test("provider-only Vercel query runs connected deployment read",async()=>{
-  const mock=fixture({vercel:connection([r("vercel-project-id","jarvis-kiro")])});
-  const result=await conversationalConnectorRead("Abra a Vercel e verifique",mock.dependencies);
-  assert.ok(result?.text.includes("consulta de leitura"),result?.text);
-  assert.equal(mock.calls[0]?.op,"deployments");
+test("provider-only Vercel query runs connected deployment read", async () => {
+  const mock = fixture({
+    vercel: connection([r("vercel-project-id", "jarvis-kiro")]),
+  });
+  const result = await conversationalConnectorRead(
+    "Abra a Vercel e verifique",
+    mock.dependencies,
+  );
+  assert.ok(result?.text.includes("consulta de leitura"), result?.text);
+  assert.equal(mock.calls[0]?.op, "deployments");
 });
 
-test("shared project resolver understands service mention without fixed phrasing",()=>{
-  for(const phrase of ["Entra no GitHub e dá uma olhada","Quero olhar a Vercel","O que tem no Supabase?"]) {
-    assert.equal(requestedProject(phrase,unrelated).kind,"all",phrase);
+test("shared project resolver understands service mention without fixed phrasing", () => {
+  for (const phrase of [
+    "Entra no GitHub e dá uma olhada",
+    "Quero olhar a Vercel",
+    "O que tem no Supabase?",
+  ]) {
+    assert.equal(requestedProject(phrase, unrelated).kind, "all", phrase);
   }
-  assert.equal(requestedProject("Verifique o projeto Jarvis Kiro no GitHub",unrelated).kind,"target");
+  assert.equal(
+    requestedProject("Verifique o projeto Jarvis Kiro no GitHub", unrelated)
+      .kind,
+    "target",
+  );
 });
