@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../lib/auth";
 import { operationalSnapshotLive } from "../../../lib/operational/server";
+import { naviBridgeStatus } from "../../../lib/openai/navi-adapter";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ export async function GET() {
             "Conector nativo implementado; branches e arquivos exigem escopo e plano aprovado. Merge não habilitado.",
         },
         n8n: capability("n8n"),
+        navi: naviBridgeStatus(process.env),
       },
       safeguards: {
         githubWriteRequiresPlanApproval: true,
