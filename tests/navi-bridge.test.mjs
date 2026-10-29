@@ -36,3 +36,10 @@ test("Navi routing is explicit and preserved in chat/research", () => {
   assert.match(chat, /answerNaviRequest\(message, input\.history \|\| \[\], signal\)/);
   assert.match(research, /answerNaviRequest\(body\.query, history, request\.signal\)/);
 });
+
+test("Navi status distinguishes authorization from configured credentials", () => {
+  const status = readFileSync(new URL("../lib/openai/navi-adapter.ts", import.meta.url), "utf8");
+  assert.match(status, /awaiting_billing_authorization/);
+  assert.match(status, /JARVIS_OPENAI_API_BILLING_AUTHORIZED/);
+  assert.match(status, /Executor implementado; faltam validação funcional/);
+});
