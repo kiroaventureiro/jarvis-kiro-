@@ -829,7 +829,7 @@ export default function JarvisExperience() {
         messageId: assistantId,
         result: {
           requestId: assistantId,
-          source: result.provider === "openai_navi" ? "navi" : "other",
+          source: "other",
           status: "completed",
           messages: [result.text],
           artifacts: [],
