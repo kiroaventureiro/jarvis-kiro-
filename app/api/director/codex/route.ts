@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
+import { codexDraftResult } from "../../../../lib/orchestration/unified-result";
 import { createCodexTask } from "../../../../lib/codex/task-store";
 import { codexWorkerReadiness } from "../../../../lib/codex/worker-readiness";
 import { planCodexDelegation, type CodexTaskKind } from "../../../../lib/codex/delegation-plan";
@@ -34,7 +35,7 @@ export async function POST(request: Request) {
     if (plan.repository !== "kiroaventureiro/jarvis-kiro-" || plan.baseBranch !== "feature/diretor-tecnico-agent")
       return NextResponse.json({error:"Repositório ou branch ainda não autorizados para esta integração"}, {status:403});
     const saved = await createCodexTask({ repository: plan.repository, branch: plan.baseBranch, kind: plan.kind, instruction: plan.task });
-    return NextResponse.json({plan, task: saved, queued:false, started:false}, {
+    return NextResponse.json({plan, task: saved, result: codexDraftResult(saved), queued:false, started:false}, {
       headers:{"Cache-Control":"private, no-store"}
     });
   } catch (error) {
