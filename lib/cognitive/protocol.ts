@@ -1,5 +1,9 @@
 import { depthFor, normalized } from "./intent";
 import { humanizerGuidance } from "./humanizer";
+import {
+  specialistGuidance,
+  voiceSpecialistGuidance,
+} from "./specialist-guidance";
 export const COGNITIVE_PROTOCOL_VERSION = "jk-cognitive-4.2";
 export type ResponsePurpose = "answer" | "decision" | "creative" | "code";
 export function responseProfile(message: string) {
@@ -41,6 +45,9 @@ export function cognitiveProtocol(
       "Nesta etapa, retorne somente o contrato de classificação solicitado; não produza resposta final, Markdown, plano executável ou argumentos de ferramenta.",
     ].join(" ");
   shared.push(
+    channel === "voice" && !message.trim()
+      ? voiceSpecialistGuidance()
+      : specialistGuidance(message),
     humanizerGuidance(channel),
     channel === "voice"
       ? "Narre naturalmente, sem Markdown, JSON, identificadores extensos, código bruto ou URLs. Referências técnicas ficam no resultado visual. Não alegue ferramentas de outra modalidade; utilize apenas as funções declaradas nesta sessão de voz."

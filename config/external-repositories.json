@@ -9,6 +9,16 @@
   },
   "repositories": [
     {
+      "slug": "wshobson/agents",
+      "url": "https://github.com/wshobson/agents",
+      "domain": "engineering-skills",
+      "license": "MIT",
+      "adoption": "adapt-guidance",
+      "enabled": false,
+      "requiresReview": true,
+      "note": "Pinned engineering guidance is selected by task in JK; Codex native plugins are installed separately. External multi-agent runtime is not enabled."
+    },
+    {
       "slug": "ayghri/i-have-adhd",
       "url": "https://github.com/ayghri/i-have-adhd",
       "domain": "interaction",
