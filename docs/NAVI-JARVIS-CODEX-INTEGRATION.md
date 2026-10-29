@@ -21,3 +21,9 @@ Dar ao usuário uma única interface do JK para solicitar conversas mediadas pel
 
 ## Aceite
 Nenhuma gravação em produção; nenhuma chamada paga até autorização explícita; chaves somente no servidor; zero tokens em respostas/logs; testes unitários, integração, CI e smoke autenticado; inventário claro entre operacional, simulado, planejado e bloqueado.
+
+## Decisão do proprietário: aproveitar planos pagos e gratuitos
+O JK **não deve dar preferência automática a ferramentas gratuitas**. Selecionar a melhor capacidade disponível por tarefa e autorização, levando em conta qualidade, acesso, disponibilidade e cotas reais. Assinatura ChatGPT/Codex/Work não concede automaticamente créditos OpenAI API: identificar cobrança independente antes de ativação, sem pedir senha nem token na conversa. Após autorização de um escopo rotineiro, evitar confirmações repetitivas; preservar bloqueios contra loops, gastos inesperados, operações destrutivas e publicação sem aprovação.
+
+## Checkpoint desta etapa
+A rota autenticada `GET /api/director` passou a expor `capabilities.navi`, derivada de `naviBridgeStatus(process.env)`. Os estados 'disabled', 'needs_configuration' e 'ready_for_validation' não declaram conversação operacional. O código não retorna chaves nem consulta serviços externos. A API de execução, testes de ponta a ponta e ponte Codex continuam pendentes.
