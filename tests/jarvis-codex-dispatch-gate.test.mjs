@@ -10,3 +10,8 @@ test("Codex dispatch is authenticated, same origin, scoped, and never claims wor
  assert.match(route,/started:false,queued:false/);
  assert.doesNotMatch(route,/spawn\(|exec\(|worker\.start\(/);
 });
+
+test("Dispatch checks the exact permitted repository and development branch",()=>{
+ assert.match(route,/task\.repository!=="kiroaventureiro\/jarvis-kiro-"/);
+ assert.match(route,/task\.branch!=="feature\/diretor-tecnico-agent"/);
+});
