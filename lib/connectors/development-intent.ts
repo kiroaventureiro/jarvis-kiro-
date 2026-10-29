@@ -8,7 +8,7 @@ export function developmentIntent(text: string) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
   if (
-    !/\b(melhore|encontre|diagnostique|verifique|proponha|corrija|analise)\b/.test(
+    !/\b(melhore|melhora|encontre|diagnostique|verifique|proponha|corrija|corrige|conserte|conserta|ajuste|ajusta|implemente|implementa|desenvolva|desenvolve|crie|cria|analise)\b/.test(
       n,
     ) ||
     !/\b(sua|seu|jarvis|jk)\b/.test(n)
