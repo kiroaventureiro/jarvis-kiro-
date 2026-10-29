@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { naviTextResult } from "../../../../lib/orchestration/unified-result";
+import { randomUUID } from "node:crypto";
 import { authorized } from "../../../../lib/auth";
 import { askNavi, NaviError, safeNaviHistory } from "../../../../lib/openai/navi-executor";
 
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
     const history = safeNaviHistory(b.history);
     if (typeof b.message !== "string") return NextResponse.json({error:"Mensagem inválida"}, {status:400});
     const result = await askNavi(b.message, history, {env:process.env,signal:request.signal});
-    return NextResponse.json({available:true, text:result.text, model:result.model, provider:"openai_navi", usage:null}, {headers:{"Cache-Control":"private, no-store"}});
+    return NextResponse.json({available:true, text:result.text, model:result.model, provider:"openai_navi", usage:null, result: naviTextResult({requestId:randomUUID(),text:result.text,provider:"openai_navi"})}, {headers:{"Cache-Control":"private, no-store"}});
   } catch (e) {
     const code = e instanceof NaviError ? e.code : "UNAVAILABLE";
     const message: Record<string, string> = {
