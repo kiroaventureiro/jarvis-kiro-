@@ -1,3 +1,4 @@
+import { answerCodexPlanning } from "../../../../lib/codex/conversation";
 import { answerNaviRequest } from "../../../../lib/openai/navi-router";
 import { answerVoiceUsageQuestion } from "../../../../lib/voice/usage-answer";
 import { answerVoiceStudioQuestion } from "../../../../lib/voice/voicestudio-server";
@@ -77,6 +78,7 @@ export async function POST(request: Request) {
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     localReply: async (message, signal, input) =>
+      answerCodexPlanning(message) ||
       (await answerNaviRequest(message, input.history || [], signal)) ||
       (await answerCouncilRequest(message, signal)) ||
       (await answerNativeRequest(message, signal, input.history)) ||
