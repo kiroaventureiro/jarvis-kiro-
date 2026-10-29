@@ -9,3 +9,8 @@ test("Codex task status is authenticated, read-only and not executable",()=>{
   assert.match(source,/private, no-store/);
   assert.doesNotMatch(source,/export async function POST|export async function PATCH|spawn\(/);
 });
+
+test("Nested route resolves server modules from the repository root",()=>{
+  assert.match(source,/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/lib\/auth/);
+  assert.match(source,/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/\.\.\/lib\/codex\/task-store/);
+});
