@@ -19,8 +19,9 @@ export type JarvisUnifiedResult = {
   provenance?: { provider: string; taskReference?: string; resultReference?: string };
 };
 export function codexDraftResult(task: {
-  id:string; state:"draft"; repository:string; branch:string; kind?:"review"|"test"|"implement";
+  id:string; state:string; repository:string; branch:string; kind?:"review"|"test"|"implement";
 }): JarvisUnifiedResult {
+  if (task.state !== "draft") throw Error("CODEX_TASK_NOT_DRAFT");
   return {
     requestId:task.id,
     source:"codex",
