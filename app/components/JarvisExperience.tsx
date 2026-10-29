@@ -9,6 +9,7 @@ import { abacusEvidenceScene } from "../../lib/abacus/voice-evidence";
 import { conversationAction } from "../../lib/holo/conversation-actions";
 import HoloResponseHUD from "./holo/HoloResponseHUD";
 import { JarvisGeneratedImage } from "./JarvisGeneratedImage";
+import { desktopDownloadsSupported, readAutoDownloadPreference, saveAutoDownloadPreference } from "../../lib/downloads/automatic";
 import { JarvisResultPanel } from "../../components/jarvis-result-panel";
 import type { JarvisUnifiedResult } from "../../lib/orchestration/unified-result";
 import { useHoloSession } from "./holo/HoloSession";
@@ -71,6 +72,13 @@ export default function JarvisExperience() {
     [error, setError] = useState(""),
     [hidden, setHidden] = useState(false),
     [dragging, setDragging] = useState(false);
+  const [autoDownload, setAutoDownload] = useState(false);
+  const [desktopDownloadCapable, setDesktopDownloadCapable] = useState(false);
+  useEffect(()=>{
+    const supported=desktopDownloadsSupported(navigator.userAgent,window.matchMedia("(pointer: coarse)").matches);
+    setDesktopDownloadCapable(supported);
+    if(supported)setAutoDownload(readAutoDownloadPreference(window.localStorage));
+  },[]);
   const [generatedImages, setGeneratedImages] = useState<Array<{messageId:string;file:File;label:string}>>([]);
   const [unifiedResults, setUnifiedResults] = useState<Array<{ messageId: string; result: JarvisUnifiedResult }>>([]);
   const [voiceSnapshot, setVoiceSnapshot] = useState<VoiceSnapshot>({
@@ -1078,6 +1086,13 @@ export default function JarvisExperience() {
               </button>
             </div>
           </div>
+          {desktopDownloadCapable && <label style={{display:"flex",alignItems:"center",gap:8,fontSize:12,padding:"0 12px 8px"}}>
+            <input type="checkbox" checked={autoDownload} onChange={(event)=>{
+              const enabled=event.target.checked;
+              if(saveAutoDownloadPreference(window.localStorage,enabled))setAutoDownload(enabled);
+            }}/>
+            Baixar imagens automaticamente no PC
+          </label>}
           <div
             className="hud-content"
             ref={output}
@@ -1090,7 +1105,7 @@ export default function JarvisExperience() {
                   {item.role === "user" ? "Você" : "Jarvis"}
                 </span>
                 {item.role === "assistant" && unifiedResults.some(entry => entry.messageId === item.id)
-                  ? <>{unifiedResults.filter(entry => entry.messageId === item.id).map(entry => <JarvisResultPanel key={entry.messageId} result={entry.result} />)}{generatedImages.filter(image=>image.messageId === item.id).map(image=><JarvisGeneratedImage key={image.messageId} file={image.file} label={image.label} />)}</>
+                  ? <>{unifiedResults.filter(entry => entry.messageId === item.id).map(entry => <JarvisResultPanel key={entry.messageId} result={entry.result} />)}{generatedImages.filter(image=>image.messageId === item.id).map(image=><JarvisGeneratedImage key={image.messageId} id={image.messageId} file={image.file} label={image.label} autoDownload={desktopDownloadCapable && autoDownload} />)}</>
                   : <p>{item.text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1")}</p>}
               </article>
             ))}
