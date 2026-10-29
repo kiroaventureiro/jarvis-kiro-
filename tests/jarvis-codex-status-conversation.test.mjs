@@ -18,3 +18,11 @@ test("Chat and voice use authenticated read-only task endpoint",()=>{
  assert.match(ui,/await conversationalCodexStatus\(spoken\)/);
  assert.match(ui,/await conversationalCodexStatus\(text\)/);
 });
+
+test("Natural follow-up uses only the actual Codex task from this session",()=>{
+ const id="123e4567-e89b-12d3-a456-426614174000";
+ assert.equal(exports.codexRecentStatusIntent("Como está a tarefa do Codex?",id),id);
+ assert.equal(exports.codexRecentStatusIntent("Qual o andamento da tarefa?",id),id);
+ assert.equal(exports.codexRecentStatusIntent("Como está a tarefa do Codex?",null),null);
+ assert.equal(exports.codexRecentStatusIntent("Execute essa tarefa",id),null);
+});
