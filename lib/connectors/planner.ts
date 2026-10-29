@@ -218,6 +218,7 @@ export class DevelopmentPlanner {
         .toLowerCase();
     const n = normalize(message);
     const self = developmentIntent(message);
+    const wantsWrite = /\b(corrija|corrige|conserte|conserta|ajuste|ajusta|melhore|melhora|implemente|implementa|desenvolva|desenvolve|crie|cria)\b/.test(n);
     if (!self && !/\b(verifique|diagnostique|corrija|corrige|conserte|conserta|ajuste|ajusta|melhore|melhora|implemente|implementa|desenvolva|desenvolve|crie|cria|analise)\b/.test(n))
       return null;
     const project = self
@@ -247,7 +248,9 @@ export class DevelopmentPlanner {
             : "O diagnóstico está pendente ou falhou para ") +
           project.name +
           scope +
-          ". Os resultados estão na Central de Conexões. Plano de continuidade: revisar as evidências, preparar correção pequena, validar testes no CI e gerar Preview somente após aprovação. A proposta com modelo também depende de autorização de custo. Nenhuma modificação foi executada.",
+          (wantsWrite
+            ? ". Os resultados estão na Central de Conexões. Pedido de alteração identificado: utilize Propor correção supervisionada para gerar um patch, sujeito à autorização de custo e à aprovação antes do commit e Preview. Nenhuma modificação foi executada."
+            : ". Os resultados estão na Central de Conexões. Plano de continuidade: revisar as evidências, preparar correção pequena, validar testes no CI e gerar Preview somente após aprovação. A proposta com modelo também depende de autorização de custo. Nenhuma modificação foi executada."),
         model: "jk-connectors",
         provider: "local_operational" as const,
         usage: null,
