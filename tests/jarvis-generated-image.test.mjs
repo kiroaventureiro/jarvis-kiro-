@@ -24,7 +24,7 @@ test("Generated images survive later chat turns within an eight-image memory bou
 test("Generated images can be saved locally using temporary object URLs",()=>{
  assert.match(image,/aria-label="Salvar imagem gerada"/);
  assert.match(image,/download=/);
- assert.match(image,/file\.size === 0/);
+ assert.match(image,/file\.size\s*===\s*0/);
  assert.doesNotMatch(image,/localStorage|dangerouslySetInnerHTML/);
 });
 
