@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../../lib/auth";
-import { getCodexTask, updateCodexTask } from "../../../../../lib/codex/task-store";
+import { getCodexTask } from "../../../../../lib/codex/task-store";
+import { approveCodexTask } from "../../../../../lib/codex/task-approval";
 import { codexWorkerReadiness } from "../../../../../lib/codex/worker-readiness";
 
 export const dynamic="force-dynamic";
@@ -24,8 +25,8 @@ export async function POST(request:Request) {
   if(!task||task.state!=="draft"||task.repository!=="kiroaventureiro/jarvis-kiro-"||
      task.branch!=="feature/diretor-tecnico-agent")
    return NextResponse.json({error:"Tarefa não encontrada ou indisponível para aprovação"},{status:409});
-  const saved=await updateCodexTask(task.id,"approved",{approvalVerified:true});
-  return NextResponse.json({task:saved,started:false,queued:false,executor:codexWorkerReadiness().execution,
+  const saved=await approveCodexTask(task.id);
+  return NextResponse.json({task:saved.task,approvalReceipt:saved.approvalReceipt,started:false,queued:false,executor:codexWorkerReadiness().execution,
     message:"Aprovação registrada. Nenhuma execução foi iniciada."},{headers:{"Cache-Control":"private, no-store"}});
  }catch{return NextResponse.json({error:"Não foi possível registrar a aprovação"},{status:409});}
 }

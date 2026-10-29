@@ -2,6 +2,8 @@
 
 Assistente pessoal Kiro Produções, com interface Next.js para desktop e iPhone.
 
+[Diagnóstico e limites da integração Jarvis ↔ Codex Cloud](docs/CODEX-CLOUD-INTEGRATION.md)
+
 ## Estado real (25/10/2026)
 - Painel responsivo implementado. A tela não pede senha, mas isso NÃO significa acesso seguro a dados privados.
 - Rota de voz Realtime implementada, porém protegida por sessão e dependente de OPENAI_API_KEY; ainda não validada ponta a ponta em produção.

@@ -8,6 +8,7 @@ export type CodexApprovalReceipt = {
   branch: string;
   approvedAt: number;
   expiresAt: number;
+  taskDigest?: string;
 };
 function valid(r: CodexApprovalReceipt, now:number) {
   return r?.version===1 &&
@@ -15,7 +16,8 @@ function valid(r: CodexApprovalReceipt, now:number) {
     r.repository==="kiroaventureiro/jarvis-kiro-" &&
     r.branch==="feature/diretor-tecnico-agent" &&
     Number.isSafeInteger(r.approvedAt) && Number.isSafeInteger(r.expiresAt) &&
-    r.approvedAt<=now && r.expiresAt>now && r.expiresAt-r.approvedAt<=300000;
+    r.approvedAt<=now && r.expiresAt>now && r.expiresAt-r.approvedAt<=300000 &&
+    (r.taskDigest===undefined || /^[a-f0-9]{64}$/.test(r.taskDigest));
 }
 export function signCodexApproval(r:CodexApprovalReceipt,secret:string,now=Date.now()):string {
   if(secret.length<32 || !valid(r,now)) throw Error("INVALID_APPROVAL");

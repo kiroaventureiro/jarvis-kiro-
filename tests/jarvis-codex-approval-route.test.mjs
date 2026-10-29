@@ -8,7 +8,7 @@ test("Codex approval requires user authentication, same origin and exact task af
  assert.match(src,/v\.confirmation!=="autorizo esta tarefa"/);
  assert.match(src,/task\.state!=="draft"/);
  assert.match(src,/task\.repository!=="kiroaventureiro\/jarvis-kiro-"/);
- assert.match(src,/approvalVerified:true/);
+ assert.match(src,/approveCodexTask\(task.id\)/);
 });
 test("Approval endpoint never dispatches jobs or suggests task execution",()=>{
  assert.match(src,/started:false,queued:false/);
