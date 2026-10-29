@@ -19,3 +19,13 @@ test("Codex API returns unified data without disguising drafts as completed",()=
  assert.match(api,/result: codexDraftResult\(saved\)/);
  assert.match(api,/queued:false, started:false/);
 });
+
+test("Navi text adapter returns only genuine text and no fabricated media",()=>{
+ const r=exports.naviTextResult({requestId:"request-123",text:"Uma ideia para a Kiro TV",provider:"openai"});
+ assert.equal(r.source,"navi");
+ assert.equal(r.status,"completed");
+ assert.equal(r.artifacts.length,0);
+ assert.deepEqual(Array.from(r.messages),["Uma ideia para a Kiro TV"]);
+ assert.equal(r.provenance.provider,"openai");
+ assert.throws(()=>exports.naviTextResult({requestId:"bad/id",text:"ok",provider:"openai"}),/INVALID_NAVI_RESULT/);
+});
