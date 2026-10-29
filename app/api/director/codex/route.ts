@@ -30,6 +30,9 @@ export async function POST(request: Request) {
       task:v.task, repository:v.repository, branch:v.branch,
       kind:v.kind as CodexTaskKind,
     });
+    // No cross-repository drafts until an explicit scope-authorization workflow exists.
+    if (plan.repository !== "kiroaventureiro/jarvis-kiro-" || plan.baseBranch !== "feature/diretor-tecnico-agent")
+      return NextResponse.json({error:"Repositório ou branch ainda não autorizados para esta integração"}, {status:403});
     const saved = await createCodexTask({ repository: plan.repository, branch: plan.baseBranch });
     return NextResponse.json({plan, task: saved, queued:false, started:false}, {
       headers:{"Cache-Control":"private, no-store"}
