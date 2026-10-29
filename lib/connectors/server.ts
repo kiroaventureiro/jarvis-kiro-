@@ -82,6 +82,11 @@ export async function answerNativeRequest(
     const platform = await answerAbacusPlatformQuestion(message, signal);
     if (platform) return platform;
   }
+  // An explicit request to read connected systems must reach the real connector
+  // before generic cognitive/planning status answers can intercept it.
+  const { conversationalConnectorRead } = await import("./conversation");
+  const directRead = await conversationalConnectorRead(message);
+  if (directRead) return directRead;
   const { answerWorkspaceQuestion } = await import("../workspace/conversation");
   const workspace = await answerWorkspaceQuestion(message);
   if (workspace) return workspace;
@@ -96,9 +101,6 @@ export async function answerNativeRequest(
     const reply = await planner.intent(message);
     if (reply) return reply;
   }
-  const { conversationalConnectorRead } = await import("./conversation");
-  const conversational = await conversationalConnectorRead(message);
-  if (conversational) return conversational;
   const n = message
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
