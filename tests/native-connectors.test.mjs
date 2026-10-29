@@ -1053,6 +1053,12 @@ test("supervised self-diagnostic reads only fixed files from an authorized bindi
   );
   assert.match(reply.text, /Nenhuma modificação foi executada/);
   assert.match(reply.text, /speech-output/);
+  const writeReply = await planner.intent("Jarvis, conserta sua voz");
+  assert.match(writeReply.text, /Pedido de alteração identificado/);
+  assert.match(writeReply.text, /Nenhuma modificação foi executada/);
+  assert.equal(modelCalls, 0);
+  assert.ok(f.calls.slice(before).every((x) => x.method === "GET"));
+
   assert.equal(modelCalls, 0);
   assert.ok(f.calls.slice(before).every((x) => x.method === "GET"));
   const state = await f.store.read();
