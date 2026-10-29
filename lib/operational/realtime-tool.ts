@@ -1,3 +1,4 @@
+import { shouldRunPlatformRead } from "../orchestration/tool-intent";
 import { voiceUsageIntent } from "../voice/ledger";
 import { voiceStudioIntent } from "../voice/voicestudio";
 import { abacusPlatformIntent } from "../abacus/platform-intent";
@@ -104,7 +105,8 @@ export function createOperationalVoiceTool(options: {
         const researchQuery =
           call.name === "jarvis_visual_research"
             ? (args as { query: string }).query
-            : abacusPlatformIntent(question) ||
+            : shouldRunPlatformRead(question) ||
+                abacusPlatformIntent(question) ||
                 voiceUsageIntent(question) ||
                 voiceStudioIntent(question)
               ? question
