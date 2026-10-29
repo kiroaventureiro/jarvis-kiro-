@@ -387,8 +387,7 @@ export class ConnectorService {
       throw new ConnectorError("PERMISSION_DENIED", 403);
     if (
       mutation(action) &&
-      (this.options.environment() === "production" ||
-        resource.environment === "production" ||
+      (resource.environment === "production" ||
         !this.options.writeResources()[action.provider]?.includes(resource.id))
     )
       throw new ConnectorError("PRODUCTION_BLOCKED", 403);
