@@ -149,7 +149,7 @@ export default function ConnectionsPage() {
                 {option.href ? <p><a href={option.href} {...(option.href.startsWith("https:") ? {target:"_blank",rel:"noopener noreferrer"} : {})}>{option.action}</a></p> : <p><small>Sem autorização disponível nesta versão.</small></p>}
               </div>
             </details>
-          </article>article>
+          </article>
         );})}
       </div>
     </main>
