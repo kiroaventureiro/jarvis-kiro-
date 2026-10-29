@@ -207,26 +207,35 @@ export default function JarvisExperience() {
         messages.map(({ id, role, text }) => ({ id, role, text })),
       );
   }, [messages, retainHistory, historyLoaded]);
-  // One brief, nonintrusive arrival update. Authentication is checked by the API.
-  // Never auto-start the microphone or audio without a user gesture.
+  // Arrival briefing is a transient announcement, not permanent chat history.
+  const [arrivalNotice, setArrivalNotice] = useState("");
   const arrivalRequested = useRef(false);
   useEffect(() => {
     if (!historyLoaded || arrivalRequested.current) return;
     arrivalRequested.current = true;
     const controller = new AbortController();
+    let hideTimer: ReturnType<typeof setTimeout> | undefined;
     void fetch("/api/director/arrival-briefing", {
       credentials: "same-origin", cache: "no-store", signal: controller.signal,
     }).then(async (response) => {
-      if (!response.ok) return;
+      if (!response.ok || controller.signal.aborted) return;
       const data: unknown = await response.json();
       if (!data || typeof data !== "object" || !("text" in data) ||
-          typeof data.text !== "string" || !data.text.trim()) return;
-      const briefingText = data.text;
-      setMessages((items) => [...items, {
-        id: crypto.randomUUID(), role: "assistant", text: briefingText.slice(0, 3500),
-      }]);
-    }).catch(() => { /* No false status if a connector is unavailable. */ });
-    return () => controller.abort();
+          typeof data.text !== "string" || !data.text.trim() || controller.signal.aborted) return;
+      const text = data.text.slice(0, 3500);
+      setArrivalNotice(text);
+      hideTimer = setTimeout(() => setArrivalNotice(""), 16000);
+      // Browser audio playback can require a prior gesture. If blocked, the
+      // announcement remains available for an explicit "Ouvir" click.
+      if (document.visibilityState === "visible" && !muteRef.current &&
+          readVoicePreferences().volume > 0) {
+        void getVoiceManager().speak(text, controller.signal).catch(() => {});
+      }
+    }).catch(() => {});
+    return () => {
+      controller.abort();
+      if (hideTimer) clearTimeout(hideTimer);
+    };
   }, [historyLoaded]);
   const [typingRequest, setTypingRequest] = useState(false);
   const [desktopVoice, setDesktopVoice] = useState(false);
@@ -1387,6 +1396,24 @@ export default function JarvisExperience() {
             ×
           </button>
         </div>
+      ) : null}
+      {arrivalNotice ? (
+        <aside role="status" aria-label="Boletim do Jarvis" className="glass" style={{
+          position:"fixed",bottom:"6.5rem",left:"50%",transform:"translateX(-50%)",
+          zIndex:40,width:"min(90vw,520px)",maxHeight:"32vh",overflow:"auto",
+          padding:"0.8rem 1rem",borderRadius:16,boxShadow:"0 12px 40px #0008"
+        }}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+            <strong>Boletim do Jarvis</strong>
+            <div style={{display:"flex",gap:8}}>
+              <button type="button" className="subtle-button" onClick={() => {
+                void getVoiceManager().speak(arrivalNotice, new AbortController().signal).catch(() => {});
+              }}>Ouvir</button>
+              <button type="button" className="subtle-button" onClick={()=>setArrivalNotice("")} aria-label="Recolher boletim">×</button>
+            </div>
+          </div>
+          <p style={{fontSize:"0.85rem",lineHeight:1.45,margin:"0.5rem 0 0"}}>{arrivalNotice}</p>
+        </aside>
       ) : null}
       <div className="jarvis-dock-hotzone" aria-hidden="true" />
       <div className="interaction-dock">
