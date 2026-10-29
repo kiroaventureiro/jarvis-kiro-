@@ -25,3 +25,13 @@ Criar processo separado do Next.js, com checkout de repositório restrito a `kir
 
 ## Estado atual e limite
 O SDK é uma **opção de arquitetura**, não um executor já conectado. `codexWorkerReadiness().execution` deve permanecer `not_connected`, e `/api/director/codex/dispatch` deve continuar recusando envio. Não adicionar flags para fingir disponibilidade nem executar agentes pelo processo web Next.js.
+
+## Caminho C — Login oficial com ChatGPT para app-server
+A OpenAI documenta "Sign in with ChatGPT" (SIWC), que fornece ao aplicativo um token OAuth autorizado e distingue autenticação de permissão de uso do plano. Com autorização explícita do usuário, um processo isolado pode iniciar Codex app-server com um provedor Responses para plano ChatGPT e acompanhar eventos `turn/completed`. Isso é distinto de chamar tarefas já existentes do Codex Cloud.
+
+Fontes oficiais: https://developers.openai.com/siwc/token-sharing-open-source e https://developers.openai.com/siwc/token-sharing-open-source/codex-app-server
+
+Implementação futura exige: fluxo de registro/login/PKCE suportado, confirmação de escopo autorizado, armazenamento e renovação segura de tokens **no worker**, controle de custos e consentimento, sandbox, limites de repositório, fila e recibos. Não armazenar token no navegador ou cofre genérico; não copiar token do Codex/ChatGPT. Sem esse login concluído, permanecer bloqueado.
+
+## Decisão de engenharia
+Próximo teste deve ser autenticação de **leitura** suportada, sem criar tarefas nem gerar custos. Após comprovação, executar tarefa de revisão somente com autorização específica. Priorizar o caminho que realmente usa os benefícios de conta autorizados, sem supor que um token de login da interface funcione no Cloud CLI. Não confundir autenticação ChatGPT com cobrança da API.
