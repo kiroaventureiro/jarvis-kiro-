@@ -146,7 +146,7 @@ export default function ConnectionsPage() {
                 <p>{x.category}</p>
                 <p>{option.requirement}</p>
                 <details><summary>Como conectar</summary><ol>{connectionInstructions(x.id,x.category).map(step=><li key={step}>{step}</li>)}</ol></details>
-                {option.href ? <p><a href={option.href} {...(option.href.startsWith("https:") ? {target:"_blank",rel:"noopener noreferrer"} : {})}>{option.action}</a></p> : <p><small>Integração ainda indisponível nesta versão.</small></p>}
+                {option.href ? <p><a href={option.href} {...(option.href.startsWith("https:") ? {target:"_blank",rel:"noopener noreferrer"} : {})}>{option.action}</a></p> : <p><small>Sem autorização disponível nesta versão.</small></p>}
               </div>
             </details>
           </article>article>
