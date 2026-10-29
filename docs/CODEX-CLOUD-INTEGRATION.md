@@ -1,5 +1,9 @@
 # Jarvis ↔ Codex Cloud: estado verificado
 
+Investigação posterior da issue #4: [MCP/conector, mecanismos oficiais e ponto de parada](CODEX-MCP-INVESTIGATION.md).
+As observações abaixo são históricas; o diagnóstico atual diferencia falha de transporte
+de rejeição de autenticação. Não inferir um novo 401 a partir do registro anterior.
+
 Verificação de 29/10/2026, na branch `feature/diretor-tecnico-agent`.
 **Não há conexão operacional autenticada com o executor Codex Cloud neste ambiente.**
 Nenhuma tarefa remota foi criada, nenhum serviço pago foi ativado e nada foi publicado.

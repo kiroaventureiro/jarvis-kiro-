@@ -46,6 +46,7 @@ import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voic
 import { voiceAction } from "../../lib/voice/local-intents";
 import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
 import { codexDraftIntent } from "../../lib/codex/chat-intent";
+import { APP_SHORTCUTS, browserActionIntent, appHandoffIntent, prepareAppHandoff, type AppHandoff } from "../../lib/codex/app-handoff";
 import { codexStatusIntent, codexRecentStatusIntent } from "../../lib/codex/status-intent";
 import { describeCodexDispatchResponse } from "../../lib/codex/dispatch-response";
 import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
@@ -84,6 +85,32 @@ export default function JarvisExperience() {
     setDesktopDownloadCapable(desktopDownloadsSupported(navigator.userAgent,window.matchMedia("(pointer: coarse)").matches));
   },[]);
   const [trackedCodexIds,setTrackedCodexIds]=useState<string[]>([]);
+  const [appHandoff,setAppHandoff]=useState<AppHandoff|null>(null);
+  const [appsOpen,setAppsOpen]=useState(false);
+  const [browserAction,setBrowserAction]=useState<{name:string;url:string}|null>(null);
+  const [handoffNotice,setHandoffNotice]=useState("Pedido preparado. Revise antes de abrir.");
+  function conversationalAppHandoff(text:string) {
+    try {
+      const action=browserActionIntent(text);
+      if(action) {
+        setBrowserAction(action);setAppsOpen(true);
+        return {text:"Preparei o acesso a "+action.name+". Clique no link em Aplicativos para abrir no seu navegador. Isso não conecta sua conta nem concede controle do navegador ao Jarvis.",model:"jk-browser-action",provider:"local_operational" as const,usage:null,visual:undefined};
+      }
+    } catch {
+      setBrowserAction(null);
+      return {text:"Não preparei a pesquisa: remova possíveis credenciais do pedido. Nada foi enviado ao navegador.",model:"jk-browser-action",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
+    const destination=appHandoffIntent(text);
+    if(!destination)return null;
+    try {
+      setAppHandoff(prepareAppHandoff(text,destination));
+      setHandoffNotice("Pedido preparado. Revise antes de abrir.");
+      return {text:destination==="codex" ? "Preparei o pedido. Use Abrir Codex com pedido; você revisa e aperta enviar no aplicativo. Se não abrir, copie o pedido e use Codex Web ou ChatGPT. Nenhuma tarefa foi iniciada." : "Preparei o pedido para o ChatGPT/Navi. Copie o texto e abra o ChatGPT para colar e enviar. Nenhuma tarefa foi iniciada.",model:"jk-app-handoff",provider:"local_operational" as const,usage:null,visual:undefined};
+    } catch {
+      setAppHandoff(null);
+      return {text:"Não preparei o link: remova possíveis credenciais do pedido e tente novamente. Nenhum dado foi encaminhado.",model:"jk-app-handoff",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
+  }
   const [pendingCodexApproval,setPendingCodexApproval]=useState<string|null>(null);
   const [recentCodexTaskId,setRecentCodexTaskId]=useState<string|null>(null);
   const [codexAlertVisual,setCodexAlertVisual]=useState<"attention"|"activity"|"success"|"error"|null>(null);
@@ -996,7 +1023,7 @@ export default function JarvisExperience() {
     try {
       const voiceFirst =
         desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
-      const local = await conversationalCodexApproval(text) || localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexStatus(text) || await conversationalCodexDraft(text);
+      const local = await conversationalCodexApproval(text) || localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexStatus(text) || conversationalAppHandoff(text) || await conversationalCodexDraft(text);
       let generatedForThisResponse=false;
       const result =
         local ||
@@ -1295,6 +1322,38 @@ export default function JarvisExperience() {
           </div>
         </section>
       ) : null}
+      {appsOpen ? (
+        <section className="glass app-handoff" aria-label="Aplicativos" style={{position:"relative",zIndex:20,maxWidth:680,width:"calc(100% - 32px)",margin:"16px auto 160px",padding:20}}>
+          <h2>Aplicativos</h2>
+          <p>Abra os serviços no seu navegador. O login continua no próprio serviço; abrir não concede acesso à conta ao Jarvis.</p>
+          {browserAction ? <p><a href={browserAction.url} target="_blank" rel="noopener noreferrer">Abrir {browserAction.name}</a></p> : null}
+          <div style={{display:"flex",flexWrap:"wrap",gap:16}}>
+            {APP_SHORTCUTS.map(app=><a key={app.name} href={app.url} target="_blank" rel="noopener noreferrer">{app.name}</a>)}
+            <Link href="/conexoes">Autorizar e verificar conexões</Link>
+            <Link href="/configuracoes">Ajustar e ouvir a voz</Link>
+          </div>
+          <button className="subtle-button" onClick={()=>setAppsOpen(false)}>Fechar aplicativos</button>
+        </section>
+      ) : null}
+      {appHandoff ? (
+        <section className="glass app-handoff" aria-label="Pedido para outro aplicativo" style={{position:"relative",zIndex:20,maxWidth:680,width:"calc(100% - 32px)",margin:"16px auto 160px",padding:20,overflowWrap:"anywhere"}}>
+          <h2>{appHandoff.destination === "codex" ? "Pedido para o Codex" : "Pedido para o ChatGPT"}</h2>
+          <p role="status">{handoffNotice}</p>
+          <p>Você envia no destino e recebe o resultado lá. O link não seleciona um ambiente Cloud.</p>
+          {appHandoff.truncated ? <p>Pedido abreviado para caber no link. Confira o objetivo.</p> : null}
+          <textarea aria-label="Pedido preparado" readOnly value={appHandoff.prompt} rows={8} style={{width:"100%",boxSizing:"border-box",color:"inherit",background:"transparent"}} />
+          <div style={{display:"flex",flexWrap:"wrap",gap:12,marginTop:12}}>
+            {appHandoff.destination === "codex" ? <a className="subtle-button" href={appHandoff.codexUrl} onClick={()=>setHandoffNotice("Abertura solicitada. Se o aplicativo não abriu, use Copiar pedido e Codex Web. Envio ainda não confirmado.")}>Abrir Codex com pedido</a> : null}
+            <button className="subtle-button" onClick={async()=>{
+              try { await navigator.clipboard.writeText(appHandoff.prompt); setHandoffNotice("Pedido copiado. Cole no destino e revise antes de enviar."); }
+              catch { setHandoffNotice("Cópia automática indisponível. Selecione e copie o texto do campo acima."); }
+            }}>Copiar pedido</button>
+            <a className="subtle-button" href={appHandoff.codexWebUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setHandoffNotice("Abertura do Codex Web solicitada. Copie e cole o pedido; envio não confirmado.")}>Abrir Codex Web</a>
+            <a className="subtle-button" href={appHandoff.chatgptUrl} target="_blank" rel="noopener noreferrer" onClick={()=>setHandoffNotice("Abertura do ChatGPT solicitada. Copie e cole o pedido; envio não confirmado.")}>Abrir ChatGPT</a>
+            <button className="subtle-button" onClick={()=>setAppHandoff(null)}>Fechar pedido</button>
+          </div>
+        </section>
+      ) : null}
       {error ? (
         <div className="error-hud glass" role="alert">
           <p>{error}</p>
@@ -1370,6 +1429,7 @@ export default function JarvisExperience() {
           </form>
         ) : null}
         <div className="dock-controls glass">
+          <button type="button" className="subtle-button" aria-expanded={appsOpen} onClick={()=>setAppsOpen(open=>!open)}>Aplicativos</button>
           <WakeListener
             muted={muted}
             blocked={workspace.files.length > 0 || state === "connecting"}
@@ -1437,7 +1497,7 @@ export default function JarvisExperience() {
               );
             }}
             onMessage={async (spoken, signal) => {
-              const local = await conversationalCodexApproval(spoken) || localConversationReply(spoken) || await conversationalCapabilityReply(spoken) || await conversationalCodexStatus(spoken) || await conversationalCodexDraft(spoken);
+              const local = await conversationalCodexApproval(spoken) || localConversationReply(spoken) || await conversationalCapabilityReply(spoken) || await conversationalCodexStatus(spoken) || conversationalAppHandoff(spoken) || await conversationalCodexDraft(spoken);
               if (local) return { ...local, provider: "local_action" };
               if (spoken.length > 1500)
                 throw new Error(

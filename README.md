@@ -2,6 +2,19 @@
 
 Assistente pessoal Kiro Produções, com interface Next.js para desktop e iPhone.
 
+## Usar os aplicativos
+
+Na branch experimental, o botão **Aplicativos** abre atalhos para Codex, ChatGPT,
+Google, Microsoft 365, GitHub, Supabase e Vercel. Experimente “peça ao Codex para
+revisar meus testes”, “pergunte ao Navi sobre minha ideia” ou “pesquise no Google
+sobre energia solar”. O Jarvis prepara o pedido/link; você abre e envia no destino.
+Esses atalhos não concedem acesso às contas nem controle remoto do navegador.
+
+Para acesso do próprio Jarvis aos serviços, use **Conexões** e os conectores
+autenticados. Para ouvir e ajustar a voz disponível no aparelho, use
+**Configurações → Identidade vocal do Jarvis**. VoiceStudio externo é opcional e
+exige serviço próprio configurado. [Demonstração e limites](docs/CODEX-APP-HANDOFF.md).
+
 [Diagnóstico e limites da integração Jarvis ↔ Codex Cloud](docs/CODEX-CLOUD-INTEGRATION.md)
 
 ## Estado real (25/10/2026)

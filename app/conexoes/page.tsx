@@ -4,6 +4,7 @@ import Link from "next/link";
 import AbacusHub from "../components/AbacusHub";
 import AbacusStatus from "../components/AbacusStatus";
 import NativeConnectors from "../components/NativeConnectors";
+import { APP_SHORTCUTS } from "../../lib/codex/app-handoff";
 type Item = {
   id: string;
   name: string;
@@ -53,6 +54,14 @@ export default function ConnectionsPage() {
     >
       <Link href="/configuracoes">← Configurações</Link>
       <h1>Central de Conexões</h1>
+      <section className="glass notice" aria-label="Abrir aplicativos">
+        <h2>Abrir agora</h2>
+        <p>Acesso direto aos aplicativos. Para o Jarvis ler ou alterar dados, use as autorizações e verificações dos conectores abaixo.</p>
+        <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+          {APP_SHORTCUTS.map(app=><a key={app.name} href={app.url} target="_blank" rel="noopener noreferrer">{app.name}</a>)}
+          <Link href="/configuracoes">Ouvir e ajustar a voz</Link>
+        </div>
+      </section>
       <AbacusStatus />
       <AbacusHub />
       <NativeConnectors />

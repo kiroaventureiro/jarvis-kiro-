@@ -36,3 +36,28 @@ test("Unexpected response and timeout do not establish authentication",async()=>
     assert.equal(report.cloudAuthentication,"not_verified");
   }
 });
+
+test("Transport failures never claim rejected authentication or disclose raw errors",async()=>{
+  for (const detail of ["error sending request for url private-token-secret-value", "Failed to connect to proxy port 8080", "ECONNREFUSED", "ENOTFOUND", "certificate verify failed"]) {
+    const r=runner(()=>{throw {message:detail};});
+    const report=await diagnoseCodexCloud({run:r.run,env:{}});
+    assert.equal(report.cloudAuthentication,"not_verified");
+    assert.equal(report.blocker,"cloud_transport_failed");
+    assert.equal(report.taskCreationVerified,false);
+    assert.equal(report.jarvisExecutorConnected,false);
+    assert.equal(JSON.stringify(report).includes(detail),false);
+  }
+});
+
+test("Timeout takes precedence over transport wording; explicit rejection stays distinct",async()=>{
+  for (const [error,authentication,blocker] of [
+    [{killed:true,message:"error sending request"},"not_verified","cloud_probe_timeout"],
+    [{stderr:"403 Forbidden"},"denied","cloud_access_denied"],
+    [{message:"unexpected CLI failure"},"not_verified","cloud_probe_failed"],
+  ]) {
+    const r=runner(()=>{throw error;});
+    const report=await diagnoseCodexCloud({run:r.run,env:{}});
+    assert.equal(report.cloudAuthentication,authentication);
+    assert.equal(report.blocker,blocker);
+  }
+});

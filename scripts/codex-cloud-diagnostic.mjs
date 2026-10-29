@@ -48,7 +48,12 @@ export async function diagnoseCodexCloud({run = execute, env = process.env} = {}
       return {...report, cloudAuthentication: "rejected", blocker: "cloud_authentication_rejected"};
     if (/\b403\b|forbidden/i.test(detail))
       return {...report, cloudAuthentication: "denied", blocker: "cloud_access_denied"};
-    return {...report, blocker: error?.killed ? "cloud_probe_timeout" : "cloud_probe_failed"};
+    if (error?.killed) return {...report, blocker: "cloud_probe_timeout"};
+    // A transport failure says nothing about whether the service accepts login.
+    // Keep raw errors private: they may include task data or credentials.
+    if (/error sending request|failed to connect|could not connect|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|certificate verify failed/i.test(detail))
+      return {...report, blocker: "cloud_transport_failed"};
+    return {...report, blocker: "cloud_probe_failed"};
   }
 }
 
