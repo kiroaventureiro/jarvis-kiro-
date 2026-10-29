@@ -118,6 +118,27 @@ export class ConnectorService {
       note: "Credenciais da memória não são usadas por estes conectores. Produção e merge permanecem bloqueados.",
     };
   }
+  /** Revalidate existing authorizations only. Never creates connections or changes scope. */
+  async verifySavedConnections() {
+    const state=await this.options.store.read();
+    const results: Array<{provider:Provider;state:"verified"|"not_connected"|"failed"}> = [];
+    for (const provider of ["github","supabase","vercel"] as const) {
+      const saved=state.connections[provider];
+      if (!saved?.credentials || saved.status!=="connected") {
+        results.push({provider,state:"not_connected"});
+        continue;
+      }
+      try {
+        await this.test(provider);
+        results.push({provider,state:"verified"});
+      } catch {
+        // Provider errors may contain private metadata. Persist the existing safe
+        // test result, but return only a bounded summary to this batch action.
+        results.push({provider,state:"failed"});
+      }
+    }
+    return {results};
+  }
   private async connection(p: Provider) {
     let c = (await this.options.store.read()).connections[p];
     if (!c || c.status !== "connected" || !c.credentials)

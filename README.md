@@ -11,7 +11,9 @@ sobre energia solar”. O Jarvis prepara o pedido/link; você abre e envia no de
 Esses atalhos não concedem acesso às contas nem controle remoto do navegador.
 
 Para acesso do próprio Jarvis aos serviços, use **Conexões** e os conectores
-autenticados. Para ouvir e ajustar a voz disponível no aparelho, use
+autenticados. **Verificar contas já autorizadas** confere GitHub, Supabase e
+Vercel em uma ação, usando apenas as credenciais já guardadas e sem alterar
+permissões ou iniciar execuções. Para ouvir e ajustar a voz disponível no aparelho, use
 **Configurações → Identidade vocal do Jarvis**. VoiceStudio externo é opcional e
 exige serviço próprio configurado. [Demonstração e limites](docs/CODEX-APP-HANDOFF.md).
 

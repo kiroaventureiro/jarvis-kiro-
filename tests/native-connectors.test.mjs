@@ -1061,3 +1061,30 @@ test("scoped connector read shares one timestamp for evidence and response",()=>
   assert.match(source,/current\.lastReadAt = checkedAt/);
   assert.match(source,/checkedAt,\s*data: redact/);
 });
+
+test('batch verification uses saved accounts, isolates failure and preserves scope', async()=>{
+ const f=fixture();
+ await setup(f,['github','supabase','vercel']);
+ const before=await f.store.read();
+ f.calls.length=0;
+ const original=f.service.options.call;
+ f.service.options.call=async(p,...args)=>{if(p==='supabase')throw Error('private credential must not escape');return original(p,...args)};
+ const result=await f.service.verifySavedConnections();
+ assert.deepEqual(result.results,[{provider:'github',state:'verified'},{provider:'supabase',state:'failed'},{provider:'vercel',state:'verified'}]);
+ assert.equal(JSON.stringify(result).includes('private credential'),false);
+ assert.ok(f.calls.every(call=>call.method==='GET'));
+ const after=await f.store.read();
+ for(const provider of ['github','supabase','vercel']){
+  assert.deepEqual(after.connections[provider].grants,before.connections[provider].grants);
+  assert.deepEqual(after.connections[provider].resources,before.connections[provider].resources);
+ }
+ assert.equal(after.connections.supabase.verifiedAt,null);
+});
+
+test('batch verification skips unconnected accounts without provider requests',async()=>{
+ const f=fixture();
+ const result=await f.service.verifySavedConnections();
+ assert.equal(result.results.length,3);
+ assert.ok(result.results.every(item=>item.state==='not_connected'));
+ assert.deepEqual(f.calls,[]);
+});

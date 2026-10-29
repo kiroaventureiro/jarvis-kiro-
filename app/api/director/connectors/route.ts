@@ -61,6 +61,8 @@ export async function POST(request: Request) {
       session = (await cookies()).get(cookieName)!.value,
       sessionId = hash(session);
     const op = data.op;
+    if (op === "verify_saved")
+      return NextResponse.json(await connectors.verifySavedConnections(), {headers});
     if (op === "plan")
       return NextResponse.json(
         await connectors.plan(data.title, data.actions),

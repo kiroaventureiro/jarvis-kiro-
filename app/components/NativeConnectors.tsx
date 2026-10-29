@@ -78,6 +78,7 @@ async function api(data: unknown) {
 export default function NativeConnectors() {
   const [view, setView] = useState<Overview | null>(null),
     [error, setError] = useState(""),
+    [verification, setVerification] = useState<Array<{provider:Provider;state:"verified"|"not_connected"|"failed"}>>([]),
     [loading, setLoading] = useState(false);
   async function load() {
     const r = await fetch("/api/director/connectors", {
@@ -123,6 +124,16 @@ export default function NativeConnectors() {
       setLoading(false);
     }
   }
+  async function verifySaved() {
+    setLoading(true);setError("");setVerification([]);
+    try {
+      const result=await api({op:"verify_saved"});
+      setVerification(result.results);
+      await load();
+    } catch(e) {
+      setError(e instanceof Error?e.message:"Não foi possível verificar as conexões salvas.");
+    } finally {setLoading(false);}
+  }
   return (
     <section
       className="native-connectors"
@@ -137,6 +148,13 @@ export default function NativeConnectors() {
           Atualizar conectores
         </button>
       </div>
+      <button type="button" onClick={verifySaved} disabled={loading || !view?.configured}>
+        {loading ? "Consultando conexões…" : "Verificar contas já autorizadas"}
+      </button>
+      <p>Verifica GitHub, Supabase e Vercel com as autorizações já salvas. Não solicita novos tokens, não altera permissões e não inicia tarefas ou deploys.</p>
+      {verification.length ? <ul aria-label="Resultado da verificação de contas" role="status">
+        {verification.map(item=><li key={item.provider}>{names[item.provider]}: {item.state==="verified"?"acesso verificado agora":item.state==="not_connected"?"autorização ainda não cadastrada":"verificação falhou; consulte o conector abaixo"}</li>)}
+      </ul> : null}
       <p>
         Conecte uma conta, escolha os projetos e conceda permissões ao JK.
         Gravações e deploys exigem um plano aprovado. Arquivos e logs são
