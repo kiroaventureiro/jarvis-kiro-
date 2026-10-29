@@ -393,6 +393,7 @@ export class ConnectorService {
     const connection = await this.connection(provider);
     const resource = this.allow(action, connection);
     let result: unknown;
+    let checkedAt: string;
     try {
       if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
       const run = signal
@@ -402,7 +403,7 @@ export class ConnectorService {
         : this.run;
       result = await run(action, connection.credentials!, resource);
       if (signal?.aborted) throw new DOMException("Cancelado", "AbortError");
-      const checkedAt = new Date(this.now()).toISOString();
+      checkedAt = new Date(this.now()).toISOString();
       await this.options.store.update((state) => {
         const current = state.connections[provider];
         if (
