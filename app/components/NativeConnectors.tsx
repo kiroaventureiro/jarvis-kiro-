@@ -359,9 +359,9 @@ function ProviderCard({
     >
       <h3>{names[v.provider]}</h3>
       <ol aria-label={"Etapas de conexão " + names[v.provider]}>
-        <li>Autorizar no provedor por OAuth ou token pessoal.</li>
-        <li>{c?.verifiedAt && !c.lastError ? "Validado: " : "Pendente: "}testar a autorização e listar projetos.</li>
-        <li>{c?.resources.length ? "Salvos: " : "Pendente: "}selecionar e salvar os projetos e permissões.</li>
+        <li>Conecte sua conta uma vez, usando OAuth ou um token do provedor.</li>
+        <li>{c?.verifiedAt && !c.lastError ? "Conexão verificada: " : "Conexão ainda não verificada: "}o Jarvis identifica os projetos permitidos pelo provedor.</li>
+        <li>Não é necessário selecionar projetos nem repetir permissões dentro do Jarvis. Opções avançadas são facultativas.</li>
       </ol>
       <p>{tokenSetup[v.provider].help}</p>
       <a href={tokenSetup[v.provider].url} target="_blank" rel="noopener noreferrer">{tokenSetup[v.provider].label}</a>
