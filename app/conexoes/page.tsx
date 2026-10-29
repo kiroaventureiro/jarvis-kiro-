@@ -5,6 +5,7 @@ import AbacusHub from "../components/AbacusHub";
 import AbacusStatus from "../components/AbacusStatus";
 import NativeConnectors from "../components/NativeConnectors";
 import WorkspaceConnectors from "../components/WorkspaceConnectors";
+import ObsConnection from "../components/ObsConnection";
 import DeviceCamera from "../components/DeviceCamera";
 import { connectionOption } from "../../lib/connection-options";
 import { APP_SHORTCUTS } from "../../lib/codex/app-handoff";
@@ -70,6 +71,7 @@ export default function ConnectionsPage() {
       <NativeConnectors />
       <WorkspaceConnectors />
       <DeviceCamera />
+      <ObsConnection />
       <section
         className="glass notice"
         aria-label="Consultas públicas integradas"

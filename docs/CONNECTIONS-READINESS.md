@@ -85,8 +85,11 @@ https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-fl
   com aviso claro; assinatura de chat não equivale à API xAI. Não foi configurada
   inferência xAI paga. Disponibilidade de modelo Grok via Abacus precisa ser
   confirmada pelo catálogo autenticado; não foi presumida.
-- OBS / Kiro TV: falta ponte local autenticada até o OBS no computador.
-  Nenhum software foi instalado no aparelho nem porta local exposta à internet.
+- OBS / Kiro TV: conector de leitura direta navegador → OBS local implementado.
+  Requer abrir o Jarvis no mesmo computador do OBS, habilitar o WebSocket v5 com
+  autenticação e permitir acesso de loopback no navegador. Não exige agente
+  adicional instalado, não expõe uma porta na internet e não permite controle
+  remoto. Ver [conexão OBS local](OBS-LOCAL-CONNECTION.md).
 - Redes sociais: não têm adaptador habilitado apenas por constarem no catálogo.
   APIs, revisão de aplicativo e escopos dependem da plataforma.
 - Bancos/finanças: dependem do banco e de API ou provedor Open Finance apropriado.

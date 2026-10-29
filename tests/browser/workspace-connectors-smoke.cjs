@@ -37,7 +37,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   await workspace.getByRole('checkbox',{name:'Gmail',exact:true}).check();assert.equal(await google.isEnabled(),true);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   await workspace.screenshot({path:'/tmp/jarvis-workspace-evidence/workspace-'+width+'.png'});
-  await page.getByLabel('Buscar plataforma').fill('OBS Studio');await page.getByText('Precisa de ponte local autenticada',{exact:true}).waitFor();
+  await page.getByLabel('Buscar plataforma').fill('OBS Studio');await page.getByText('Leitura local implementada · autorização no OBS necessária',{exact:true}).waitFor();
   assert.deepEqual(errors,[]);console.log(JSON.stringify({width,passed:true,missingConfigurationBlocksConsent:true,scopedMetadataRead:true,cameraRequiresGesture:true,cameraTracksStopped:true}));await context.close();
  }
 }finally{await browser.close()}})().catch(e=>{console.error(e);process.exitCode=1});

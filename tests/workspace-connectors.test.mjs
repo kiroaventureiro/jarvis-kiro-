@@ -49,7 +49,7 @@ test('disconnect during refresh cannot restore a deleted account',async()=>{
 });
 test('catalog has unique entries and honest blockers for OBS, Grok, banks and unsupported apps',()=>{
  const rows=JSON.parse(fs.readFileSync('config/connection-catalog.json','utf8')).items;assert.equal(new Set(rows.map(r=>r.id)).size,rows.length);
- const {connectionOption}=load('lib/connection-options.ts');assert.equal(connectionOption('obs-studio','').href,null);assert.equal(connectionOption('nubank-pj','').href,null);assert.match(connectionOption('xai-grok','').requirement,/não equivale/);assert.equal(connectionOption('gmail','').href,'#workspace-connectors');
+ const {connectionOption}=load('lib/connection-options.ts');assert.equal(connectionOption('obs-studio','').href,'#obs-connection');assert.equal(connectionOption('nubank-pj','').href,null);assert.match(connectionOption('xai-grok','').requirement,/não equivale/);assert.equal(connectionOption('gmail','').href,'#workspace-connectors');
 });
 
 test('disconnect during authorization code exchange cannot restore account access',async()=>{

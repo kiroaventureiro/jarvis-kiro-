@@ -95,7 +95,7 @@
     {
       "name": "OBS",
       "category": "streaming",
-      "connectionStrategy": "agente Windows local",
+      "connectionStrategy": "consulta autenticada do WebSocket v5 pelo navegador no mesmo aparelho; sem controle remoto",
       "purpose": "Status e cenas",
       "status": "planned_not_connected",
       "requiresUserAuthorization": true,

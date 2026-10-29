@@ -16,6 +16,11 @@ A câmera usa permissão local do navegador. Os cartões priorizam Kiro/Grok/OBS
 informam os requisitos das integrações ainda pendentes.
 [Estado das conexões e configuração necessária](docs/CONNECTIONS-READINESS.md).
 
+**OBS / Kiro TV:** a Central de Conexões consulta cenas e estado de transmissão/
+gravação pelo WebSocket autenticado do OBS no mesmo aparelho, sem instalar agente.
+Requer permissão de acesso local no navegador e não inicia lives nem gravações.
+[Como conectar o OBS](docs/OBS-LOCAL-CONNECTION.md).
+
 Para acesso do próprio Jarvis aos serviços, use **Conexões** e os conectores
 autenticados. **Verificar Abacus e contas já autorizadas** consulta o catálogo
 Abacus, GitHub, Supabase, Vercel e a descoberta VoiceStudio em uma ação,
