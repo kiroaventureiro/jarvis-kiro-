@@ -83,6 +83,7 @@ export default function JarvisExperience() {
     setDesktopDownloadCapable(desktopDownloadsSupported(navigator.userAgent,window.matchMedia("(pointer: coarse)").matches));
   },[]);
   const [trackedCodexIds,setTrackedCodexIds]=useState<string[]>([]);
+  const [pendingCodexApproval,setPendingCodexApproval]=useState<string|null>(null);
   const [codexAlertVisual,setCodexAlertVisual]=useState<"attention"|"activity"|"success"|"error"|null>(null);
   const seenCodexAlerts=useRef<Set<string>>(new Set());
   useEffect(()=>{
@@ -848,6 +849,28 @@ export default function JarvisExperience() {
       visual: undefined,
     };
   }
+  async function conversationalCodexApproval(text:string) {
+    if(!pendingCodexApproval)return null;
+    const normalized=text.toLocaleLowerCase("pt-BR").trim().replace(/[.!?]+$/,"");
+    if(["não","nao","cancela","cancelar","não autorizo"].includes(normalized)){
+      setPendingCodexApproval(null);
+      return {text:"Não registrei aprovação para essa tarefa.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
+    if(!["sim, autorizo","sim autorizo","autorizo esta tarefa"].includes(normalized))return null;
+    const taskId=pendingCodexApproval;
+    setPendingCodexApproval(null);
+    try{
+      const response=await fetch("/api/director/codex/approve",{
+        method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({taskId,approved:true,confirmation:"autorizo esta tarefa"})
+      });
+      const data=await response.json();
+      if(!response.ok||data.started!==false||data.queued!==false||data.task?.state!=="approved")throw Error("INVALID_APPROVAL_RESPONSE");
+      return {text:"Aprovação da tarefa Codex "+taskId.slice(0,8)+" registrada. O executor ainda não está conectado; nada foi executado.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+    }catch{
+      return {text:"Não foi possível confirmar a aprovação desta tarefa. Nenhuma execução foi iniciada.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
+  }
   async function conversationalCodexStatus(text:string) {
     const id=codexStatusIntent(text);
     if(!id)return null;
@@ -880,8 +903,11 @@ export default function JarvisExperience() {
       if(!response.ok)return {text:"Não consegui registrar o rascunho Codex. Nenhuma execução foi iniciada.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
       const data=await response.json();
       if(data.started!==false||data.queued!==false||data.task?.state!=="draft")throw Error("INVALID_CODEX_STATE");
-      if(typeof data.task.id==="string" && /^[0-9a-f-]{36}$/i.test(data.task.id))setTrackedCodexIds(ids=>[...ids.filter(id=>id!==data.task.id).slice(-9),data.task.id]);
-      return {text:"Registrei o pedido como rascunho Codex ("+String(data.task.id).slice(0,8)+"). O executor ainda não está conectado: nenhuma programação ou teste começou.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
+      if(typeof data.task.id==="string" && /^[0-9a-f-]{36}$/i.test(data.task.id)){
+        setTrackedCodexIds(ids=>[...ids.filter(id=>id!==data.task.id).slice(-9),data.task.id]);
+        setPendingCodexApproval(data.task.id);
+      }
+      return {text:"Registrei o pedido como rascunho Codex ("+String(data.task.id).slice(0,8)+"). Você autoriza registrar a aprovação desta tarefa? Nenhuma programação ou teste começará agora.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
     } catch {
       return {text:"O rascunho Codex não foi confirmado. Nenhuma execução foi iniciada.",model:"jk-codex",provider:"local_operational" as const,usage:null,visual:undefined};
     }
@@ -961,7 +987,7 @@ export default function JarvisExperience() {
     try {
       const voiceFirst =
         desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
-      const local = localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexStatus(text) || await conversationalCodexDraft(text);
+      const local = await conversationalCodexApproval(text) || localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexStatus(text) || await conversationalCodexDraft(text);
       let generatedForThisResponse=false;
       const result =
         local ||
@@ -1402,7 +1428,7 @@ export default function JarvisExperience() {
               );
             }}
             onMessage={async (spoken, signal) => {
-              const local = localConversationReply(spoken) || await conversationalCapabilityReply(spoken) || await conversationalCodexStatus(spoken) || await conversationalCodexDraft(spoken);
+              const local = await conversationalCodexApproval(spoken) || localConversationReply(spoken) || await conversationalCapabilityReply(spoken) || await conversationalCodexStatus(spoken) || await conversationalCodexDraft(spoken);
               if (local) return { ...local, provider: "local_action" };
               if (spoken.length > 1500)
                 throw new Error(
