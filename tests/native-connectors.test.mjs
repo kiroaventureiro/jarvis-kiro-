@@ -1054,3 +1054,10 @@ test("supervised self-diagnostic reads only fixed files from an authorized bindi
     state.audit.some((x) => x.outcome === "done" || x.operation === "execute"),
   );
 });
+
+test("scoped connector read shares one timestamp for evidence and response",()=>{
+  const source=readFileSync(new URL("../lib/connectors/service.ts",import.meta.url),"utf8");
+  assert.match(source,/const checkedAt = new Date\(this\.now\(\)\)\.toISOString\(\)/);
+  assert.match(source,/current\.lastReadAt = checkedAt/);
+  assert.match(source,/checkedAt,\s*data: redact/);
+});
