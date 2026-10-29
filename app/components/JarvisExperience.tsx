@@ -44,6 +44,7 @@ import {
 import { getVoiceManager } from "../../lib/voice/speech-output";
 import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voice-preferences";
 import { voiceAction } from "../../lib/voice/local-intents";
+import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
 import type { VoiceSnapshot } from "../../lib/voice/voice-controller";
 import { useFileWorkspace } from "./useFileWorkspace";
 import {
@@ -806,6 +807,26 @@ export default function JarvisExperience() {
       visual: undefined,
     };
   }
+  async function conversationalCapabilityReply(text:string) {
+    const topic=capabilityQuestion(text);
+    if(!topic)return null;
+    try {
+      const response=await fetch("/api/director/capabilities",{cache:"no-store",credentials:"same-origin"});
+      if(!response.ok)return null;
+      const data=await response.json();
+      let answer="";
+      if(topic==="codex")answer=data.codex?.execution==="not_connected"
+        ?"O Codex pode preparar tarefas, mas o executor autenticado ainda não está conectado. Não iniciei nenhuma execução."
+        :"A integração Codex informou o estado "+String(data.codex?.execution||"indefinido")+".";
+      if(topic==="navi")answer=data.navi?.available
+        ?"A ponte Navi está configurada e autorizada no servidor. Isto não confirma uma chamada realizada."
+        :"A ponte Navi ainda não está pronta. Verifique configuração, habilitação e autorização de cobrança da OpenAI API.";
+      if(topic==="companion")answer=data.companion?.desktopConnected
+        ?"O companion informa conexão desktop; operações específicas ainda precisam de autorização."
+        :"O aplicativo local do Jarvis ainda não está conectado ao computador.";
+      return {text:answer,model:"jk-capabilities",provider:"local_operational" as const,usage:null,visual:undefined};
+    } catch { return null; }
+  }
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const text = draft.trim();
@@ -861,7 +882,7 @@ export default function JarvisExperience() {
     try {
       const voiceFirst =
         desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
-      const local = localConversationReply(text);
+      const local = localConversationReply(text) || await conversationalCapabilityReply(text);
       let generatedForThisResponse=false;
       const result =
         local ||
@@ -1301,7 +1322,7 @@ export default function JarvisExperience() {
               );
             }}
             onMessage={async (spoken, signal) => {
-              const local = localConversationReply(spoken);
+              const local = localConversationReply(spoken) || await conversationalCapabilityReply(spoken);
               if (local) return { ...local, provider: "local_action" };
               if (spoken.length > 1500)
                 throw new Error(
