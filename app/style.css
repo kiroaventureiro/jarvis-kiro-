@@ -1220,3 +1220,19 @@ details summary .badge {
 @media (prefers-reduced-motion: reduce) {
   .jarvis-stage.jarvis-desktop-focus .interaction-dock { transition: none; }
 }
+
+
+/* Transient, non-textual Codex notification around the holographic presence. */
+.jarvis-stage[data-codex-alert="activity"] .presence { filter: drop-shadow(0 0 26px rgba(71,184,252,.56)); }
+.jarvis-stage[data-codex-alert="attention"] .presence { filter: drop-shadow(0 0 26px rgba(255,210,81,.62)); }
+.jarvis-stage[data-codex-alert="success"] .presence { filter: drop-shadow(0 0 30px rgba(91,238,178,.68)); }
+.jarvis-stage[data-codex-alert="error"] .presence { filter: drop-shadow(0 0 30px rgba(255,107,137,.64)); }
+@media (prefers-reduced-motion: no-preference) {
+  .jarvis-stage[data-codex-alert]:not([data-codex-alert="none"]) .presence {
+    animation: jarvis-codex-alert-glow 1.8s ease-in-out 2;
+  }
+  @keyframes jarvis-codex-alert-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .8; }
+  }
+}
