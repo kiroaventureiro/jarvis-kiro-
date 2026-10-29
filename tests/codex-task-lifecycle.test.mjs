@@ -1,0 +1,22 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import ts from "typescript";
+import vm from "node:vm";
+import {readFileSync} from "node:fs";
+const src=readFileSync(new URL("../lib/codex/task-lifecycle.ts",import.meta.url),"utf8");
+const exports={};
+vm.runInNewContext(ts.transpileModule(src,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,Date});
+const task={id:"t1",state:"draft",repository:"kiroaventureiro/jarvis-kiro-",branch:"feature/diretor-tecnico-agent",createdAt:"2026-10-29T05:00:00Z",updatedAt:"2026-10-29T05:00:00Z"};
+const now="2026-10-29T05:05:00Z";
+test("Codex task cannot claim execution without verified authorization and worker",()=>{
+  assert.throws(()=>exports.transitionCodexTask(task,"running",{},now),/INVALID_TRANSITION/);
+  assert.throws(()=>exports.transitionCodexTask(task,"approved",{},now),/APPROVAL_REQUIRED/);
+  const approved=exports.transitionCodexTask(task,"approved",{approvalVerified:true},now);
+  assert.throws(()=>exports.transitionCodexTask(approved,"queued",{},now),/VERIFIED_WORKER_REQUIRED/);
+  const queued=exports.transitionCodexTask(approved,"queued",{workerVerified:true},now);
+  const running=exports.transitionCodexTask(queued,"running",{workerVerified:true},now);
+  assert.throws(()=>exports.transitionCodexTask(running,"completed",{workerVerified:true},now),/VERIFIED_RESULT_REQUIRED/);
+  const completed=exports.transitionCodexTask(running,"completed",{workerVerified:true,resultReference:"https://github.com/example/commit/abc"},now);
+  assert.equal(completed.state,"completed");
+  assert.throws(()=>exports.transitionCodexTask(completed,"running",{workerVerified:true},now),/INVALID_TRANSITION/);
+});
