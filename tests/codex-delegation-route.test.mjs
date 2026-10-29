@@ -32,3 +32,9 @@ test("Codex planning persists drafts and never reports execution",()=>{
   assert.match(route,/task: saved, queued:false, started:false/);
   assert.match(route,/Não foi possível registrar a tarefa no armazenamento persistente/);
 });
+
+test("Codex task persistence is restricted to the authorized repository and experimental branch",()=>{
+  assert.match(route,/plan\.repository !== "kiroaventureiro\/jarvis-kiro-"/);
+  assert.match(route,/plan\.baseBranch !== "feature\/diretor-tecnico-agent"/);
+  assert.match(route,/Repositório ou branch ainda não autorizados/);
+});
