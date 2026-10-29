@@ -71,7 +71,7 @@ export default function JarvisExperience() {
     [error, setError] = useState(""),
     [hidden, setHidden] = useState(false),
     [dragging, setDragging] = useState(false);
-  const [generatedImage, setGeneratedImage] = useState<{messageId:string;file:File;label:string}|null>(null);
+  const [generatedImages, setGeneratedImages] = useState<Array<{messageId:string;file:File;label:string}>>([]);
   const [latestUnified, setLatestUnified] = useState<{ messageId: string; result: JarvisUnifiedResult } | null>(null);
   const [voiceSnapshot, setVoiceSnapshot] = useState<VoiceSnapshot>({
     phase: "off",
@@ -795,7 +795,6 @@ export default function JarvisExperience() {
     // Typed messages use the server-side RouteLLM adapter. Voice remains a separate session.
     const userId = crypto.randomUUID();
     const assistantId = crypto.randomUUID();
-    setGeneratedImage(null);
     setMessages((items) => [...items, { id: userId, role: "user", text }]);
     setDraft("");
     setError("");
@@ -812,7 +811,7 @@ export default function JarvisExperience() {
           onGeneratedMedia: (items) => {
             holoSession.rememberMedia(items);
             const image=items.find(item=>["image/png","image/jpeg","image/webp"].includes(item.file.type) && item.file.size <= 8_000_000);
-            if (image && !requestController.signal.aborted) setGeneratedImage({messageId:assistantId,file:image.file,label:image.label});
+            if (image && !requestController.signal.aborted) setGeneratedImages(previous=>[...previous.slice(-7),{messageId:assistantId,file:image.file,label:image.label}]);
           },
           history: messages.map(({ role, text }) => ({ role, content: text })),
           signal: requestController.signal,
@@ -1091,7 +1090,7 @@ export default function JarvisExperience() {
                   {item.role === "user" ? "Você" : "Jarvis"}
                 </span>
                 {item.role === "assistant" && latestUnified?.messageId === item.id
-                  ? <><JarvisResultPanel result={latestUnified.result} />{generatedImage?.messageId === item.id && <JarvisGeneratedImage file={generatedImage.file} label={generatedImage.label} />}</>
+                  ? <><JarvisResultPanel result={latestUnified.result} />{generatedImages.filter(image=>image.messageId === item.id).map(image=><JarvisGeneratedImage key={image.messageId} file={image.file} label={image.label} />)}</>
                   : <p>{item.text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1")}</p>}
               </article>
             ))}
