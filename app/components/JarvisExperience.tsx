@@ -832,6 +832,7 @@ export default function JarvisExperience() {
       const voiceFirst =
         desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
       const local = localConversationReply(text);
+      let generatedForThisResponse=false;
       const result =
         local ||
         (await requestAbacus(text, {
@@ -840,7 +841,7 @@ export default function JarvisExperience() {
             const image=items.find(item=>["image/png","image/jpeg","image/webp"].includes(item.file.type) && item.file.size <= 8_000_000);
             if (image && !requestController.signal.aborted) {
               setGeneratedImages(previous=>[...previous.slice(-7),{messageId:assistantId,file:image.file,label:image.label,autoDownloadOnArrival:false}]);
-              if (desktopDownloadCapable) setPendingDownload({id:assistantId,file:image.file});
+              if (desktopDownloadCapable) { generatedForThisResponse=true; setPendingDownload({id:assistantId,file:image.file}); }
             }
           },
           history: messages.map(({ role, text }) => ({ role, content: text })),
@@ -861,6 +862,7 @@ export default function JarvisExperience() {
           },
         }));
       if (requestController.signal.aborted) return;
+      if (generatedForThisResponse) result.text += "\n\nQuer que eu baixe esta imagem no seu computador?";
       setUnifiedResults(previous => [...previous.slice(-31), {
         messageId: assistantId,
         result: {
