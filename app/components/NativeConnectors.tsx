@@ -885,6 +885,17 @@ function RepairPanel({
     [authorize, setAuthorize] = useState(false),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState("");
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const requestedProject = params.get("repairProject");
+    const requestedText = params.get("repairRequest");
+    const requestedPaths = params.get("repairPaths");
+    if (requestedProject && projects.some((p) => p.id === requestedProject))
+      setProject(requestedProject);
+    if (requestedText) setRequest(requestedText.slice(0, 700));
+    if (requestedPaths) setPaths(requestedPaths.slice(0, 700));
+    // A deep link may fill the form but never authorize AI cost or execute a write.
+  }, [projects]);
   async function run(mode: string) {
     setBusy(true);
     setNotice("");
