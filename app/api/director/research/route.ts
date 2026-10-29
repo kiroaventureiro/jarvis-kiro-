@@ -1,3 +1,4 @@
+import { answerNativeRequest } from "../../../../lib/connectors/server";
 import { answerVoiceUsageQuestion } from "../../../../lib/voice/usage-answer";
 import { answerVoiceStudioQuestion } from "../../../../lib/voice/voicestudio-server";
 import { answerAbacusAgentQuestion } from "../../../../lib/abacus/agent-read";
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Consulta inválida" }, { status: 400 });
   try {
     const reply =
+      (await answerNativeRequest(body.query, request.signal)) ||
       (await answerVoiceUsageQuestion(body.query)) ||
       (await answerAbacusPlatformQuestion(body.query, request.signal)) ||
       (await answerAbacusAgentQuestion(body.query, request.signal)) ||
