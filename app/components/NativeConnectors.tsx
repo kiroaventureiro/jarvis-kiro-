@@ -63,6 +63,14 @@ const names = {
   supabase: "Supabase administrativo",
   vercel: "Vercel",
 };
+const tokenSetup = {
+  github: {url:"https://github.com/settings/personal-access-tokens", label:"Gerenciar tokens no GitHub", help:"Selecione os repositórios desejados no GitHub. Comece com leitura; Contents e Pull requests precisam de escrita apenas para alterações aprovadas. Não habilite exclusão de repositórios ou administração por padrão."},
+  supabase: {url:"https://supabase.com/dashboard/account/tokens", label:"Gerenciar tokens no Supabase", help:"Use um token pessoal da Management API para listar os projetos administrativos. A chave service role de um banco não substitui esse token. O cofre dedicado e a memória são configurações independentes."},
+  vercel: {url:"https://vercel.com/account/settings/tokens", label:"Gerenciar tokens na Vercel", help:"Escolha o escopo da conta/equipe no provedor. Informe o ID da equipe quando necessário e selecione os projetos no Jarvis. Deploy de produção não é habilitado por este conector."},
+};
+class ConnectorRequestError extends Error {
+  constructor(message:string, public diagnostics?:unknown) { super(message); }
+}
 async function api(data: unknown) {
   const r = await fetch("/api/director/connectors", {
     method: "POST",
@@ -72,10 +80,11 @@ async function api(data: unknown) {
     body: JSON.stringify(data),
   });
   const body = await r.json();
-  if (!r.ok) throw new Error(body.error || "Operação não concluída.");
+  if (!r.ok) throw new ConnectorRequestError(body.error || "Operação não concluída.", body.diagnostics);
   return body;
 }
 export default function NativeConnectors() {
+  const [diagnostics,setDiagnostics]=useState<unknown>(null);
   const [view, setView] = useState<Overview | null>(null),
     [error, setError] = useState(""),
     [verification, setVerification] = useState<Array<{provider:Provider;state:"verified"|"not_connected"|"failed"}>>([]),
@@ -126,6 +135,14 @@ export default function NativeConnectors() {
       setLoading(false);
     }
   }
+  async function diagnoseSetup() {
+    setLoading(true);setError("");
+    try {
+      const r=await fetch("/api/director/connectors?diagnostics=1",{cache:"no-store",credentials:"same-origin"});
+      const body=await r.json();if(!r.ok)throw Error(body.error||"Não foi possível verificar a configuração.");
+      setDiagnostics({pageOrigin:window.location.origin,server:body});
+    } catch(e){setError(e instanceof Error?e.message:"Diagnóstico indisponível.");}finally{setLoading(false);}
+  }
   async function verifySaved() {
     setLoading(true);setError("");setVerification([]);setAbacusVerification(null);setStudioVerification(null);
     try {
@@ -144,6 +161,13 @@ export default function NativeConnectors() {
       className="native-connectors"
       aria-label="Conectores nativos de desenvolvimento"
     >
+      <details className="glass notice">
+        <summary>Verificar configuração das conexões</summary>
+        <p>Consulta somente a configuração deste ambiente, sem testar tokens ou chamar provedores. Acesso exige sessão do proprietário.</p>
+        <button type="button" disabled={loading} onClick={diagnoseSetup}>Diagnosticar configuração</button>
+        {diagnostics ? <pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{JSON.stringify(diagnostics,null,2)}</pre> : null}
+        <Link href="/configuracoes">Abrir acesso do proprietário</Link>
+      </details>
       <div className="connector-heading">
         <div>
           <p className="eyebrow">DESENVOLVIMENTO AUTORIZADO</p>
@@ -271,10 +295,12 @@ function ProviderCard({
 }) {
   const [busy, setBusy] = useState(false),
     [notice, setNotice] = useState(""),
+    [requestDiagnostics,setRequestDiagnostics]=useState<unknown>(null),
     [manual, setManual] = useState(false),
     [token, setToken] = useState(""),
     [teamId, setTeamId] = useState(""),
     [available, setAvailable] = useState<Resource[]>([]),
+    [nextPage,setNextPage]=useState<number|null>(null),
     [selected, setSelected] = useState<Resource[]>(
       v.connection?.resources || [],
     ),
@@ -291,10 +317,12 @@ function ProviderCard({
   async function run(fn: () => Promise<void>) {
     setBusy(true);
     setNotice("");
+    setRequestDiagnostics(null);
     try {
       await fn();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : "Não foi possível concluir.");
+      if(e instanceof ConnectorRequestError && e.diagnostics)setRequestDiagnostics(e.diagnostics);
     } finally {
       setBusy(false);
     }
@@ -303,10 +331,19 @@ function ProviderCard({
     await run(async () => {
       const result = await api({ op: "test", provider: v.provider });
       setAvailable(result.resources);
+      setNextPage(v.provider==="github" && result.truncated ? 2 : null);
       setNotice(
         "Leitura do provedor validada. Escolha e salve os projetos autorizados.",
       );
       await onChange();
+    });
+  }
+  async function moreProjects(){
+    if(nextPage===null)return;
+    await run(async()=>{
+      const result=await api({op:"discover",provider:v.provider,page:nextPage});
+      setAvailable(items=>[...new Map([...items,...result.resources].map((r:Resource)=>[r.id,r])).values()]);
+      setNextPage(result.truncated && nextPage<10 ? nextPage+1 : null);
     });
   }
   function toggle(r: Resource, checked: boolean) {
@@ -321,6 +358,15 @@ function ProviderCard({
       aria-label={"Conector " + names[v.provider]}
     >
       <h3>{names[v.provider]}</h3>
+      <ol aria-label={"Etapas de conexão " + names[v.provider]}>
+        <li>Autorizar no provedor por OAuth ou token pessoal.</li>
+        <li>{c?.verifiedAt && !c.lastError ? "Validado: " : "Pendente: "}testar a autorização e listar projetos.</li>
+        <li>{c?.resources.length ? "Salvos: " : "Pendente: "}selecionar e salvar os projetos e permissões.</li>
+      </ol>
+      <p>{tokenSetup[v.provider].help}</p>
+      <a href={tokenSetup[v.provider].url} target="_blank" rel="noopener noreferrer">{tokenSetup[v.provider].label}</a>
+      {!v.writeAllowlist.length ? <p>Leitura pode ser autorizada. Alterações permanecem bloqueadas até a configuração dos recursos permitidos no servidor.</p> : null}
+      {requestDiagnostics ? <details open><summary>Diagnóstico seguro do envio recusado</summary><pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{JSON.stringify(requestDiagnostics,null,2)}</pre></details> : null}
       <p>
         <strong>
           {c?.status === "connected"
@@ -357,9 +403,10 @@ function ProviderCard({
       <div className="connector-buttons">
         <button
           type="button"
-          disabled={!enabled || busy || !v.oauthConfigured}
-          onClick={() =>
-            run(async () => {
+          disabled={!enabled || busy}
+          onClick={() => {
+            if(!v.oauthConfigured){setManual(true);return;}
+            void run(async () => {
               const r = await api({ op: "connect", provider: v.provider });
               const u = new URL(r.authorizationUrl);
               if (
@@ -370,10 +417,10 @@ function ProviderCard({
               )
                 throw Error("Destino de autorização inválido.");
               window.location.assign(u.href);
-            })
-          }
+            });
+          }}
         >
-          Conectar {names[v.provider]}
+          Conectar {names[v.provider]}{v.oauthConfigured ? "" : " com token"}
         </button>
         <button
           type="button"
@@ -496,9 +543,11 @@ function ProviderCard({
           <details>
             <summary>Escopo de projetos e permissões</summary>
             <p>
-              Selecione até 20 recursos. A listagem é limitada; se o recurso não
-              aparecer, restrinja a instalação no provedor.
+              Selecione até 100 recursos autorizados. GitHub permite carregar mais páginas,
+              até 1.000 repositórios consultados. Vercel lista até 100 projetos e Supabase até 200;
+              os limites não concedem acesso adicional no provedor.
             </p>
+            {nextPage!==null ? <button type="button" disabled={busy} onClick={moreProjects}>Carregar mais repositórios GitHub</button> : null}
             {(available.length ? available : c.resources).map((r) => (
               <div key={r.id} className="connector-resource">
                 <label>

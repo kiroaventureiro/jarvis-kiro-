@@ -12,3 +12,14 @@ export function connectionOption(id:string,category:string){
  const social=/Redes|sociais|Comunicação/i.test(category);
  return {priority:kiro?1:social?2:3,status:"Ainda não pronto para autorização",requirement:kiro?"Identificar a API e os recursos do projeto Kiro, implementar o adaptador e verificar a autenticação.":"Faltam avaliação da API oficial, adaptador de execução e autenticação própria. Somente autorizar uma conta ainda não basta. Não há custo ou acesso ativado por este cadastro.",href:null,action:null};
 }
+
+/** Preparation guidance never creates authorization or claims an unimplemented adapter. */
+export function connectionInstructions(id:string,category:string){
+ const option=connectionOption(id,category);
+ if(["github","supabase","vercel"].includes(id))return ["Abra o conector nativo acima e confira a configuração do ambiente.","Autorize no aplicativo OAuth configurado ou use o token pessoal no formulário seguro; nunca envie segredos pelo chat.","Teste a conexão, escolha os projetos listados pelo provedor e salve o escopo.","Faça uma leitura verificável. Escrita exige recurso permitido no servidor, plano e aprovação próprios."];
+ if(option.href==="#workspace-connectors")return ["Confira os requisitos OAuth na seção Google e Microsoft.","O administrador cadastra o aplicativo, os callbacks e as APIs necessárias no provedor.","Selecione os serviços e autorize na tela oficial; depois use a consulta de leitura.","Permissão na plataforma não habilita edição, envio ou publicação que o Jarvis ainda não implementa."];
+ if(id==="device-camera")return ["Use a seção Câmera no navegador em HTTPS.","Permita a câmera somente ao clicar; desligue ao terminar. Não há conexão com uma conta Google."];
+ if(["obs-studio","kiro-tv"].includes(id))return ["Abra o Jarvis no mesmo computador do OBS.","Habilite o WebSocket autenticado no OBS e autorize acesso local no navegador.","Informe os dados somente no painel local e verifique cenas e estado; não inicia transmissão."];
+ if(id==="abacus-ai")return ["Use a verificação das contas já configuradas, sem gerar conteúdo pago.","Catálogo validado não comprova geração ou acesso a aplicativos privados. Uso de modelos mantém seu orçamento e autorização."];
+ return [option.requirement,"Confira se a plataforma oferece API oficial e qual método suporta: OAuth, token próprio ou permissão local. Um link para o site não conecta a conta.","Antes de receber credenciais, o Jarvis precisa de adaptador validado para essa plataforma, armazenamento apropriado e teste de leitura com resultado verificável.","Autorize somente os recursos necessários. Nenhuma instalação, cobrança, publicação ou permissão é ativada por estas instruções."];
+}

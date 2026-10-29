@@ -5,12 +5,14 @@ import {
   connectors,
   connectorOAuth,
   projects,
+  connectorStore,
 } from "../../../../lib/connectors/server";
 import {
   provider,
   hash,
   jsonBody,
   originAllowed,
+  requestOriginStatus,
   publicError,
   safeText,
 } from "../../../../lib/connectors/security";
@@ -25,12 +27,26 @@ const headers = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "no-referrer",
 };
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await authorized()))
     return NextResponse.json(
       { error: "Sessão do proprietário necessária." },
       { status: 401, headers },
     );
+  if (request && new URL(request.url).searchParams.get("diagnostics") === "1") {
+    const settings = ["JARVIS_CONNECTOR_STORE_URL", "JARVIS_CONNECTOR_STORE_KEY", "JARVIS_CONNECTOR_ENCRYPTION_KEY"];
+    return NextResponse.json({
+      checkedAt: new Date().toISOString(),
+      authenticated: true,
+      origin: requestOriginStatus(request, oauthApps().origin || undefined),
+      vaultConfigured: connectorStore.configured(),
+      missingVaultSettings: settings.filter(key => !process.env[key]?.trim()),
+      writePolicyPresent: !!process.env.JARVIS_CONNECTOR_WRITE_RESOURCES?.trim(),
+      oauthConfigured: Object.fromEntries((["github", "supabase", "vercel"] as const).map(p => [p, connectorOAuth.configured(p)])),
+      noProviderCalls: true,
+      note: "GET de diagnóstico não verifica o Origin de um POST. Compare com os detalhes do envio recusado. Nenhum segredo, cookie ou corpo é incluído.",
+    }, {headers});
+  }
   try {
     return NextResponse.json(
       {
@@ -55,7 +71,7 @@ export async function POST(request: Request) {
     );
   if (!originAllowed(request, oauthApps().origin || undefined))
     return NextResponse.json(
-      { error: "Origem não autorizada." },
+      { error: "Origem não autorizada.", code: "ORIGIN_NOT_ALLOWED", diagnostics: requestOriginStatus(request, oauthApps().origin || undefined) },
       { status: 403, headers },
     );
   try {
@@ -121,7 +137,7 @@ export async function POST(request: Request) {
       );
       response.cookies.set("jk_dev_oauth", result.binding, {
         httpOnly: true,
-        secure: new URL(request.url).protocol === "https:",
+        secure: new URL(oauthApps().origin || request.url).protocol === "https:",
         sameSite: "lax",
         path: "/api/director/connectors/oauth",
         maxAge: 600,

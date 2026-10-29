@@ -1,3 +1,4 @@
+import { requestOriginAllowed } from "../request-origin";
 import {
   boundHistory,
   publicAbacusError,
@@ -41,12 +42,8 @@ export async function processAbacusRequest(
 ) {
   const error = (message: string, status: number) =>
     Response.json({ error: message }, { status, headers });
-  const origin = request.headers.get("Origin");
-  if (
-    (origin && origin !== new URL(request.url).origin) ||
-    request.headers.get("Sec-Fetch-Site") === "cross-site"
-  )
-    return error("Origem não autorizada", 403);
+  if (!requestOriginAllowed(request, process.env.JARVIS_CONNECTOR_ORIGIN, false))
+return error("Origem não autorizada", 403);
   let data: unknown;
   try {
     const reader = request.body?.getReader();

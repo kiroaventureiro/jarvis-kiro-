@@ -1,9 +1,6 @@
+import { requestOriginAllowed } from "../request-origin";
 export function sameOrigin(request: Request) {
-  const origin = request.headers.get("origin");
-  return (
-    (!origin || origin === new URL(request.url).origin) &&
-    request.headers.get("sec-fetch-site") !== "cross-site"
-  );
+  return requestOriginAllowed(request, process.env.JARVIS_CONNECTOR_ORIGIN, false);
 }
 export async function boundedBody(request: Request, limit: number) {
   const reader = request.body?.getReader();

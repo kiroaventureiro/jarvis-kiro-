@@ -20,7 +20,7 @@ test("Server-only OpenAI execution uses bounded history and cancellation", () =>
 });
 test("Navi route requires authentication and same origin", () => {
   assert.match(route, /await authorized\(\)/);
-  assert.match(route, /sec-fetch-site/);
+  assert.match(route, /requestOriginAllowed\(request, process.env.JARVIS_CONNECTOR_ORIGIN, false\)/);
   assert.match(route, /origem|Origem/);
   assert.match(route, /safeNaviHistory/);
   assert.match(route, /private, no-store/);

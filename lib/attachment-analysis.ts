@@ -1,3 +1,4 @@
+import { requestOriginAllowed } from "./request-origin";
 import {
   attachmentType,
   fileProblem,
@@ -174,12 +175,8 @@ export function createAnalysisHandler(deps: Dependencies) {
   return async function POST(req: Request) {
     if (!(await deps.authorized()))
       return problem("Autentique seu dispositivo para analisar arquivos.", 401);
-    const origin = req.headers.get("Origin");
-    if (
-      (origin && origin !== new URL(req.url).origin) ||
-      req.headers.get("Sec-Fetch-Site") === "cross-site"
-    )
-      return problem("Origem do envio não autorizada.", 403);
+    if (!requestOriginAllowed(req, process.env.JARVIS_CONNECTOR_ORIGIN, false))
+return problem("Origem do envio não autorizada.", 403);
     const key = deps.key();
     if (!key)
       return problem(
