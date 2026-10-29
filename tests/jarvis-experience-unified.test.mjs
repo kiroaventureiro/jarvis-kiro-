@@ -10,3 +10,8 @@ test("Jarvis main chat renders completed replies via the unified panel",()=>{
  assert.match(source,/<JarvisResultPanel result=\{latestUnified\.result\}/);
  assert.match(source,/artifacts: \[\]/);
 });
+
+test("Chat does not misattribute Abacus output to Navi",()=>{
+ assert.match(source,/source: "other"/);
+ assert.doesNotMatch(source,/result\.provider === "openai_navi"/);
+});
