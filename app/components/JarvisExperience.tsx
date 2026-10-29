@@ -221,8 +221,9 @@ export default function JarvisExperience() {
       const data: unknown = await response.json();
       if (!data || typeof data !== "object" || !("text" in data) ||
           typeof data.text !== "string" || !data.text.trim()) return;
+      const briefingText = data.text;
       setMessages((items) => [...items, {
-        id: crypto.randomUUID(), role: "assistant", text: data.text.slice(0, 3500),
+        id: crypto.randomUUID(), role: "assistant", text: briefingText.slice(0, 3500),
       }]);
     }).catch(() => { /* No false status if a connector is unavailable. */ });
     return () => controller.abort();
