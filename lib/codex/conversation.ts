@@ -12,11 +12,11 @@ export function answerCodexPlanning(message: string) {
   if (!/\b(revisar|revise|analisar|analise|testar|teste|implementar|implemente|corrigir|corrija|desenvolver|desenvolva)\b/.test(n))
     return null;
   // Never turn questions, negated instructions or another named project into a Jarvis task.
-  if (/\\b(?:nao|nunca)\\s+(?:peca|pede|mande|envie|delegue|solicite|prepare)\\b/.test(n))
+  if (/\b(?:nao|nunca)\s+(?:peca|pede|mande|envie|delegue|solicite|prepare)\b/.test(n))
     return null;
-  if (/\\b(?:pode|consegue|seria possivel|como)\\s+(?:pedir|mandar|enviar|delegar|solicitar)\\b/.test(n))
+  if (/\b(?:pode|consegue|seria possivel|como)\s+(?:pedir|mandar|enviar|delegar|solicitar)\b/.test(n))
     return null;
-  const explicitRepository = /\\b(?:repositorio|repo|projeto)\\s+([a-z0-9_.-]+\\/[a-z0-9_.-]+)/.exec(n);
+  const explicitRepository = /\b(?:repositorio|repo|projeto)\s+([a-z0-9_.-]+\/[a-z0-9_.-]+)/.exec(n);
   if (explicitRepository && explicitRepository[1] !== "kiroaventureiro/jarvis-kiro-")
     return null;
   const kind: CodexTaskKind = /\b(testar|teste)\b/.test(n) ? "test"
