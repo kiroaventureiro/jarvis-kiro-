@@ -124,6 +124,13 @@ export class VoiceController {
     rec.onend = () => { if (this.rec === rec) this.pause(); };
     try { rec.start(); } catch { this.pause(); }
   }
+  interruptSpeech() {
+    if (!this.speechPending) return;
+    this.skipSpeech = true;
+    this.options.speech.cancel();
+    this.pause();
+    this.emit("resuming", "Fala interrompida. Retomando a escuta…");
+  }
   audioMuted() {
     if (this.phase === "speaking") {
       this.skipSpeech = true;
