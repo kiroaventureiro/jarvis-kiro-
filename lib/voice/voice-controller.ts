@@ -107,7 +107,7 @@ export class VoiceController {
     rec.interimResults = true;
     const interrupt = (spoken: string) => {
       const phrase = normalizeSpeech(spoken);
-      if (!/^(?:jarvis )?(?:pare|para|parar|silencio|cala a boca|pare de falar|para de falar|chega|cancele|cancelar)$/.test(phrase)) return;
+      if (!/^(?:(?:jarvis|jarvis kiro) )?(?:pare|para|parar|silencio|cala a boca|pare de falar|para de falar|chega|cancele|cancelar)(?: agora| por favor)?$/.test(phrase)) return;
       this.skipSpeech = true;
       this.options.speech.cancel();
       this.pause();
