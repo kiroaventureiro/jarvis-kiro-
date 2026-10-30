@@ -52,6 +52,9 @@ test('Browser actions prepare safe search and service links without API access',
  assert.equal(browserActionIntent('abra a Microsoft').url,'https://www.microsoft365.com/');
  assert.equal(browserActionIntent('abra GitHub').url,'https://github.com/');
  assert.equal(browserActionIntent('Jarvis, entre no GitHub').url,'https://github.com/');
+ assert.equal(browserActionIntent('Navi, entre no GitHub').url,'https://github.com/');
+ assert.equal(browserActionIntent('Navi, abra o repositório do Jarvis no GitHub').url,'https://github.com/kiroaventureiro/jarvis-kiro-');
+ assert.equal(browserActionIntent('Navi, abra a Vercel').url,'https://vercel.com/umiversokiro/jarvis-kiro');
  assert.equal(browserActionIntent('vá ao GitHub').url,'https://github.com/');
  assert.equal(browserActionIntent('abra o GitHub no navegador').url,'https://github.com/');
  assert.equal(browserActionIntent('abra o repositório do Jarvis no GitHub').url,'https://github.com/kiroaventureiro/jarvis-kiro-');
