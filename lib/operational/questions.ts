@@ -21,7 +21,7 @@ export function operationalQuestion(
   )
     return null;
   const query =
-    /\b(quais|qual|que|como|voce|sua|seu|esta|estao|funciona|funcionam|conhece|configurados|conectados|capacidades|tenho|tem|posso|acesso|autorizado|disponivel)\b/.test(
+    /\b(quais|qual|que|como|voce|sua|seu|esta|estao|funciona|funcionam|conhece|configurad[oa]s?|conectad[oa]s?|funcionando|status|operacional|capacidades|tenho|tem|posso|acesso|autorizad[oa]s?|disponiv(?:el|eis))\b/.test(
       n,
     );
   if (!query) return null;
