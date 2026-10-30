@@ -23,7 +23,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { connectorResultLink } from "../../lib/connectors/result";
 import JarvisNavigation from "./JarvisNavigation";
-import { CosmicSystems } from "./CosmicScene";
+
 import RefinedJarvisCore from "./RefinedJarvisCore";
 import ArrivalBriefing from "./ArrivalBriefing";
 import { arrivalBriefingIntent } from "../../lib/voice/arrival-intent";
@@ -1649,7 +1649,7 @@ export default function JarvisExperience() {
           ) : null}
         </div>
       </div>
-      <CosmicSystems />
+
     </main>
   );
 }
