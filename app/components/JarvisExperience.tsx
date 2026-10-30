@@ -1217,7 +1217,7 @@ export default function JarvisExperience() {
         onRemove={workspace.remove}
         onCancel={workspace.cancel}
       />
-      <header className="stage-header">
+      <header className="stage-header" style={{ borderBottom: "none", boxShadow: "none" }}>
         <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-start", gap: 10, flex: "0 0 auto", minWidth: 0, maxWidth: "calc(100% - 48px)" }}>
         <Link
           href="/"
@@ -1230,6 +1230,8 @@ export default function JarvisExperience() {
             lineHeight: 1.1,
             flexShrink: 0,
             fontStyle: "italic",
+            textDecoration: "none",
+            borderBottom: "none",
             fontWeight: 500,
             letterSpacing: "-0.035em",
             textTransform: "none",
