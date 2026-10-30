@@ -802,6 +802,7 @@ export default function JarvisExperience() {
     }
   }
   async function microphone() {
+    window.dispatchEvent(new Event("jk-arrival-stop"));
     wakeStop.current();
     if (fileSpeech.current) {
       fileSpeech.current.abort();
@@ -848,6 +849,7 @@ export default function JarvisExperience() {
       setTyping(true);
       reply="Preparei a opção de anexar arquivos. Para selecionar um arquivo local, o navegador pode exigir um clique.";
     } else {
+      window.dispatchEvent(new Event("jk-arrival-stop"));
       getVoiceManager().cancel();
       reply="Interrompi a fala atual.";
     }
