@@ -23,7 +23,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { connectorResultLink } from "../../lib/connectors/result";
 import JarvisNavigation from "./JarvisNavigation";
-import HolographicCore from "./HolographicCore";
+import HolographicCore, { CosmicSystems } from "./CosmicScene";
+import ArrivalBriefing from "./ArrivalBriefing";
+import { arrivalBriefingIntent } from "../../lib/voice/arrival-intent";
 import HologramBackdrop from "./HologramBackdrop";
 import { corePhase, type AudioVisualMode } from "../../lib/hologram/policy";
 import AttachmentHUD from "./AttachmentHUD";
@@ -204,39 +206,11 @@ export default function JarvisExperience() {
   useEffect(() => {
     if (historyLoaded && retainHistory)
       saveDeviceHistory(
-        messages.map(({ id, role, text }) => ({ id, role, text })),
+        messages.filter(item => item.role !== "assistant" || (item.text !== arrivalText.current && !item.text.startsWith("Boletim do Jarvis,"))).map(({ id, role, text }) => ({ id, role, text })),
       );
   }, [messages, retainHistory, historyLoaded]);
-  // Arrival briefing is a transient announcement, not permanent chat history.
-  const [arrivalNotice, setArrivalNotice] = useState("");
-  const arrivalRequested = useRef(false);
-  useEffect(() => {
-    if (!historyLoaded || arrivalRequested.current) return;
-    arrivalRequested.current = true;
-    const controller = new AbortController();
-    let hideTimer: ReturnType<typeof setTimeout> | undefined;
-    void fetch("/api/director/arrival-briefing", {
-      credentials: "same-origin", cache: "no-store", signal: controller.signal,
-    }).then(async (response) => {
-      if (!response.ok || controller.signal.aborted) return;
-      const data: unknown = await response.json();
-      if (!data || typeof data !== "object" || !("text" in data) ||
-          typeof data.text !== "string" || !data.text.trim() || controller.signal.aborted) return;
-      const text = data.text.slice(0, 3500);
-      setArrivalNotice(text);
-      hideTimer = setTimeout(() => setArrivalNotice(""), 16000);
-      // Browser audio playback can require a prior gesture. If blocked, the
-      // announcement remains available for an explicit "Ouvir" click.
-      if (document.visibilityState === "visible" && !muteRef.current &&
-          readVoicePreferences().volume > 0) {
-        void getVoiceManager().speak(text, controller.signal).catch(() => {});
-      }
-    }).catch(() => {});
-    return () => {
-      controller.abort();
-      if (hideTimer) clearTimeout(hideTimer);
-    };
-  }, [historyLoaded]);
+  const arrivalText = useRef("");
+  const rememberArrival = useCallback((text: string) => { arrivalText.current = text; }, []);
   const [typingRequest, setTypingRequest] = useState(false);
   const [desktopVoice, setDesktopVoice] = useState(false);
   const browserReplyId = useRef<string | null>(null);
@@ -853,6 +827,10 @@ export default function JarvisExperience() {
     setMic(enabled);
   }
   function selfControlReply(text:string) {
+    if (arrivalBriefingIntent(text)) {
+      window.dispatchEvent(new Event("jk-arrival-reveal"));
+      return {text:arrivalText.current || "O boletim ainda não está disponível. Verifique sua sessão e tente novamente.",model:"jk-arrival-replay",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
     const action=voiceAction(text);
     if(action==="none")return null;
     let reply="";
@@ -1177,7 +1155,7 @@ export default function JarvisExperience() {
   return (
     <main
       className={
-        "jarvis-stage jarvis-desktop-focus " +
+        "cosmic-stage jarvis-stage jarvis-desktop-focus " +
         (hidden ? "is-hidden " : "") +
         (holoSession.current ? "has-holo " : "") +
         (workspace.files.length ? "has-attachments " : "") +
@@ -1244,7 +1222,7 @@ export default function JarvisExperience() {
         </Link>
         <JarvisNavigation />
       </header>
-      <section className="presence" aria-label="Presença do Jarvis">
+      <section id="cosmic-home" className="presence" aria-label="Presença do Jarvis">
         <HolographicCore
           phase={corePhase(
             workspace.phase === "error" ? "error" : state,
@@ -1397,24 +1375,7 @@ export default function JarvisExperience() {
           </button>
         </div>
       ) : null}
-      {arrivalNotice ? (
-        <aside role="status" aria-label="Boletim do Jarvis" className="glass" style={{
-          position:"fixed",bottom:"6.5rem",left:"50%",transform:"translateX(-50%)",
-          zIndex:40,width:"min(90vw,520px)",maxHeight:"32vh",overflow:"auto",
-          padding:"0.8rem 1rem",borderRadius:16,boxShadow:"0 12px 40px #0008"
-        }}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
-            <strong>Boletim do Jarvis</strong>
-            <div style={{display:"flex",gap:8}}>
-              <button type="button" className="subtle-button" onClick={() => {
-                void getVoiceManager().speak(arrivalNotice, new AbortController().signal).catch(() => {});
-              }}>Ouvir</button>
-              <button type="button" className="subtle-button" onClick={()=>setArrivalNotice("")} aria-label="Recolher boletim">×</button>
-            </div>
-          </div>
-          <p style={{fontSize:"0.85rem",lineHeight:1.45,margin:"0.5rem 0 0"}}>{arrivalNotice}</p>
-        </aside>
-      ) : null}
+      {historyLoaded ? <ArrivalBriefing muted={muted} busy={connected || state === "processing" || state === "responding" || voiceSnapshot.microphoneActive || workspace.busy} onReady={rememberArrival} /> : null}
       <div className="jarvis-dock-hotzone" aria-hidden="true" />
       <div className="interaction-dock">
         <details className="dock-preferences">
@@ -1687,6 +1648,8 @@ export default function JarvisExperience() {
           ) : null}
         </div>
       </div>
+      <CosmicSystems />
     </main>
   );
 }
+

@@ -1,0 +1,473 @@
+/* Official owner reference: raster composition with CSS parallax, not inferred 3D. */
+.cosmic-stage.jarvis-stage {
+  min-height: 100dvh;
+  height: auto;
+  overflow: clip;
+  background: #050609;
+  isolation: isolate;
+}
+.cosmic-stage .jk-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  opacity: 0.46;
+  background-color: #050609;
+  background-image:
+    radial-gradient(1px 1px at 17px 31px, #dce7f8aa 90%, transparent),
+    radial-gradient(1px 1px at 98px 111px, #d8c7a273 90%, transparent),
+    radial-gradient(1px 1px at 62px 170px, #cad9ef55 90%, transparent),
+    radial-gradient(2px 2px at 201px 83px, #d0dcf940 50%, transparent);
+  background-size:
+    237px 223px,
+    301px 319px,
+    181px 271px,
+    401px 337px;
+}
+.cosmic-stage .jk-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse, #050609bb 25%, #05060955);
+}
+.cosmic-stage .presence,
+.cosmic-stage:has(.response-hud) .presence,
+.cosmic-stage.has-attachments .presence {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100svh;
+  min-height: 540px;
+  margin: 0;
+  transform: none;
+}
+.cosmic-stage .state-indicator {
+  position: absolute;
+  bottom: 138px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  width: max-content;
+  max-width: 90vw;
+  font-size: 11px;
+}
+.cosmic-scene {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.4s;
+}
+.cosmic-scene[data-hidden="true"] {
+  opacity: 0.16;
+}
+.cosmic-viewport {
+  position: absolute;
+  inset: 80px 0 110px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: pan-y;
+  outline-offset: -8px;
+}
+.cosmic-viewport:active {
+  cursor: grabbing;
+}
+.cosmic-camera {
+  position: absolute;
+  width: min(1120px, 100vw);
+  aspect-ratio: 1024 / 614;
+  top: 50%;
+  left: 50%;
+  transform: translate(
+      calc(-50% + var(--cosmic-x)),
+      calc(-50% + var(--cosmic-y))
+    )
+    scale(var(--cosmic-zoom));
+  transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+  will-change: transform;
+}
+.cosmic-viewport:active .cosmic-camera {
+  transition: none;
+}
+.cosmic-reference {
+  width: 100%;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse, #000 40%, #000e 65%, transparent 78%);
+}
+.cosmic-accretion {
+  position: absolute;
+  left: 20%;
+  top: 30%;
+  width: 64%;
+  height: 43%;
+  border-radius: 50%;
+  border: 1px solid #ffd19b60;
+  border-bottom: 3px solid #ffb451b0;
+  transform: rotate(-24deg);
+  box-shadow: 0 4px 22px #ffa13130;
+  animation: cosmic-disk 12s ease-in-out infinite;
+  pointer-events: none;
+}
+.cosmic-flow {
+  position: absolute;
+  left: 9%;
+  top: 17%;
+  width: 54%;
+  height: 53%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 20% 50%, #63c6ff40, transparent 36%);
+  animation: cosmic-flow 6s ease-in-out infinite;
+  pointer-events: none;
+}
+.cosmic-orbit {
+  position: absolute;
+  left: 18%;
+  top: 47%;
+  width: 65%;
+  height: 12%;
+  transform: rotate(-24deg);
+  pointer-events: none;
+}
+.cosmic-star {
+  position: absolute;
+  width: clamp(9px, 1.6vw, 20px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 36% 32%,
+    #e7f8ff,
+    #76d2ff 36%,
+    #1b6fb5 75%
+  );
+  box-shadow: 0 0 20px #5fcfff;
+  animation: cosmic-orbit 22s ease-in-out infinite;
+}
+.cosmic-scene[data-phase="listening"] .cosmic-flow,
+.cosmic-scene[data-phase="responding"] .cosmic-flow {
+  animation-duration: 2s;
+  opacity: 1;
+}
+.cosmic-scene[data-phase="processing"] .cosmic-accretion {
+  animation-duration: 3s;
+}
+.cosmic-scene[data-phase="error"] .cosmic-accretion {
+  border-color: #ea9b93;
+}
+.cosmic-scene[data-paused="true"] *,
+.cosmic-scene[data-hidden="true"] * {
+  animation-play-state: paused !important;
+}
+.cosmic-tools {
+  position: absolute;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #d4b68b35;
+  border-radius: 30px;
+  background: #090c10cc;
+  z-index: 4;
+  white-space: nowrap;
+}
+.cosmic-tools button {
+  background: transparent;
+  border: 0;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 9px 12px;
+  color: #d8ccba;
+  font-size: 12px;
+  border-radius: 24px;
+}
+.cosmic-tools button:hover {
+  background: #d5ab6220;
+}
+.cosmic-tools button:last-child {
+  color: #f5d3a0;
+  background: #bc82351f;
+}
+.cosmic-stage .stage-header {
+  position: absolute;
+}
+.cosmic-stage .wordmark {
+  color: #eee5d6;
+}
+.cosmic-stage .wordmark span {
+  color: #c4a474;
+}
+.cosmic-systems {
+  position: relative;
+  z-index: 2;
+  padding: clamp(56px, 10vw, 130px) max(24px, calc((100vw - 1080px) / 2)) 180px;
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 72px;
+  background: linear-gradient(#05060900, #050609ed 20%);
+  scroll-margin-top: 30px;
+}
+.cosmic-systems-intro {
+  align-self: start;
+  position: sticky;
+  top: 70px;
+}
+.cosmic-systems-intro > span {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: #c7a878;
+}
+.cosmic-systems h2 {
+  font-size: clamp(28px, 4vw, 46px);
+  line-height: 1.15;
+  color: #f4eee3;
+  letter-spacing: -0.04em;
+  margin: 22px 0;
+}
+.cosmic-systems p {
+  color: #a8adb7;
+  font-size: 15px;
+  max-width: 34ch;
+}
+.cosmic-systems a {
+  color: #dbbd92;
+  text-decoration: none;
+}
+.gravity-navigation {
+  display: grid;
+  gap: 20px;
+}
+.gravity-link {
+  display: grid;
+  grid-template-columns: 38px 1fr 30px;
+  gap: 16px;
+  align-items: center;
+  min-height: 100px;
+  padding: 24px;
+  border-top: 1px solid #ccb08538;
+  border-radius: 5px;
+  background: linear-gradient(110deg, #c3a46e0b, transparent);
+  font-size: clamp(18px, 2vw, 24px);
+  transition:
+    transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.7s,
+    background 0.2s;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gravity-link:not(.is-visible) {
+    opacity: 0.12;
+    transform: translateY(35px) scale(0.97);
+  }
+}
+.gravity-link:focus-visible,
+.gravity-link:hover {
+  opacity: 1;
+  transform: translateY(-3px);
+  background: #ddbe8120;
+}
+.gravity-number {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: #80796f;
+}
+.arrival-briefing {
+  position: fixed;
+  right: 24px;
+  bottom: 124px;
+  z-index: 40;
+  width: min(360px, calc(100vw - 32px));
+  color: #e4ded2;
+  border: 1px solid #be9e6540;
+  border-radius: 16px;
+  background: #0b0e14ef;
+  backdrop-filter: blur(18px);
+  padding: 14px 16px;
+  text-align: left;
+}
+.arrival-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.arrival-heading button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.arrival-briefing p {
+  font-size: 12px;
+  color: #b3b9c3;
+  margin: 4px 0 10px;
+}
+.arrival-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.arrival-actions button,
+.arrival-actions summary {
+  min-height: 44px;
+  padding: 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.arrival-actions button {
+  background: #bc955525;
+  border-color: #c2a47635;
+}
+.arrival-actions details {
+  flex: 1;
+}
+.arrival-actions details[open] p {
+  max-height: 28vh;
+  overflow: auto;
+}
+.arrival-briefing.is-collapsed {
+  width: auto;
+  padding: 0;
+  bottom: 24px;
+}
+.arrival-replay {
+  background: transparent;
+  border: 0;
+  padding: 12px 16px;
+  min-height: 44px;
+  font-size: 11px;
+  color: #c1b49c;
+}
+.cosmic-stage .interaction-dock {
+  position: fixed;
+  z-index: 35;
+}
+.cosmic-stage.jarvis-desktop-focus .jarvis-dock-hotzone {
+  position: fixed;
+}
+.cosmic-stage:has(.arrival-briefing[data-speaking="true"]) .interaction-dock,
+.cosmic-stage.has-attachments .interaction-dock,
+.cosmic-stage:has(.text-composer) .interaction-dock {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%);
+}
+@keyframes cosmic-disk {
+  0%,
+  100% {
+    transform: rotate(-24deg) scale(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: rotate(-20deg) scale(1.06);
+    opacity: 0.8;
+  }
+}
+@keyframes cosmic-flow {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+@keyframes cosmic-orbit {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(0.7);
+    opacity: 0.65;
+  }
+  50% {
+    transform: translate(42vw, 0) scale(0.8);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(21vw, -65px) scale(0.5);
+    opacity: 0.55;
+  }
+  75% {
+    transform: translate(21vw, 65px) scale(1.15);
+    opacity: 1;
+  }
+}
+@media (max-width: 767px) {
+  .cosmic-stage .presence,
+  .cosmic-stage:has(.response-hud) .presence {
+    min-height: 520px;
+  }
+  .cosmic-camera {
+    width: 145vw;
+  }
+  .cosmic-tools {
+    bottom: 110px;
+  }
+  .cosmic-tools button {
+    padding-inline: 9px;
+  }
+  .cosmic-stage .state-indicator {
+    bottom: 180px;
+  }
+  .cosmic-systems {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding-bottom: 200px;
+  }
+  .cosmic-systems-intro {
+    position: static;
+  }
+  .gravity-link {
+    min-height: 90px;
+  }
+  .arrival-briefing {
+    right: 16px;
+    bottom: 175px;
+  }
+  .arrival-briefing.is-collapsed {
+    bottom: 100px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cosmic-scene *,
+  .gravity-link {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.cosmic-accretion {
+  overflow: hidden;
+}
+.cosmic-accretion::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    transparent 20%,
+    #ffdb9e70,
+    transparent 45%,
+    #d7783930,
+    transparent 70%
+  );
+  mask-image: radial-gradient(
+    ellipse,
+    transparent 38%,
+    #000 40%,
+    transparent 52%
+  );
+  animation: cosmic-light-flow 18s linear infinite;
+}
+@keyframes cosmic-light-flow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cosmic-scene[data-paused="true"] *::after,
+.cosmic-scene[data-hidden="true"] *::after {
+  animation-play-state: paused !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cosmic-scene *::after {
+    animation: none !important;
+  }
+}

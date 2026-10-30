@@ -1,3 +1,6 @@
+import { arrivalBriefingIntent } from "../../../../lib/voice/arrival-intent";
+import { arrivalBriefing } from "../../../../lib/connectors/arrival-briefing";
+import { connectorStore } from "../../../../lib/connectors/server";
 import { requestOriginAllowed } from "../../../../lib/request-origin";
 import { answerCodexPlanning } from "../../../../lib/codex/conversation";
 import { answerNaviRequest } from "../../../../lib/openai/navi-router";
@@ -79,6 +82,7 @@ return NextResponse.json({ error: "Origem inválida" }, { status: 403 });
   }
   try {
     const reply =
+      (arrivalBriefingIntent(body.query) ? await arrivalBriefing(connectorStore) : null) ||
       answerCodexPlanning(body.query) ||
       (await answerNaviRequest(body.query, history, request.signal)) ||
       (await answerCouncilRequest(body.query, request.signal, false)) ||
@@ -112,3 +116,4 @@ return NextResponse.json({ error: "Origem inválida" }, { status: 403 });
     );
   }
 }
+
