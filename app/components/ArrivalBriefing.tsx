@@ -92,14 +92,10 @@ export default function ArrivalBriefing({
           return;
         const value = data.text.slice(0, 3500);
         setText(value);
-        setOpen(true);
+        // Never play the arrival bulletin without explicit user request.
+        setOpen(false);
         onReady(value);
-        collapseAfter(16000);
-        // Respect autoplay policy. Never unlock audio by secretly starting a paid session.
-        if (!navigator.userActivation || navigator.userActivation.hasBeenActive)
-          void play(value);
-        else
-          setNotice("Boletim pronto. Toque em Ouvir para autorizar o áudio.");
+        setNotice("Boletim disponível sob solicitação.");
       })
       .catch(() => {
         /* No fabricated bulletin or intrusive error for a failed/auth-required request. */
@@ -114,13 +110,17 @@ export default function ArrivalBriefing({
   useEffect(() => {
     const interrupt = () => {
       speech.current?.abort();
+      getVoiceManager().cancel();
+      setSpeaking(false);
+      setNotice("Boletim interrompido");
     };
     if (muted || busy) interrupt();
     const visibility = () => {
       if (document.hidden) interrupt();
     };
     document.addEventListener("visibilitychange", visibility);
-    return () => document.removeEventListener("visibilitychange", visibility);
+    window.addEventListener("jk-arrival-stop", interrupt);
+    return () => { document.removeEventListener("visibilitychange", visibility); window.removeEventListener("jk-arrival-stop", interrupt); };
   }, [muted, busy]);
   useEffect(() => {
     const replay = () => {
@@ -144,6 +144,7 @@ export default function ArrivalBriefing({
             <button
               className="subtle-button"
               onClick={() => {
+                window.dispatchEvent(new Event("jk-arrival-stop"));
                 clearHide();
                 setOpen(false);
               }}
@@ -154,6 +155,7 @@ export default function ArrivalBriefing({
           </div>
           <p role="status">{notice}</p>
           <div className="arrival-actions">
+            {speaking ? <button onClick={() => window.dispatchEvent(new Event("jk-arrival-stop"))}>Parar boletim</button> : null}
             <button
               onClick={() => void play(text)}
               disabled={
