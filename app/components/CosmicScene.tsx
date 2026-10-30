@@ -123,6 +123,23 @@ function CosmicScene(props: Props) {
     window.addEventListener("pointermove", pointer, { passive: true });
     window.addEventListener("jarvis-graphics", wake);
     window.addEventListener("jk-speech-progress", speech);
+    const camera = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        active?: boolean; index?: number; focus?: string;
+      }>).detail;
+      if (!detail?.active || paused()) {
+        el.style.transform = "";
+        return;
+      }
+      const step = Math.max(0, Math.min(12, detail.index || 0));
+      const direction = step % 4;
+      const offsetX = [0, -9, 8, 0][direction];
+      const offsetY = [-2, 3, -2, 5][direction];
+      const scale = step === 0 ? 1.55 : 1.35 + (step % 3) * 0.13;
+      el.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(${scale})`;
+    };
+    window.addEventListener("jk-cosmic-camera", camera);
+
     void import("../../lib/hologram/cosmic-canvas")
       .then((module) => {
         if (disposed) return;
@@ -143,6 +160,8 @@ function CosmicScene(props: Props) {
       window.removeEventListener("pointermove", pointer);
       window.removeEventListener("jarvis-graphics", wake);
       window.removeEventListener("jk-speech-progress", speech);
+      window.removeEventListener("jk-cosmic-camera", camera);
+      el.style.transform = "";
     };
   }, [props.onVisualMode]);
   useEffect(() => {
@@ -156,6 +175,7 @@ function CosmicScene(props: Props) {
     >
       <canvas
         ref={canvas}
+        style={{ transition:"transform 1250ms cubic-bezier(.2,.75,.3,1)", transformOrigin:"50% 50%" }}
         role="img"
         aria-label="Jarvis cósmico: buraco negro, plasma dourado e estrela azul, desenhados e animados por código."
       />
