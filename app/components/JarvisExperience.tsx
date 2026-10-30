@@ -44,6 +44,7 @@ import {
   visibleResponses,
 } from "../../lib/response-presentation";
 import { getVoiceManager } from "../../lib/voice/speech-output";
+import { registerAudioStopper, subscribeInterruption } from "../../lib/voice/interruption";
 import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voice-preferences";
 import { voiceAction } from "../../lib/voice/local-intents";
 import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
@@ -86,6 +87,16 @@ export default function JarvisExperience() {
   useEffect(()=>{
     setDesktopDownloadCapable(desktopDownloadsSupported(navigator.userAgent,window.matchMedia("(pointer: coarse)").matches));
   },[]);
+  useEffect(() => registerAudioStopper(() => {
+    typingAbort.current?.abort();
+    fileSpeech.current?.abort();
+    fileSpeech.current = null;
+    getVoiceManager().cancel();
+    audio.current?.pause();
+  }), []);
+  useEffect(() => subscribeInterruption(next => {
+    if (next === "idle" || next === "listening") setState(next);
+  }), []);
   const [trackedCodexIds,setTrackedCodexIds]=useState<string[]>([]);
   const [appHandoff,setAppHandoff]=useState<AppHandoff|null>(null);
   const [appsOpen,setAppsOpen]=useState(false);
