@@ -179,6 +179,48 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
       await context.close();
       if (recording) await recording.saveAs(out + "/jarvis-procedural.webm");
     }
+    // Internal menu pages must reveal their individual sections, not the
+    // full content wrapper. They must remain scrollable on narrow screens.
+    const internalContext = await browser.newContext({
+      viewport: { width: 390, height: 700 },
+      hasTouch: true,
+      isMobile: true,
+    });
+    try {
+      const internalPage = await internalContext.newPage();
+      await internalPage.route("**/api/**", (route) =>
+        route.fulfill({ status: 401, json: { error: "Test session required" } }),
+      );
+      await internalPage.goto(base + "/configuracoes", {
+        waitUntil: "domcontentloaded",
+      });
+      await internalPage.locator("main.internal-page.jk-interior-scroll").waitFor();
+      await internalPage.waitForFunction(() =>
+        document.querySelectorAll(
+          "main.internal-page > .internal-content > .jk-reveal",
+        ).length >= 3,
+      );
+      const layout = await internalPage.evaluate(() => ({
+        wrapperAnimated: document.querySelector(
+          "main.internal-page > .internal-content",
+        )?.classList.contains("jk-reveal"),
+        revealedSections: document.querySelectorAll(
+          "main.internal-page > .internal-content > .jk-reveal",
+        ).length,
+        scrollHeight: document.documentElement.scrollHeight,
+        viewportHeight: innerHeight,
+      }));
+      assert.equal(layout.wrapperAnimated, false);
+      assert.ok(layout.revealedSections >= 3);
+      assert.ok(layout.scrollHeight > layout.viewportHeight);
+      await internalPage.evaluate(() =>
+        window.scrollTo(0, document.documentElement.scrollHeight),
+      );
+      await internalPage.waitForFunction(() => window.scrollY > 0);
+      results.push({ scenario: "internal-scroll-mobile", ...layout });
+    } finally {
+      await internalContext.close();
+    }
     await fs.writeFile(out + "/results.json", JSON.stringify(results, null, 2));
     console.log(JSON.stringify(results, null, 2));
   } finally {
