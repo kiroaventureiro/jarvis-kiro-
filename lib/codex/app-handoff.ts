@@ -42,7 +42,9 @@ export function appHandoffIntent(message: string): "codex" | "chatgpt" | null {
   const text = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (!/\b(peca|pedir|pergunte|perguntar|solicite|prepare|abra|abrir|envie|mandar|mande|encaminhe|revisar|revise|analise|implemente|teste|ajude)\b/.test(text)) return null;
   if (/\bcodex\b/.test(text)) return "codex";
-  return /\b(chatgpt|navi)\b/.test(text) ? "chatgpt" : null;
+  if (/\bchatgpt\b/.test(text)) return "chatgpt";
+  // A vocative at the start ("Navi, revise...") is not a handoff request.
+  return /\b(?:ao|a|para|pro|com)\s+navi\b/.test(text) ? "chatgpt" : null;
 }
 export function prepareAppHandoff(message: string, destination: "codex" | "chatgpt", origin = JARVIS_ORIGIN) {
   if (origin !== JARVIS_ORIGIN) throw Error("INVALID_ORIGIN");
