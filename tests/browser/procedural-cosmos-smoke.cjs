@@ -91,6 +91,24 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
         if (config.reduced) assert.equal(after, before);
         else assert.notEqual(after, before);
       }
+      // Camera moves only for active narrated demonstrations. It must reset
+      // immediately on exit and respect the reduced-motion preference.
+      if (!config.fallback) {
+        const transform = await page.evaluate(() => {
+          const el = document.querySelector(".procedural-cosmos canvas");
+          window.dispatchEvent(new CustomEvent("jk-cosmic-camera", {
+            detail: { active: true, index: 2, focus: "right" },
+          }));
+          const active = el.style.transform;
+          window.dispatchEvent(new CustomEvent("jk-cosmic-camera", {
+            detail: { active: false },
+          }));
+          return { active, reset: el.style.transform };
+        });
+        if (config.reduced) assert.equal(transform.active, "");
+        else assert.match(transform.active, /scale\\(1\\.43\\)/);
+        assert.equal(transform.reset, "");
+      }
       assert.equal(
         await page
           .locator(
