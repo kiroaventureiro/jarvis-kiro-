@@ -146,6 +146,17 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
       /private.*no-store/,
     );
     await page.locator(".arrival-briefing.is-open").waitFor();
+    const orbit = await page.locator(".cosmic-star").evaluate(el => {
+      const animation = el.getAnimations()[0];
+      if (!animation) throw Error("Idle orbit animation missing");
+      animation.pause(); animation.currentTime = 5500;
+      const upper = el.getBoundingClientRect().y;
+      animation.currentTime = 16500;
+      const lower = el.getBoundingClientRect().y;
+      animation.currentTime = 0; animation.play();
+      return { upper, lower };
+    });
+    assert.ok(orbit.lower > orbit.upper + 30, "The orbit must have distinct front/back arcs");
     assert.equal(await page.evaluate(() => window.__spoken.length), 0);
     assert.equal(
       await page.locator(".jk-core,.jk-base,.jk-emitter").count(),

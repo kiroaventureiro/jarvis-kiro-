@@ -378,7 +378,15 @@
     opacity: 0.65;
   }
   50% {
-    transform: translate(42vw, -20px) scale(1.15);
+    transform: translate(42vw, 0) scale(0.8);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(21vw, -65px) scale(0.5);
+    opacity: 0.55;
+  }
+  75% {
+    transform: translate(21vw, 65px) scale(1.15);
     opacity: 1;
   }
 }
