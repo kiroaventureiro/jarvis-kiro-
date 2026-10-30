@@ -5,7 +5,8 @@ export const APP_SHORTCUTS = [
   {name:"ChatGPT",url:"https://chatgpt.com/"},
   {name:"Google",url:"https://www.google.com/"},
   {name:"Microsoft 365",url:"https://www.microsoft365.com/"},
-  {name:"GitHub Jarvis",url:"https://github.com/kiroaventureiro/jarvis-kiro-/tree/feature/diretor-tecnico-agent"},
+  {name:"GitHub",url:"https://github.com/"},
+  {name:"GitHub Jarvis",url:"https://github.com/kiroaventureiro/jarvis-kiro-"},
   {name:"Supabase",url:"https://supabase.com/dashboard"},
   {name:"Vercel",url:"https://vercel.com/umiversokiro/jarvis-kiro"},
 ] as const;
@@ -13,7 +14,7 @@ export const APP_SHORTCUTS = [
 /** Browser navigation is offered as a link, never automatic remote browser control. */
 export function browserActionIntent(message:string): {name:string;url:string}|null {
   const text=message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  if(!/\b(abra|abrir|acesse|acessar|pesquise|pesquisar|busque|buscar|procure)\b/.test(text))return null;
+  if(!/\b(abra|abrir|acesse|acessar|pesquise|pesquisar|busque|buscar|procure)\b/.test(text) && !/\b(entre|entrar)\s+(?:no|na|em)\b/.test(text) && !/\b(va|ir)\s+(?:ao|no|na|para o|para a)\b/.test(text))return null;
   if(/\b(pesquise|pesquisar|busque|buscar|procure)\b/.test(text) && /\b(google|navegador|web|internet|bing)\b/.test(text)) {
     // Apply the same credential refusal before putting any request in a search URL.
     prepareAppHandoff(message,"chatgpt");
@@ -24,11 +25,16 @@ export function browserActionIntent(message:string): {name:string;url:string}|nu
     return {name:"Pesquisa no navegador",url:engine+encodeURIComponent(Array.from(query.toWellFormed()).slice(0,400).join(""))};
   }
   if(/\bcodex\b|\bchatgpt\b|\bnavi\b/.test(text))return null;
+  const shortcut=(name:string)=>APP_SHORTCUTS.find(app=>app.name===name) ?? null;
+  // Mentioning a browser does not turn a request for GitHub into a Google link.
+  if(/\bgithub\b/.test(text)) {
+    const project=/(?:projeto|repositorio|repo)\s+(?:do\s+|da\s+)?jarvis|github\s+(?:do\s+)?jarvis|jarvis\s+no\s+github/.test(text);
+    return shortcut(project ? "GitHub Jarvis" : "GitHub");
+  }
+  if(/\bsupabase\b/.test(text))return shortcut("Supabase");
+  if(/\bvercel\b/.test(text))return shortcut("Vercel");
   if(/\b(google|navegador|chrome|edge)\b/.test(text))return {name:"Google",url:"https://www.google.com/"};
   if(/\b(microsoft|office|outlook)\b/.test(text))return {name:"Microsoft 365",url:"https://www.microsoft365.com/"};
-  if(/\bgithub\b/.test(text))return APP_SHORTCUTS[4];
-  if(/\bsupabase\b/.test(text))return APP_SHORTCUTS[5];
-  if(/\bvercel\b/.test(text))return APP_SHORTCUTS[6];
   return null;
 }
 export function appHandoffIntent(message: string): "codex" | "chatgpt" | null {
