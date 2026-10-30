@@ -156,7 +156,8 @@ export async function answerOperationalQuestion(
   );
   return {
     text:
-      snapshot.nativeRegistryState === "unavailable" && kind === "overview"
+      snapshot.nativeRegistryState === "unavailable" &&
+      (kind === "overview" || kind === "github" || kind === "vercel")
         ? "O cofre dos conectores nativos está temporariamente indisponível. Não posso confirmar seus estados atuais nem afirmar que estão desconectados."
         : operationalAnswer(kind, snapshot),
     model: "jarvis-operational",
