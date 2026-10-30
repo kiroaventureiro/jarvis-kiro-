@@ -23,7 +23,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { connectorResultLink } from "../../lib/connectors/result";
 import JarvisNavigation from "./JarvisNavigation";
-import HolographicCore, { CosmicSystems } from "./CosmicScene";
+import { CosmicSystems } from "./CosmicScene";
+import RefinedJarvisCore from "./RefinedJarvisCore";
 import ArrivalBriefing from "./ArrivalBriefing";
 import { arrivalBriefingIntent } from "../../lib/voice/arrival-intent";
 import HologramBackdrop from "./HologramBackdrop";
@@ -1223,7 +1224,7 @@ export default function JarvisExperience() {
         <JarvisNavigation />
       </header>
       <section id="cosmic-home" className="presence" aria-label="Presença do Jarvis">
-        <HolographicCore
+        <RefinedJarvisCore
           phase={corePhase(
             workspace.phase === "error" ? "error" : state,
             voiceSnapshot.phase,
