@@ -104,6 +104,8 @@ async function mock(context, { unsupported = false } = {}) {
   );
 }
 async function activate(page) {
+  // The compact desktop dock opens through keyboard focus or bottom-edge hover.
+  await page.getByRole("button", { name: "Ativar escuta por Jarvis", exact: true }).focus();
   await page
     .getByRole("button", { name: "Ativar escuta por Jarvis", exact: true })
     .click();
@@ -162,6 +164,7 @@ async function activate(page) {
         });
       });
       await page.goto(base);
+      await page.locator(".dock-controls button").first().focus();
       await page
         .getByRole("button", { name: "Ativar escuta por Jarvis", exact: true })
         .waitFor();
@@ -226,7 +229,7 @@ async function activate(page) {
         .click();
       await page
         .getByRole("textbox", { name: "Mensagem para o Jarvis" })
-        .fill("Pedido pelo teclado");
+        .fill("Explique luz e sombra na fotografia");
       await page.getByRole("button", { name: "Enviar mensagem" }).click();
       if (name === "desktop") {
         await page.locator("main[data-state=responding]").waitFor();
@@ -240,9 +243,12 @@ async function activate(page) {
         );
         await page.evaluate(() => window.__finish());
       }
+      await page.waitForFunction(()=>["idle","responding","error"].includes(document.querySelector("main")?.dataset.state));
+      if (await page.locator("main[data-state=responding]").count()) await page.evaluate(() => window.__finish());
+      if (await page.locator("main[data-state=error]").count()) throw Error("Typed conversation error: "+await page.locator("main").innerText());
       await page.locator("main[data-state=idle]").waitFor();
       assert.equal(calls.length, 2);
-      assert.equal(calls[1].message, "Pedido pelo teclado");
+      assert.equal(calls[1].message, "Explique luz e sombra na fotografia");
       assert.equal(
         await page.evaluate(
           () => document.documentElement.scrollWidth > innerWidth,
@@ -310,6 +316,7 @@ async function activate(page) {
       await mock(fallback);
       const fp = await fallback.newPage();
       await fp.goto(base);
+      await fp.locator(".dock-controls button").first().focus();
       await fp.locator("main[data-speech-presentation=voice-first]").waitFor();
       if (mode === "muted")
         await fp
@@ -356,6 +363,7 @@ async function activate(page) {
     await mock(controls);
     const cp = await controls.newPage();
     await cp.goto(base);
+      await cp.locator(".dock-controls button").first().focus();
     await activate(cp);
     await cp.evaluate(() => window.__emit("Bom dia, Jarvis"));
     await cp.locator("main[data-voice-phase=speaking]").waitFor();
@@ -403,6 +411,7 @@ async function activate(page) {
     await mock(unsupported, { unsupported: true });
     const up = await unsupported.newPage();
     await up.goto(base);
+      await up.locator(".dock-controls button").first().focus();
     await up
       .getByRole("button", { name: "Ativar escuta por Jarvis", exact: true })
       .click();
@@ -417,6 +426,7 @@ async function activate(page) {
     await mock(denied);
     const dp = await denied.newPage();
     await dp.goto(base);
+      await dp.locator(".dock-controls button").first().focus();
     await activate(dp);
     await dp.evaluate(() =>
       window.__recs.at(-1).onerror({ error: "not-allowed" }),
@@ -441,6 +451,7 @@ async function activate(page) {
       });
     });
     await fp.goto(base);
+      await fp.locator(".dock-controls button").first().focus();
     await activate(fp);
     await fp.evaluate(() => window.__emit("Jarvis, preciso de ajuda"));
     await fp.getByText(/Abacus indisponível/).waitFor();
@@ -463,6 +474,7 @@ async function activate(page) {
     await mock(ios);
     const ip = await ios.newPage();
     await ip.goto(base);
+      await ip.locator(".dock-controls button").first().focus();
     await activate(ip);
     assert.equal(await ip.evaluate(() => window.__recs[0].continuous), false);
     await ip.evaluate(() => window.__emit("Boa noite, Jarvis"));

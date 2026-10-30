@@ -1,3 +1,4 @@
+import { arrivalBriefingIntent } from "../voice/arrival-intent";
 import { shouldRunPlatformRead } from "../orchestration/tool-intent";
 import { voiceUsageIntent } from "../voice/ledger";
 import {
@@ -110,7 +111,7 @@ export function createOperationalVoiceTool(options: {
         const researchQuery =
           call.name === "jarvis_visual_research"
             ? (args as { query: string }).query
-            : shouldRunPlatformRead(question) ||
+            : arrivalBriefingIntent(question) || shouldRunPlatformRead(question) ||
                 abacusPlatformIntent(question) ||
                 voiceUsageIntent(question) ||
                 voiceStudioIntent(question) ||
@@ -242,3 +243,4 @@ export function neuralOperationalOutput(
   }
   return abacus ? { ...raw, abacus } : value;
 }
+

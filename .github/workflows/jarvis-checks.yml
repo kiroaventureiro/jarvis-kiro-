@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [feature/diretor-tecnico-agent]
+    branches: [main, feature/diretor-tecnico-agent, feature/cosmic-issue-16]
 permissions:
   contents: read
 jobs:
@@ -22,3 +22,8 @@ jobs:
         run: npx tsc --noEmit
       - name: Next.js build
         run: npm run build
+      - name: Install browser for cosmic behavior checks
+        run: npx playwright install --with-deps chromium
+      - name: Cosmic scene and transient voice briefing
+        run: node tests/integration/cosmic-ui.cjs
+
