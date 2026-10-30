@@ -119,17 +119,10 @@ export class VoiceController {
     this.dedupe = new CommandDeduplicator();
     this.listen();
   }
-  /** Turn off the user's microphone without cancelling a reply already being spoken. */
+  /** Explicitly disabling voice stops both recognition and any reply owned by this controller. */
   disableListening() {
-    if (!this.enabled) return;
-    if (!this.speechPending) {
-      this.stop("Microfone desligado.");
-      return;
-    }
-    this.enabled = false;
-    this.clearTimers();
-    this.pause();
-    this.emit("off", "Microfone desligado. A narração continua.");
+    if (!this.enabled && !this.speechPending && !this.busy) return;
+    this.stop("Escuta e fala interrompidas.");
   }
   stop(message = "Escuta desligada.") {
     const ownedSpeech = this.speechPending || this.busy;
