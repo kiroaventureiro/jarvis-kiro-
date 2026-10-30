@@ -217,14 +217,13 @@ export class VoiceController {
         const text = result[0]?.transcript?.trim() || "";
         if (!text) continue;
         this.retries = 0;
-        const parsed = parseWake(text, this.now() < this.armedUntil);
-        if (!parsed.accepted) {
-          this.emit("waiting", "Fala detectada, mas a ativação Jarvis não foi reconhecida. Diga Jarvis e depois seu pedido.");
-          continue;
-        }
-        if (!this.dedupe.accept(parsed.command, this.now())) continue;
+        // With listening explicitly enabled by the user, every final utterance
+        // is a potential request. The assistant name is optional.
+        const parsed = parseWake(text, true);
+        const command = parsed.command.trim();
+        if (!command || !this.dedupe.accept(command, this.now())) continue;
         this.armedUntil = this.now() + 60000;
-        void this.run(parsed.command);
+        void this.run(command);
         break;
       }
     };
