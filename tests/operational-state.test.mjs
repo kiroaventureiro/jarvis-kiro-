@@ -256,6 +256,22 @@ test("the five requested questions use explicit registry facts and preserve proj
     operationalAnswer("abacus", s),
     /bloqueado pela política de custos/,
   );
+  // Natural service-access questions must be answered from current status evidence.
+  for (const question of [
+    "Navi, o GitHub está conectado?",
+    "Tenho acesso à Vercel?",
+    "Jarvis, quais aplicativos estão disponíveis?",
+    "Quais conectores você tem?",
+  ]) {
+    assert.equal(operationalQuestion(question), "overview", question);
+  }
+  // Commands are actions, not status questions; never infer access from them.
+  for (const command of [
+    "Navi, conecte o GitHub",
+    "Jarvis, abra o GitHub",
+  ]) {
+    assert.equal(operationalQuestion(command), null, command);
+  }
   assert.equal(operationalQuestion("Crie um novo projeto KIRO"), null);
 });
 test("operational prompt distinguishes registry authority, dated facts and project knowledge", async () => {
