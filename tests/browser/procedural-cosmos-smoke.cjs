@@ -106,7 +106,7 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
           return { active, reset: el.style.transform };
         });
         if (config.reduced) assert.equal(transform.active, "");
-        else assert.match(transform.active, /scale\\(1\\.43\\)/);
+        else assert.ok(transform.active.includes("scale(1.43)"));
         assert.equal(transform.reset, "");
       }
       assert.equal(
