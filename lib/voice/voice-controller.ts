@@ -219,7 +219,7 @@ export class VoiceController {
         this.retries = 0;
         const parsed = parseWake(text, this.now() < this.armedUntil);
         if (!parsed.accepted) {
-          this.emit("waiting", "Microfone ativo · aguardando Jarvis.");
+          this.emit("waiting", "Fala detectada, mas a ativação Jarvis não foi reconhecida. Diga Jarvis e depois seu pedido.");
           continue;
         }
         if (!this.dedupe.accept(parsed.command, this.now())) continue;
