@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feature/diretor-tecnico-agent, feature/cosmic-issue-16]
+    branches: [main, feature/diretor-tecnico-agent, feature/cosmic-issue-16, feature/procedural-jarvis]
 permissions:
   contents: read
 jobs:
@@ -24,6 +24,6 @@ jobs:
         run: npm run build
       - name: Install browser for cosmic behavior checks
         run: npx playwright install --with-deps chromium
-      - name: Cosmic scene and transient voice briefing
+      - name: Procedural Jarvis and hidden preferences
         run: node tests/integration/cosmic-ui.cjs
 

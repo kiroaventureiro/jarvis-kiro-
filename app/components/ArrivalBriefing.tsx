@@ -5,10 +5,12 @@ import { readVoicePreferences } from "../../lib/voice/voice-preferences";
 
 export default function ArrivalBriefing({
   muted,
+  quiet = false,
   busy,
   onReady,
 }: {
   muted: boolean;
+  quiet?: boolean;
   busy: boolean;
   onReady: (text: string) => void;
 }) {
@@ -131,6 +133,14 @@ export default function ArrivalBriefing({
     return () => window.removeEventListener("jk-arrival-reveal", replay);
   }, [collapseAfter]);
   if (!text) return null;
+  if (quiet)
+    return (
+      <aside
+        className="arrival-state sr-only"
+        data-speaking={speaking}
+        aria-hidden="true"
+      />
+    );
   return (
     <aside
       className={"arrival-briefing " + (open ? "is-open" : "is-collapsed")}
