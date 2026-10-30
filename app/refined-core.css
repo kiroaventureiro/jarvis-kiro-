@@ -10,3 +10,31 @@
 @media (prefers-reduced-motion:reduce) {
   .cosmic-stage .jk-refined-core { transition:none; }
 }
+
+/* The approved glass-and-serif presentation, applied only when a scene is open.
+   Real module data and interaction remain owned by HoloResponseHUD. */
+.cosmic-stage:has(.jk-refined-core) .holo-response-layer .holo-panel {
+  background:rgba(9,16,28,.84);
+  border:1px solid rgba(170,220,245,.46);
+  border-radius:2px;
+  box-shadow:0 18px 42px rgba(0,0,0,.24);
+  backdrop-filter:blur(14px);
+  animation-duration:.55s;
+}
+.cosmic-stage:has(.jk-refined-core) .holo-response-layer .holo-panel::before {
+  opacity:.16;
+}
+.cosmic-stage:has(.jk-refined-core) .holo-scene-heading h2 {
+  font-family:Georgia,"Times New Roman",serif;
+  font-weight:400;
+  letter-spacing:0;
+  text-shadow:none;
+}
+.cosmic-stage:has(.jk-refined-core) .holo-response-layer {
+  transition:opacity .3s ease;
+}
+@media (max-width:1000px) {
+  .cosmic-stage:has(.jk-refined-core) .holo-response-layer .holo-panel {
+    transform:none;
+  }
+}
