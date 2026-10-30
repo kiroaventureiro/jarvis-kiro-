@@ -24,7 +24,8 @@ export function browserActionIntent(message:string): {name:string;url:string}|nu
     const engine=/\bbing\b/.test(text)?"https://www.bing.com/search?q=":"https://www.google.com/search?q=";
     return {name:"Pesquisa no navegador",url:engine+encodeURIComponent(Array.from(query.toWellFormed()).slice(0,400).join(""))};
   }
-  if(/\bcodex\b|\bchatgpt\b|\bnavi\b/.test(text))return null;
+  // Navi can be a vocative ("Navi, abra o GitHub"), not necessarily a destination.
+  if(/\bcodex\b|\bchatgpt\b/.test(text))return null;
   const shortcut=(name:string)=>APP_SHORTCUTS.find(app=>app.name===name) ?? null;
   // Mentioning a browser does not turn a request for GitHub into a Google link.
   if(/\bgithub\b/.test(text)) {
