@@ -34,7 +34,7 @@ export default function JarvisNavigation() {
         aria-controls="jarvis-navigation"
         onClick={() => setOpen(!open)}
       >
-        {open ? "×" : "☰"}
+        {open ? "×" : "⋮"}
       </button>
       {open ? (
         <nav id="jarvis-navigation" aria-label="Áreas do Jarvis">
