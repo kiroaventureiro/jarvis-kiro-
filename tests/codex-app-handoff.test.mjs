@@ -10,6 +10,7 @@ test('Natural requests route to Codex or ChatGPT without a fixed prefix',()=>{
  for(const text of ['Jarvis, peça ao Codex para revisar o jogo Sistema Origem','Codex, revise meus testes','Envie ao Codex uma análise'])assert.equal(appHandoffIntent(text),'codex');
  for(const text of ['pergunte ao Navi sobre minha ideia','Abra o ChatGPT para ajudar no planejamento'])assert.equal(appHandoffIntent(text),'chatgpt');
  for(const text of ['Olá Jarvis','Qual o status do Codex?'])assert.equal(appHandoffIntent(text),null);
+ for(const text of ['Navi, revise o código do Jarvis','Navi, veja a Vercel','Navi, abra o GitHub'])assert.equal(appHandoffIntent(text),null);
 });
 test('Official URL encodes Unicode and query characters; allowed origin only, no local path',()=>{
  const h=prepareAppHandoff('Revise no Codex: ação, coração & café? #jogo + 100% 😀','codex');
