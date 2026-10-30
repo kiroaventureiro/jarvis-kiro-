@@ -13,13 +13,13 @@ export function operationalQuestion(
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
   if (
-    /^(?:jarvis[, ]*)?(?:conecte|ative|execute|publique|salve|apague|crie)\b/.test(
+    /^(?:(?:jarvis|navi)[, ]*)?(?:conecte|ative|execute|publique|salve|apague|crie)\b/.test(
       n,
     )
   )
     return null;
   const query =
-    /\b(quais|qual|que|como|voce|sua|seu|esta|estao|funciona|funcionam|conhece|configurados|conectados|capacidades)\b/.test(
+    /\b(quais|qual|que|como|voce|sua|seu|esta|estao|funciona|funcionam|conhece|configurados|conectados|capacidades|tenho|tem|posso|acesso|autorizado|disponivel)\b/.test(
       n,
     );
   if (!query) return null;
@@ -39,6 +39,13 @@ export function operationalQuestion(
     )
   )
     return "projects";
+  // Named platform questions must use dated operational evidence, not the catalog.
+  // A known service is not necessarily connected to an authorized account.
+  if (
+    /\b(github|vercel)\b/.test(n) &&
+    /\b(conectad[oa]s?|configurad[oa]s?|autorizad[oa]s?|disponiv(?:el|eis)|funcionando|acesso|status|operacional)\b/.test(n)
+  )
+    return "overview";
   if (
     /(?:aplicativos|plataformas|integracoes|sistemas).*(?:ainda|precisam|pendentes)|(?:ainda|pendentes).*(?:conectar|aplicativos|integracoes)/.test(
       n,
@@ -46,7 +53,7 @@ export function operationalQuestion(
   )
     return "pending";
   if (
-    /(?:sistemas?|integracoes|integracao|conexoes|conexao|capacidades|servicos?).*(?:configur|ativ|conect|operacion|disponiv|possui|tem)|(?:quais|suas|possui|tem).*(?:integracoes|integracao|capacidades|conexoes|conexao)/.test(
+    /(?:sistemas?|integracoes|integracao|conexoes|conexao|capacidades|servicos?|aplicativos|plataformas|conectores).*(?:configur|ativ|conect|operacion|disponiv|possui|tem|acesso|conhece)|(?:quais|suas|possui|tem).*(?:integracoes|integracao|capacidades|conexoes|conexao|aplicativos|plataformas|conectores)/.test(
       n,
     )
   )
