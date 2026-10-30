@@ -32,6 +32,9 @@ test('Long and malformed Unicode inputs are bounded; web fallbacks never claim p
  assert.equal(h.codexWebUrl,'https://chatgpt.com/codex');
  assert.equal(h.chatgptUrl,'https://chatgpt.com/');
  assert.match(h.prompt,/não há execução iniciada/i);
+ assert.match(h.prompt,/confirme a branch ativa e o repositório/i);
+ assert.match(h.prompt,/nunca main/i);
+ assert.doesNotMatch(h.prompt,/Branch autorizada: feature\/diretor-tecnico-agent/i);
 });
 test('UI uses native gesture links, keeps fallbacks visible and never opens a popup programmatically',()=>{
  const ui=fs.readFileSync('app/components/JarvisExperience.tsx','utf8');
