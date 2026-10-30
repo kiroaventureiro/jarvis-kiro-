@@ -256,6 +256,48 @@ test("the five requested questions use explicit registry facts and preserve proj
     operationalAnswer("abacus", s),
     /bloqueado pela política de custos/,
   );
+  // Named services get an individual answer; general questions retain the overview.
+  for (const [question, kind] of [
+    ["Navi, o GitHub está conectado?", "github"],
+    ["GitHub conectado?", "github"],
+    ["Vercel funcionando?", "vercel"],
+    ["Tenho acesso à Vercel?", "vercel"],
+    ["GitHub e Vercel estão conectados?", "overview"],
+    ["Jarvis, quais aplicativos estão disponíveis?", "overview"],
+    ["Quais conectores você tem?", "overview"],
+  ]) {
+    assert.equal(operationalQuestion(question), kind, question);
+  }
+  const named = {
+    ...s,
+    integrations: [
+      ...s.integrations,
+      serviceStatus(
+        config({ id: "github", name: "GitHub", configured: false }),
+        undefined,
+        1001,
+      ),
+      serviceStatus(
+        config({ id: "vercel", name: "Vercel", authorized: false }),
+        undefined,
+        1001,
+      ),
+    ],
+  };
+  assert.match(operationalAnswer("github", named), /GitHub: não configurado/);
+  assert.doesNotMatch(operationalAnswer("github", named), /Abacus|Vercel/);
+  assert.match(
+    operationalAnswer("vercel", named),
+    /Vercel: credenciais configuradas; falta uma validação recente/,
+  );
+  assert.doesNotMatch(operationalAnswer("vercel", named), /Abacus|GitHub/);
+  // Commands are actions, not status questions; never infer access from them.
+  for (const command of [
+    "Navi, conecte o GitHub",
+    "Jarvis, abra o GitHub",
+  ]) {
+    assert.equal(operationalQuestion(command), null, command);
+  }
   assert.equal(operationalQuestion("Crie um novo projeto KIRO"), null);
 });
 test("operational prompt distinguishes registry authority, dated facts and project knowledge", async () => {
@@ -416,6 +458,14 @@ test("status and local-answer routes retain authentication before probes and nev
     );
   }
 });
+test("unavailable connector vault cannot be reported as a verified GitHub or Vercel disconnection", () => {
+  const server = fs.readFileSync("lib/operational/server.ts", "utf8");
+  assert.match(
+    server,
+    /kind === "overview" \|\| kind === "github" \|\| kind === "vercel"/,
+  );
+});
+
 test("encrypted read probe returns only evidence, detects a wrong key and makes no test write", async () => {
   const memory = await load("lib/server-memory.ts");
   process.env.SUPABASE_URL = "https://fake-project.supabase.co";

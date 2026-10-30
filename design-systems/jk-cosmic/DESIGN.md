@@ -1,5 +1,11 @@
 # Jarvis Kiro — identidade cósmica
 
+> Direção anterior rejeitada pelo proprietário. A nova especificação está em
+> `docs/PROCEDURAL-JARVIS-PREVIEW.md`: cena procedural em tela inteira, sem
+> fotografia, texto permanente, botões de câmera ou navegação por rolagem.
+> Preferências somente sob demanda. O conteúdo abaixo é registro histórico,
+> não uma instrução para restaurar a proposta rejeitada.
+
 ## Referência e atmosfera
 A composição fornecida pelo proprietário é o próprio Jarvis: buraco negro, disco dourado, fluxo azul e estrelas. O ativo original está em `public/cosmic/star-orbiting-black-hole.jpg`; não há pedestal, rosto, esfera JK antiga ou cenário industrial. Preservar a imagem em alternativas sem GPU.
 

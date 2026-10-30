@@ -104,6 +104,8 @@ async function mock(context, { unsupported = false } = {}) {
   );
 }
 async function activate(page) {
+  const preferences=page.getByRole("button",{name:"Abrir preferências do Jarvis",exact:true});
+  if(await preferences.count()){await preferences.focus();await page.keyboard.press("Enter");}
   // The compact desktop dock opens through keyboard focus or bottom-edge hover.
   await page.getByRole("button", { name: "Ativar escuta por Jarvis", exact: true }).focus();
   await page

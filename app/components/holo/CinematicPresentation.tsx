@@ -125,6 +125,23 @@ export default function CinematicPresentation({
       );
     };
   }, [step?.focus]);
+  // A narrated demonstration drives a reversible virtual camera through the
+  // code-drawn cosmic space. The home is unaffected when no scene is active.
+  useEffect(() => {
+    const reduceMotion = reduced || instant;
+    window.dispatchEvent(new CustomEvent("jk-cosmic-camera", {
+      detail: {
+        active: !reduceMotion,
+        index: director.index,
+        focus: step?.focus || "center",
+      },
+    }));
+    return () => {
+      window.dispatchEvent(new CustomEvent("jk-cosmic-camera", {
+        detail: { active: false, index: 0, focus: "center" },
+      }));
+    };
+  }, [director.index, step?.focus, instant, reduced]);
   if (!step) return null;
   const support = scene.modules.find((m) => m.id === step.supportId);
   return (

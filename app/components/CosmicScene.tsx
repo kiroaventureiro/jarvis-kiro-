@@ -1,10 +1,12 @@
 "use client";
-import { memo, useEffect, useRef, useState, type CSSProperties } from "react";
-import Link from "next/link";
-import { areas } from "./JarvisNavigation";
-import { readGraphicsPreference } from "../../lib/hologram/policy";
-import type { CorePhase, AudioVisualMode } from "../../lib/hologram/policy";
-
+import { memo, useEffect, useId, useRef, useState } from "react";
+import {
+  readGraphicsPreference,
+  phaseEnergy,
+  type CorePhase,
+  type AudioVisualMode,
+} from "../../lib/hologram/policy";
+import type { createCosmicRenderer } from "../../lib/hologram/cosmic-canvas";
 type Props = {
   phase: CorePhase;
   hidden: boolean;
@@ -13,314 +15,210 @@ type Props = {
   muted: boolean;
   onVisualMode: (mode: AudioVisualMode) => void;
 };
-const clamp = (n: number, lo: number, hi: number) =>
-  Math.max(lo, Math.min(hi, n));
-
-/** Raster reference with progressive CSS depth. No generated 3D geometry or microphone access. */
-function CosmicScene({ phase, hidden, onVisualMode }: Props) {
-  const [view, setView] = useState({ zoom: 1, x: 0, y: 0 });
-  const [paused, setPaused] = useState(true);
-  const [entered, setEntered] = useState(false);
-  const [speechActive, setSpeechActive] = useState(false);
-  const root = useRef<HTMLDivElement>(null);
-  const pointers = useRef(new Map<number, { x: number; y: number }>());
-  const pinch = useRef<number | null>(null);
+function CosmicScene(props: Props) {
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const refresh = useRef<() => void>(() => {});
+  const latest = useRef(props);
+  latest.current = props;
+  const [rendererState, setRendererState] = useState("loading");
+  const id = useId().replace(/:/g, "");
   useEffect(() => {
-    onVisualMode("representative");
+    const el = canvas.current;
+    if (!el) return;
+    let renderer: ReturnType<typeof createCosmicRenderer> = null;
+    let disposed = false,
+      raf = 0,
+      previous = 0,
+      time = 0,
+      pendingResize = true;
+    let x = 0,
+      y = 0,
+      targetX = 0,
+      targetY = 0,
+      speechActive = false;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-    const connection = (
+    const network = (
       navigator as Navigator & { connection?: { saveData?: boolean } }
     ).connection;
-    let inViewport = true;
-    const update = () =>
-      setPaused(
-        !inViewport ||
-          document.hidden ||
-          reduced.matches ||
-          readGraphicsPreference() === "eco" ||
-          !!connection?.saveData,
+    const paused = () =>
+      reduced.matches ||
+      readGraphicsPreference() === "eco" ||
+      !!network?.saveData;
+    props.onVisualMode("representative");
+    function size() {
+      if (!el) return;
+      const rect = el.getBoundingClientRect(),
+        dpr = Math.min(devicePixelRatio || 1, rect.width < 600 ? 1.1 : 1.25);
+      const ratio = Math.min(
+        dpr,
+        Math.sqrt(800_000 / Math.max(1, rect.width * rect.height)),
       );
-    update();
-    reduced.addEventListener("change", update);
-    document.addEventListener("visibilitychange", update);
-    window.addEventListener("jarvis-graphics", update);
-    // Cancel only a multi-touch gesture; a single finger remains native page scroll.
-    const el = root.current;
-    const observer =
-      typeof IntersectionObserver !== "undefined"
-        ? new IntersectionObserver((entries) => {
-            inViewport = entries[0]?.isIntersecting !== false;
-            update();
-          })
-        : null;
-    if (el) observer?.observe(el);
-    let previous: { distance: number; x: number; y: number } | null = null;
-    const touch = (e: TouchEvent) => {
-      if (e.touches.length !== 2) {
-        previous = null;
+      el.width = Math.max(1, Math.round(rect.width * ratio));
+      el.height = Math.max(1, Math.round(rect.height * ratio));
+      pendingResize = false;
+    }
+    function frame(now: number) {
+      raf = 0;
+      if (disposed || document.hidden || !renderer || !el) return;
+      const moving = !paused();
+      if (now - previous < (el.width < 650 ? 1000 / 24 : 1000 / 30)) {
+        raf = requestAnimationFrame(frame);
         return;
       }
-      e.preventDefault();
-      const [a, b] = [e.touches[0], e.touches[1]];
-      const next = {
-        distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
-        x: (a.clientX + b.clientX) / 2,
-        y: (a.clientY + b.clientY) / 2,
-      };
-      if (previous && e.type === "touchmove") {
-        const old = previous;
-        setView((v) => ({
-          zoom: clamp(
-            (v.zoom * next.distance) / Math.max(1, old.distance),
-            1,
-            3,
-          ),
-          x: clamp(v.x + next.x - old.x, -180, 180),
-          y: clamp(v.y + next.y - old.y, -120, 120),
-        }));
+      if (pendingResize) size();
+      const dt = previous ? Math.min(0.06, (now - previous) / 1000) : 0;
+      previous = now;
+      if (moving) time += dt;
+      x += (targetX - x) * 0.06;
+      y += (targetY - y) * 0.06;
+      const phase =
+        speechActive && latest.current.phase === "idle"
+          ? "responding"
+          : latest.current.phase;
+      const drawStarted = performance.now();
+      renderer.draw({
+        time,
+        energy: phaseEnergy(phase, time, null).energy,
+        x: moving ? x : 0,
+        y: moving ? y : 0,
+        motion: moving,
+      });
+      el.dataset.drawMs = String(Math.round(performance.now() - drawStarted));
+      el.dataset.frame = String(Math.round(time * 1000));
+      el.dataset.phase = phase;
+      el.dataset.motion = moving ? "animated" : "static";
+      if (moving) raf = requestAnimationFrame(frame);
+    }
+    const wake = () => {
+      if (!raf && !disposed) {
+        previous = 0;
+        raf = requestAnimationFrame(frame);
       }
-      previous = next;
     };
-    el?.addEventListener("touchmove", touch, { passive: false });
-    el?.addEventListener("touchstart", touch, { passive: false });
-    el?.addEventListener("touchend", touch);
-    return () => {
-      reduced.removeEventListener("change", update);
-      document.removeEventListener("visibilitychange", update);
-      window.removeEventListener("jarvis-graphics", update);
-      el?.removeEventListener("touchmove", touch);
-      el?.removeEventListener("touchstart", touch);
-      el?.removeEventListener("touchend", touch);
-      observer?.disconnect();
+    refresh.current = wake;
+    const visibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+        previous = 0;
+      } else wake();
     };
-  }, [onVisualMode]);
-  useEffect(() => {
-    const progress = (event: Event) => {
-      const detail = (event as CustomEvent).detail;
-      if (detail?.phase === "start") setSpeechActive(true);
-      else if (["end", "error", "cancel"].includes(detail?.phase))
-        setSpeechActive(false);
+    const pointer = (e: PointerEvent) => {
+      targetX = (e.clientX / innerWidth - 0.5) * 2;
+      targetY = (e.clientY / innerHeight - 0.5) * 2;
     };
-    window.addEventListener("jk-speech-progress", progress);
-    return () => window.removeEventListener("jk-speech-progress", progress);
-  }, []);
-  function reset() {
-    setView({ zoom: 1, x: 0, y: 0 });
-    setEntered(false);
-  }
-  function enter() {
-    setEntered(true);
-    setView({ zoom: 2.6, x: 0, y: 0 });
-    document.getElementById("cosmic-systems")?.scrollIntoView({
-      behavior: paused ? "instant" : "smooth",
-      block: "start",
+    const speech = (event: Event) => {
+      const phase = (event as CustomEvent).detail?.phase;
+      if (phase === "start") speechActive = true;
+      else if (["end", "cancel", "error"].includes(phase)) speechActive = false;
+      wake();
+    };
+    const observer = new ResizeObserver(() => {
+      pendingResize = true;
+      wake();
     });
-  }
+    observer.observe(el);
+    document.addEventListener("visibilitychange", visibility);
+    reduced.addEventListener("change", wake);
+    window.addEventListener("pointermove", pointer, { passive: true });
+    window.addEventListener("jarvis-graphics", wake);
+    window.addEventListener("jk-speech-progress", speech);
+    const camera = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        active?: boolean; index?: number; focus?: string;
+      }>).detail;
+      if (!detail?.active || paused()) {
+        el.style.transform = "";
+        return;
+      }
+      // Camera beats are tied to real demonstration steps, not a free-running
+      // slideshow. Bounded travel keeps the luminous subject inside the frame.
+      const step = Math.max(0, Math.min(12, Math.floor(detail.index || 0)));
+      const paths = [
+        { x: 0, y: 0, scale: 1.38 }, // approach: enter the cosmic scene
+        { x: -6, y: 2, scale: 1.47 }, // explore the left-side evidence
+        { x: 6, y: -3, scale: 1.43 }, // cross to the right
+        { x: 1, y: 5, scale: 1.51 }, // look below the horizon
+        { x: -3, y: -5, scale: 1.42 }, // rise above the accretion disk
+      ];
+      const beat = paths[step % paths.length];
+      el.style.transform = `translate3d(${beat.x}%, ${beat.y}%, 0) scale(${beat.scale})`;
+    };
+    window.addEventListener("jk-cosmic-camera", camera);
+
+    void import("../../lib/hologram/cosmic-canvas")
+      .then((module) => {
+        if (disposed) return;
+        renderer = module.createCosmicRenderer(el);
+        setRendererState(renderer ? "canvas" : "fallback");
+        if (renderer) wake();
+      })
+      .catch(() => {
+        if (!disposed) setRendererState("fallback");
+      });
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+      renderer?.dispose();
+      document.removeEventListener("visibilitychange", visibility);
+      reduced.removeEventListener("change", wake);
+      window.removeEventListener("pointermove", pointer);
+      window.removeEventListener("jarvis-graphics", wake);
+      window.removeEventListener("jk-speech-progress", speech);
+      window.removeEventListener("jk-cosmic-camera", camera);
+      el.style.transform = "";
+    };
+  }, [props.onVisualMode]);
+  useEffect(() => {
+    refresh.current();
+  }, [props.phase, props.muted, props.hidden]);
   return (
     <div
-      ref={root}
-      className="cosmic-scene"
-      data-phase={speechActive && phase === "idle" ? "responding" : phase}
-      data-paused={paused}
-      data-entered={entered}
-      data-hidden={hidden}
-      data-zoom={view.zoom.toFixed(2)}
+      className="cosmic-scene procedural-cosmos"
+      data-renderer={rendererState}
+      data-hidden={props.hidden}
     >
-      <div
-        className="cosmic-viewport"
-        role="group"
-        aria-label="Cena cósmica interativa. Arraste com o mouse; use mais e menos para aproximar, Home para restaurar. No toque, use dois dedos para aproximar."
-        tabIndex={0}
-        onKeyDown={(e) => {
-          if (
-            ![
-              "+",
-              "=",
-              "-",
-              "Home",
-              "ArrowLeft",
-              "ArrowRight",
-              "ArrowUp",
-              "ArrowDown",
-              "Escape",
-            ].includes(e.key)
-          )
-            return;
-          e.preventDefault();
-          if (e.key === "Home" || e.key === "Escape") reset();
-          else
-            setView((v) => ({
-              zoom: clamp(
-                v.zoom +
-                  (e.key === "+" || e.key === "="
-                    ? 0.15
-                    : e.key === "-"
-                      ? -0.15
-                      : 0),
-                1,
-                3,
-              ),
-              x: clamp(
-                v.x +
-                  (e.key === "ArrowLeft"
-                    ? -20
-                    : e.key === "ArrowRight"
-                      ? 20
-                      : 0),
-                -180,
-                180,
-              ),
-              y: clamp(
-                v.y +
-                  (e.key === "ArrowUp" ? -20 : e.key === "ArrowDown" ? 20 : 0),
-                -120,
-                120,
-              ),
-            }));
-        }}
-        onPointerDown={(e) => {
-          if (e.pointerType !== "mouse") return;
-          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-          if (e.pointerType === "mouse")
-            e.currentTarget.setPointerCapture(e.pointerId);
-        }}
-        onPointerMove={(e) => {
-          const old = pointers.current.get(e.pointerId);
-          if (!old) return;
-          pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-          const pts = [...pointers.current.values()];
-          if (pts.length === 2) {
-            const distance = Math.hypot(
-              pts[0].x - pts[1].x,
-              pts[0].y - pts[1].y,
-            );
-            if (pinch.current)
-              setView((v) => ({
-                ...v,
-                zoom: clamp((v.zoom * distance) / pinch.current!, 1, 3),
-                x: clamp(v.x + (e.clientX - old.x) / 2, -180, 180),
-                y: clamp(v.y + (e.clientY - old.y) / 2, -120, 120),
-              }));
-            pinch.current = distance;
-          } else if (e.pointerType === "mouse")
-            setView((v) => ({
-              ...v,
-              x: clamp(v.x + e.clientX - old.x, -180, 180),
-              y: clamp(v.y + e.clientY - old.y, -120, 120),
-            }));
-        }}
-        onPointerUp={(e) => {
-          pointers.current.delete(e.pointerId);
-          pinch.current = null;
-        }}
-        onPointerCancel={(e) => {
-          pointers.current.delete(e.pointerId);
-          pinch.current = null;
-        }}
-        onLostPointerCapture={(e) => {
-          pointers.current.delete(e.pointerId);
-          pinch.current = null;
-        }}
-      >
-        <div
-          className="cosmic-camera"
-          style={
-            {
-              "--cosmic-zoom": view.zoom,
-              "--cosmic-x": view.x + "px",
-              "--cosmic-y": view.y + "px",
-            } as CSSProperties
-          }
+      <canvas
+        ref={canvas}
+        style={{ transition:"transform 1250ms cubic-bezier(.2,.75,.3,1)", transformOrigin:"50% 50%" }}
+        role="img"
+        aria-label="Jarvis cósmico: buraco negro, plasma dourado e estrela azul, desenhados e animados por código."
+      />
+      {rendererState !== "canvas" ? (
+        <svg
+          className="cosmic-vector-fallback"
+          viewBox="0 0 1000 700"
+          aria-hidden="true"
         >
-          <img
-            className="cosmic-reference"
-            src="/cosmic/star-orbiting-black-hole.jpg"
-            alt="Jarvis: buraco negro central com disco de acreção dourado e laranja, alimentado por uma estrela azul em um campo estelar."
-            draggable={false}
-            fetchPriority="high"
-          />
-          <div className="cosmic-accretion" aria-hidden="true" />
-          <div className="cosmic-flow" aria-hidden="true" />
-          <div className="cosmic-orbit" aria-hidden="true">
-            <span className="cosmic-star" />
-          </div>
-        </div>
-      </div>
-      <div className="cosmic-tools" aria-label="Explorar o Jarvis">
-        <button
-          onClick={() =>
-            setView((v) => ({ ...v, zoom: clamp(v.zoom + 0.2, 1, 3) }))
-          }
-          aria-label="Aproximar cena"
-        >
-          +
-        </button>
-        <button
-          onClick={() =>
-            setView((v) => ({ ...v, zoom: clamp(v.zoom - 0.2, 1, 3) }))
-          }
-          aria-label="Afastar cena"
-        >
-          −
-        </button>
-        <button onClick={reset} aria-label="Restaurar enquadramento">
-          Restaurar
-        </button>
-        <button onClick={enter} aria-controls="cosmic-systems">
-          Entrar no núcleo
-        </button>
-      </div>
+          <defs>
+            <radialGradient id={id + "gold"}>
+              <stop offset=".35" stopColor="#010207" />
+              <stop offset=".56" stopColor="#f9d785" />
+              <stop offset=".7" stopColor="#b94d11" />
+              <stop offset="1" stopColor="#010207" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id={id + "blue"}>
+              <stop stopColor="#caf9ff" />
+              <stop offset=".5" stopColor="#36baff" />
+              <stop offset="1" stopColor="#1164b6" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <g transform="translate(530 350) rotate(-13)">
+            <ellipse rx="380" ry="105" fill={"url(#" + id + "gold)"} />
+            <circle r="125" fill={"url(#" + id + "gold)"} />
+            <circle r="103" fill="#000102" />
+            <path
+              d="M-350 45Q-30 100 330 4"
+              fill="none"
+              stroke="#e8b05d"
+              strokeWidth="9"
+            />
+            <circle cx="-300" cy="-30" r="68" fill={"url(#" + id + "blue)"} />
+          </g>
+        </svg>
+      ) : null}
     </div>
-  );
-}
-export function CosmicSystems() {
-  const root = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const items = root.current?.querySelectorAll(".gravity-link");
-    if (!items || !("IntersectionObserver" in window)) return;
-    const observer = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) =>
-          e.target.classList.toggle("is-visible", e.isIntersecting),
-        ),
-      { threshold: 0.12 },
-    );
-    items.forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
-  return (
-    <section
-      className="cosmic-systems"
-      id="cosmic-systems"
-      ref={root}
-      aria-labelledby="cosmic-systems-title"
-    >
-      <div className="cosmic-systems-intro">
-        <span>INTERIOR DO NÚCLEO</span>
-        <h2 id="cosmic-systems-title">Seu universo de trabalho.</h2>
-        <p>
-          As ferramentas aparecem conforme você avança. Abra uma área para
-          consultar seus dados e controles.
-        </p>
-        <a href="#cosmic-home">Voltar à cena</a>
-      </div>
-      <nav
-        className="gravity-navigation"
-        aria-label="Componentes do sistema Jarvis"
-      >
-        {areas
-          .filter(([href]) => href !== "/")
-          .map(([href, label], i) => (
-            <Link className="gravity-link" key={href} href={href}>
-              <span className="gravity-number">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span>{label}</span>
-              <span aria-hidden="true">↗</span>
-            </Link>
-          ))}
-      </nav>
-    </section>
   );
 }
 export default memo(CosmicScene);

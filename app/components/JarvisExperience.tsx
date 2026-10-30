@@ -23,7 +23,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { connectorResultLink } from "../../lib/connectors/result";
 import JarvisNavigation from "./JarvisNavigation";
-import HolographicCore, { CosmicSystems } from "./CosmicScene";
+import HolographicCore from "./CosmicScene";
 import ArrivalBriefing from "./ArrivalBriefing";
 import { arrivalBriefingIntent } from "../../lib/voice/arrival-intent";
 import HologramBackdrop from "./HologramBackdrop";
@@ -74,6 +74,7 @@ export default function JarvisExperience() {
     [mic, setMic] = useState(false),
     [muted, setMuted] = useState(false),
     [typing, setTyping] = useState(false),
+    [preferencesOpen, setPreferencesOpen] = useState(false),
     [expanded, setExpanded] = useState(false),
     [history, setHistory] = useState(false),
     [messages, setMessages] = useState<TranscriptEntry[]>([]),
@@ -1155,7 +1156,7 @@ export default function JarvisExperience() {
   return (
     <main
       className={
-        "cosmic-stage jarvis-stage jarvis-desktop-focus " +
+        "quiet-stage cosmic-stage jarvis-stage jarvis-desktop-focus " +
         (hidden ? "is-hidden " : "") +
         (holoSession.current ? "has-holo " : "") +
         (workspace.files.length ? "has-attachments " : "") +
@@ -1179,6 +1180,7 @@ export default function JarvisExperience() {
                     ? "media"
                     : "idle"
       }
+      data-controls-open={preferencesOpen}
       data-voice-phase={voiceSnapshot.phase}
       data-audio-visual={audioVisual}
       data-speech-presentation={desktopVoice ? "voice-first" : "transcript"}
@@ -1375,9 +1377,10 @@ export default function JarvisExperience() {
           </button>
         </div>
       ) : null}
-      {historyLoaded ? <ArrivalBriefing muted={muted} busy={connected || state === "processing" || state === "responding" || voiceSnapshot.microphoneActive || workspace.busy} onReady={rememberArrival} /> : null}
-      <div className="jarvis-dock-hotzone" aria-hidden="true" />
+      {historyLoaded ? <ArrivalBriefing quiet muted={muted} busy={connected || state === "processing" || state === "responding" || voiceSnapshot.microphoneActive || workspace.busy} onReady={rememberArrival} /> : null}
+      <button type="button" className="jarvis-dock-hotzone" aria-label="Abrir preferências do Jarvis" aria-expanded={preferencesOpen} onPointerEnter={event => {if(event.pointerType === "mouse")setPreferencesOpen(true);}} onClick={() => setPreferencesOpen(true)} />
       <div className="interaction-dock">
+        <button type="button" className="quiet-close" aria-label="Ocultar preferências" onClick={() => {setPreferencesOpen(false);setTyping(false);(document.activeElement as HTMLElement)?.blur();}}>×</button>
         <details className="dock-preferences">
           <summary aria-label="Preferências da conversa">Preferências</summary>
           {voiceConsumption ? (
@@ -1648,7 +1651,6 @@ export default function JarvisExperience() {
           ) : null}
         </div>
       </div>
-      <CosmicSystems />
     </main>
   );
 }
