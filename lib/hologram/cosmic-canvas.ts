@@ -14,13 +14,28 @@ export function seededRandom(seed = 719) {
     return seed / 4294967296;
   };
 }
+export const ORBIT_SPEED = 0.15;
 export function orbitPosition(time: number, motion = true) {
-  const angle = Math.PI + (motion ? time * 0.075 : 0);
+  // Vertical orbit: the blue star descends in front of the horizon and
+  // returns behind it. Both axes are centered on the black hole.
+  const angle = Math.PI + (motion ? time * ORBIT_SPEED : 0);
   return {
-    x: Math.cos(angle) * 3.2,
-    y: Math.sin(angle) * 0.82,
-    front: Math.sin(angle) > 0,
+    x: Math.sin(angle) * 1.6,
+    y: Math.cos(angle) * 2.2,
+    front: Math.sin(angle) < 0,
   };
+}
+export function trailSamples(time: number, count = 42) {
+  // Previous orbital positions, never a Bezier curve anchored to the core.
+  // The tail spans less than a quarter turn, so it cannot catch itself.
+  return Array.from({ length: count }, (_, i) => {
+    const age = i / Math.max(1, count - 1);
+    return {
+      ...orbitPosition(time - age * 8.5),
+      width: Math.pow(1 - age, 1.25),
+      alpha: Math.pow(1 - age, 1.6),
+    };
+  });
 }
 export function createCosmicRenderer(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d", { alpha: false });
@@ -178,8 +193,8 @@ export function createCosmicRenderer(canvas: HTMLCanvasElement) {
     c.globalCompositeOperation = "source-over";
     c.fillStyle = "#010207";
     c.fillRect(0, 0, w, h);
-    const unit = Math.min(w / 9, h / 6.2);
-    const cx = w * 0.54 + frame.x * unit * 0.12,
+    const unit = Math.min(w / 5.5, h / 5.8);
+    const cx = w * 0.5 + frame.x * unit * 0.12,
       cy = h * 0.5 + frame.y * unit * 0.12;
     if (sky.width !== w || sky.height !== h) {
       sky.width = w;
@@ -211,54 +226,31 @@ export function createCosmicRenderer(canvas: HTMLCanvasElement) {
       sx = o.x * unit,
       sy = o.y * unit - unit * 0.15;
     const sr = unit * (0.44 + (o.front ? 0.025 : -0.025));
-    function flow() {
+    const tail = trailSamples(time);
+    function flow(front: boolean) {
       c.save();
       c.globalCompositeOperation = "screen";
-      for (let i = 0; i < 7; i++) {
-        c.strokeStyle = `rgba(54,169,255,${0.012 + i * 0.002})`;
-        c.lineWidth = unit * (0.12 + i * 0.026);
+      c.lineCap = "round";
+      c.lineJoin = "round";
+      for (let i = 0; i < tail.length - 1; i++) {
+        const from = tail[i], to = tail[i + 1];
+        if (from.front !== front) continue;
+        const width = sr * 1.75 * from.width;
+        const fade = from.alpha;
         c.beginPath();
-        c.moveTo(sx, sy);
-        c.bezierCurveTo(
-          sx * 0.68,
-          -unit * 1.8,
-          -unit * 0.9,
-          -unit * 1.5,
-          unit * 0.22,
-          -unit * 0.97,
-        );
+        c.moveTo(from.x * unit, from.y * unit - unit * 0.15);
+        c.lineTo(to.x * unit, to.y * unit - unit * 0.15);
+        c.strokeStyle = `rgba(31,137,255,${(0.17 * fade).toFixed(3)})`;
+        c.lineWidth = Math.max(0.1, width * 2.2);
         c.stroke();
-      }
-      for (let i = 0; i < 38; i++) {
-        const t = (time * 0.07 + i / 38) % 1,
-          a = 1 - t;
-        const x =
-          a * a * a * sx +
-          3 * a * a * t * (sx * 0.68) +
-          3 * a * t * t * (-unit * 0.9) +
-          t * t * t * unit * 0.22;
-        const y =
-          a * a * a * sy +
-          3 * a * a * t * (-unit * 1.8) +
-          3 * a * t * t * (-unit * 1.5) +
-          t * t * t * (-unit * 0.97);
-        c.fillStyle = "rgba(108,213,255,.15)";
-        c.beginPath();
-        c.arc(
-          x + Math.sin(i * 8.7 + time) * unit * 0.024,
-          y + Math.cos(i * 4.2) * unit * 0.04,
-          unit * 0.005,
-          0,
-          Math.PI * 2,
-        );
-        c.fill();
+        c.strokeStyle = `rgba(128,222,255,${(0.72 * fade).toFixed(3)})`;
+        c.lineWidth = Math.max(0.1, width * 0.65);
+        c.stroke();
       }
       c.restore();
     }
-    if (!o.front) {
-      flow();
-      star(sx, sy, sr, time, frame.energy);
-    }
+    flow(false);
+    if (!o.front) star(sx, sy, sr, time, frame.energy);
     // Back accretion disk and its warm bloom.
     c.save();
     c.scale(1, 0.29);
@@ -326,10 +318,8 @@ export function createCosmicRenderer(canvas: HTMLCanvasElement) {
       c.stroke();
     }
     c.restore();
-    if (o.front) {
-      flow();
-      star(sx, sy, sr, time, frame.energy);
-    }
+    flow(true);
+    if (o.front) star(sx, sy, sr, time, frame.energy);
     c.restore();
     // Low-amplitude real state response; no false microphone activity.
     if (frame.energy > 1.1)
