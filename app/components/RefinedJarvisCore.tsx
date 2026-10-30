@@ -32,7 +32,7 @@ function RefinedJarvisCore({phase,hidden,inputStream,outputStream,muted,onVisual
     onVisualMode(envelope.mode);
     let id = 0;
     const tick = () => {
-      live.current.level = envelope.level();
+      live.current.level = envelope.read() ?? 0;
       id = requestAnimationFrame(tick);
     };
     tick();
