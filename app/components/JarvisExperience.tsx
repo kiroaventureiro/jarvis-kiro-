@@ -1218,8 +1218,22 @@ export default function JarvisExperience() {
         onCancel={workspace.cancel}
       />
       <header className="stage-header">
-        <Link href="/" className="wordmark" aria-label="Jarvis Kiro">
-          JARVIS <span>KIRO</span>
+        <Link
+          href="/"
+          className="wordmark refined-script-wordmark"
+          aria-label="Jarvis Kiro"
+          style={{
+            fontFamily: '"Brush Script MT", "Segoe Script", "Apple Chancery", cursive',
+            fontSize: "clamp(1.7rem, 3vw, 2.2rem)",
+            fontStyle: "italic",
+            fontWeight: 400,
+            letterSpacing: "-0.055em",
+            textTransform: "none",
+            color: "#f7f8fc",
+            textShadow: "0 0 12px rgba(218,232,255,0.22)",
+          }}
+        >
+          Jarvis
         </Link>
         <JarvisNavigation />
       </header>
