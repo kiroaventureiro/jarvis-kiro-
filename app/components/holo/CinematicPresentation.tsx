@@ -136,9 +136,11 @@ export default function CinematicPresentation({
         focus: step?.focus || "center",
       },
     }));
-    return () => window.dispatchEvent(new CustomEvent("jk-cosmic-camera", {
-      detail: { active: false, index: 0, focus: "center" },
-    }));
+    return () => {
+      window.dispatchEvent(new CustomEvent("jk-cosmic-camera", {
+        detail: { active: false, index: 0, focus: "center" },
+      }));
+    };
   }, [director.index, step?.focus, instant, reduced]);
   if (!step) return null;
   const support = scene.modules.find((m) => m.id === step.supportId);
