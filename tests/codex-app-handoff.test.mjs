@@ -50,7 +50,12 @@ test('Browser actions prepare safe search and service links without API access',
  assert.equal(new URL(search.url).searchParams.get('q'),'ação e café');
  assert.equal(browserActionIntent('abra o navegador').url,'https://www.google.com/');
  assert.equal(browserActionIntent('abra a Microsoft').url,'https://www.microsoft365.com/');
- assert.match(browserActionIntent('abra GitHub').url,/feature\/diretor-tecnico-agent/);
+ assert.equal(browserActionIntent('abra GitHub').url,'https://github.com/');
+ assert.equal(browserActionIntent('Jarvis, entre no GitHub').url,'https://github.com/');
+ assert.equal(browserActionIntent('vá ao GitHub').url,'https://github.com/');
+ assert.equal(browserActionIntent('abra o GitHub no navegador').url,'https://github.com/');
+ assert.equal(browserActionIntent('abra o repositório do Jarvis no GitHub').url,'https://github.com/kiroaventureiro/jarvis-kiro-');
+ assert.equal(browserActionIntent('qual a diferença entre GitHub e Vercel?'),null);
  assert.equal(browserActionIntent('qual o status do Google?'),null);
  assert.throws(()=>browserActionIntent('pesquise no Google token=secreto'),/SENSITIVE_REQUEST/);
  assert.equal(browserActionIntent('abra Codex para revisar'),null);
