@@ -36,6 +36,7 @@ import {
   providerCallBudget,
 } from "../../../../lib/voice/cost-policy";
 import { processAbacusRequest } from "../../../../lib/voice/abacus-gateway";
+import { chooseTask } from "../../../../lib/abacus/protocol";
 export const dynamic = "force-dynamic";
 export async function GET() {
   if (!(await authorized()))
@@ -101,6 +102,8 @@ export async function POST(request: Request) {
         ? await answerKnowledge(message, signal)
         : null),
     prepare: async (message, signal, input) => {
+      // Skip optional contextual retrieval for ordinary chat.
+      if (chooseTask(message, input.task) === "chat") return input;
       try {
         const research = await knowledgeResearch.search(message, signal);
         return research?.sources.length ? { ...input, research } : input;
