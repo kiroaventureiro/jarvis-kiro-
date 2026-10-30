@@ -1,0 +1,17 @@
+/* Menu destinations only: scroll-driven reveal. Home remains untouched. */
+@media (prefers-reduced-motion: no-preference) {
+  main.jk-interior-scroll > .jk-reveal {
+    opacity: .34;
+    transform: translate3d(0, 28px, 0);
+    transition: opacity 480ms ease, transform 620ms cubic-bezier(.22,1,.36,1);
+    will-change: opacity, transform;
+  }
+  main.jk-interior-scroll > .jk-reveal.jk-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    will-change: auto;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  main.jk-interior-scroll > .jk-reveal { opacity: 1 !important; transform: none !important; }
+}
