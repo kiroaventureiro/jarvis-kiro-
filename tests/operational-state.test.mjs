@@ -259,6 +259,8 @@ test("the five requested questions use explicit registry facts and preserve proj
   // Named services get an individual answer; general questions retain the overview.
   for (const [question, kind] of [
     ["Navi, o GitHub está conectado?", "github"],
+    ["GitHub conectado?", "github"],
+    ["Vercel funcionando?", "vercel"],
     ["Tenho acesso à Vercel?", "vercel"],
     ["GitHub e Vercel estão conectados?", "overview"],
     ["Jarvis, quais aplicativos estão disponíveis?", "overview"],
