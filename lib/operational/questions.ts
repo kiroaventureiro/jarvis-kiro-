@@ -4,6 +4,8 @@ export type OperationalQuestion =
   | "memory"
   | "projects"
   | "pending"
+  | "github"
+  | "vercel"
   | "overview";
 export function operationalQuestion(
   message: string,
@@ -44,8 +46,11 @@ export function operationalQuestion(
   if (
     /\b(github|vercel)\b/.test(n) &&
     /\b(conectad[oa]s?|configurad[oa]s?|autorizad[oa]s?|disponiv(?:el|eis)|funcionando|acesso|status|operacional)\b/.test(n)
-  )
-    return "overview";
+  ) {
+    const github = /\bgithub\b/.test(n);
+    const vercel = /\bvercel\b/.test(n);
+    return github && vercel ? "overview" : github ? "github" : "vercel";
+  }
   if (
     /(?:aplicativos|plataformas|integracoes|sistemas).*(?:ainda|precisam|pendentes)|(?:ainda|pendentes).*(?:conectar|aplicativos|integracoes)/.test(
       n,
@@ -124,10 +129,15 @@ export function operationalAnswer(
       (snapshot.catalog.examples.join(", ") || "nenhum") +
       ". Serviços já configurados ou validados são informados separadamente; estar no catálogo não concede acesso."
     );
-  if (kind === "abacus" || kind === "memory") {
-    const s = snapshot.integrations.find(
-      (x) => x.id === (kind === "abacus" ? "abacus" : "supabase-memory"),
-    );
+  if (
+    kind === "abacus" ||
+    kind === "memory" ||
+    kind === "github" ||
+    kind === "vercel"
+  ) {
+    const id =
+      kind === "memory" ? "supabase-memory" : kind;
+    const s = snapshot.integrations.find((x) => x.id === id);
     return s
       ? describe(s)
       : "Não há informação operacional para esse serviço neste ambiente.";
