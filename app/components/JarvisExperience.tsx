@@ -1237,7 +1237,7 @@ export default function JarvisExperience() {
           muted={muted}
           onVisualMode={setAudioVisual}
         />
-        <div className="state-indicator" role="status" aria-live="polite">
+        <div className="state-indicator sr-only" role="status" aria-live="polite">
           <span className={"signal " + (connected ? "online" : "")} />
           {workspace.phase === "error"
             ? "Análise não concluída"
@@ -1282,13 +1282,13 @@ export default function JarvisExperience() {
           }))}
       />
       {state === "processing" || workspace.busy ? (
-        <div className="holo-task-state" role="status">
+        <div className="holo-task-state sr-only" role="status">
           <span />{" "}
           {workspace.busy ? "Analisando arquivos" : "Organizando resposta"} ·
           aguarde o resultado
         </div>
       ) : null}
-      {shown.length && !holoSession.current ? (
+      {shown.length && !holoSession.current && (typing || history) ? (
         <section
           className={"response-hud glass " + (expanded ? "expanded" : "")}
           aria-label="Respostas do Jarvis"
