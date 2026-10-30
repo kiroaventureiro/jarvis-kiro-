@@ -100,10 +100,11 @@ h3 {
   letter-spacing: 0.3em;
   text-decoration: none;
   font-weight: 700;
-  color: #c1dce7;
+  color: #c8f5ff;
+  text-shadow: 0 0 12px rgba(159, 227, 255, 0.45);
 }
 .wordmark span {
-  color: #75c8d7;
+  color: #9fe3ff;
   font-weight: 400;
   margin-left: 8px;
 }
