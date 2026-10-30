@@ -103,8 +103,15 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
         await page
           .locator(".stage-header")
           .evaluate((el) => getComputedStyle(el).opacity),
-        "0",
+        "1",
       );
+      const menu = page.getByRole("button", { name: "Abrir navegação" });
+      assert.equal(await menu.isVisible(), true);
+      assert.equal((await menu.innerText()).trim(), "⋮");
+      await menu.click();
+      assert.equal(await page.getByRole("navigation", { name: "Áreas do Jarvis" }).isVisible(), true);
+      await page.getByRole("button", { name: "Fechar navegação" }).click();
+      assert.equal(await page.getByRole("navigation", { name: "Áreas do Jarvis" }).count(), 0);
       assert.equal(
         await page
           .locator(".interaction-dock")
