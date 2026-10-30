@@ -44,12 +44,12 @@ function RefinedJarvisCore({phase,hidden,inputStream,outputStream,muted,onVisual
     if(!el||!host||!ctx) return;
     let w=0,h=0,dpr=1,raf=0,visible=true,last=0;
     const current:Preset={...presets.idle};
-    const points=Array.from({length:280},()=>({
+    const points=Array.from({length:440},()=>({
       ratio:1.15+Math.pow(Math.random(),1.8)*2.1,
       angle:Math.random()*Math.PI*2,
       speed:.6+Math.random()*.8,
       size:1+Math.random()*2.1,
-      opacity:.2+Math.random()*.7
+      opacity:.28+Math.random()*.68
     }));
     function resize(){
       dpr=Math.min(window.devicePixelRatio||1,2);
