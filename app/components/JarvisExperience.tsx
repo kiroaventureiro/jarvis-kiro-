@@ -1218,16 +1218,20 @@ export default function JarvisExperience() {
         onCancel={workspace.cancel}
       />
       <header className="stage-header">
+        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-start", gap: 10, flex: "0 0 auto", minWidth: 0, maxWidth: "calc(100% - 48px)" }}>
         <Link
           href="/"
-          className="wordmark refined-script-wordmark"
+          className="refined-script-wordmark"
           aria-label="Jarvis Kiro"
           style={{
-            fontFamily: '"Brush Script MT", "Segoe Script", "Apple Chancery", cursive',
-            fontSize: "clamp(1.7rem, 3vw, 2.2rem)",
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontSize: "clamp(1.65rem, 2.8vw, 2.1rem)",
+            display: "inline-block",
+            lineHeight: 1.1,
+            flexShrink: 0,
             fontStyle: "italic",
-            fontWeight: 400,
-            letterSpacing: "-0.055em",
+            fontWeight: 500,
+            letterSpacing: "-0.035em",
             textTransform: "none",
             color: "#f7f8fc",
             textShadow: "0 0 12px rgba(218,232,255,0.22)",
@@ -1235,11 +1239,12 @@ export default function JarvisExperience() {
         >
           Jarvis Kiro
         </Link>
-        <div role="status" aria-live="polite" aria-atomic="true" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginInlineStart: 12, whiteSpace: "nowrap", flexShrink: 0 }}>
+        <div role="status" aria-live="polite" aria-atomic="true" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginInlineStart: 0, whiteSpace: "nowrap", flexShrink: 0 }}>
           <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: state === "error" || workspace.phase === "error" ? "#f28f8f" : state === "processing" || workspace.busy ? "#c4b5fd" : state === "listening" || workspace.recording || voiceSnapshot.phase === "command" ? "#59ddf6" : state === "responding" || voiceSnapshot.phase === "speaking" ? "#78ead8" : "#96adbf", boxShadow: "0 0 9px currentColor", color: "#8cdbf2" }} />
           <span style={{ color: "#b9d3e4", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.09em" }}>
             {workspace.phase === "error" || state === "error" ? "CONEXÃO INDISPONÍVEL" : workspace.busy || state === "processing" || voiceSnapshot.phase === "processing" ? "PENSANDO" : workspace.recording || state === "listening" || voiceSnapshot.phase === "command" ? "OUVINDO" : state === "responding" || voiceSnapshot.phase === "speaking" ? "RESPONDENDO" : state === "connecting" ? "CONECTANDO" : "EM ESPERA"}
           </span>
+        </div>
         </div>
         <JarvisNavigation />
       </header>
