@@ -10,6 +10,7 @@ import {
   CommandDeduplicator,
   localVoiceReply,
 } from "./wake-word-policy";
+import { isSelfEcho, isStopCommand, stopAll } from "./interruption";
 export type VoiceSnapshot = {
   phase: VoicePhase;
   enabled: boolean;
@@ -45,6 +46,7 @@ export class VoiceController {
   private enabled = false;
   private busy = false;
   private rec: RecognitionDriver | null = null;
+  private barge: RecognitionDriver | null = null;
   private abort: AbortController | null = null;
   private epoch = 0;
   private retries = 0;
@@ -80,7 +82,52 @@ export class VoiceController {
       (this.options.clear || clearTimeout)(timer);
     this.timers.clear();
   }
+  private stopBargeIn() {
+    const rec = this.barge;
+    this.barge = null;
+    if (!rec) return;
+    rec.onend = null; rec.onerror = null; rec.onresult = null;
+    try { rec.abort ? rec.abort() : rec.stop(); } catch {}
+  }
+  private startBargeIn(spoken: string) {
+    this.stopBargeIn();
+    if (!this.options.recognition || !this.enabled) return;
+    let rec: RecognitionDriver;
+    try { rec = new this.options.recognition(); } catch { return; }
+    this.barge = rec;
+    rec.lang = "pt-BR"; rec.continuous = true; rec.interimResults = true;
+    rec.onresult = (event) => {
+      if (this.barge !== rec || this.phase !== "speaking") return;
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const text = event.results[i]?.[0]?.transcript?.trim() || "";
+        if (text && !isSelfEcho(text, spoken) && isStopCommand(text)) { this.interrupt(); return; }
+      }
+    };
+    rec.onerror = () => { if (this.barge === rec) this.stopBargeIn(); };
+    rec.onend = () => {
+      if (this.barge !== rec) return;
+      this.barge = null;
+      if (this.phase === "speaking" && this.enabled) this.later(() => this.startBargeIn(spoken), 650);
+    };
+    try { rec.start(); } catch { this.stopBargeIn(); }
+  }
+  interrupt() {
+    const resume = this.enabled && this.options.continuous();
+    this.epoch++;
+    this.clearTimers();
+    this.stopBargeIn();
+    this.abort?.abort(); this.abort = null;
+    this.skipSpeech = true; this.speechPending = false; this.busy = false;
+    this.options.speech.cancel();
+    stopAll({ resumeListening: resume });
+    this.pause();
+    if (!resume) { this.stop("Fala interrompida."); return; }
+    this.armedUntil = this.now() + 60000;
+    this.emit("resuming", "Fala interrompida · retomando a escuta.");
+    this.later(() => this.listen(), 450);
+  }
   private pause() {
+    this.stopBargeIn();
     const rec = this.rec;
     this.rec = null;
     this.mic = false;
@@ -210,6 +257,11 @@ export class VoiceController {
         const text = result[0]?.transcript?.trim() || "";
         if (!text) continue;
         this.retries = 0;
+        if (isStopCommand(text)) {
+          stopAll({resumeListening:true});
+          this.emit("waiting", "Fala interrompida · microfone ativo.");
+          continue;
+        }
         const parsed = parseWake(text, this.now() < this.armedUntil);
         if (!parsed.accepted) {
           this.emit("waiting", "Microfone ativo · aguardando Jarvis.");
@@ -291,6 +343,7 @@ export class VoiceController {
         this.emit("speaking", "Jarvis respondendo · reconhecimento pausado.");
         this.skipSpeech = false;
         this.speechPending = true;
+        this.startBargeIn(prepared.text);
         try {
           await this.options.speech.speak(prepared.text, abort.signal, {
             scene: prepared.visual,
@@ -302,7 +355,7 @@ export class VoiceController {
             this.options.onSpeechUnavailable?.();
           if (!this.skipSpeech && !stopped) throw error;
         } finally {
-          if (epoch === this.epoch) this.speechPending = false;
+          if (epoch === this.epoch) { this.speechPending = false; this.stopBargeIn(); }
         }
       } else {
         this.options.onSpeechUnavailable?.();
