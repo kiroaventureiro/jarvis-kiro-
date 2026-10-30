@@ -131,12 +131,18 @@ function CosmicScene(props: Props) {
         el.style.transform = "";
         return;
       }
-      const step = Math.max(0, Math.min(12, detail.index || 0));
-      const direction = step % 4;
-      const offsetX = [0, -9, 8, 0][direction];
-      const offsetY = [-2, 3, -2, 5][direction];
-      const scale = step === 0 ? 1.55 : 1.35 + (step % 3) * 0.13;
-      el.style.transform = `translate3d(${offsetX}%, ${offsetY}%, 0) scale(${scale})`;
+      // Camera beats are tied to real demonstration steps, not a free-running
+      // slideshow. Bounded travel keeps the luminous subject inside the frame.
+      const step = Math.max(0, Math.min(12, Math.floor(detail.index || 0)));
+      const paths = [
+        { x: 0, y: 0, scale: 1.38 }, // approach: enter the cosmic scene
+        { x: -6, y: 2, scale: 1.47 }, // explore the left-side evidence
+        { x: 6, y: -3, scale: 1.43 }, // cross to the right
+        { x: 1, y: 5, scale: 1.51 }, // look below the horizon
+        { x: -3, y: -5, scale: 1.42 }, // rise above the accretion disk
+      ];
+      const beat = paths[step % paths.length];
+      el.style.transform = `translate3d(${beat.x}%, ${beat.y}%, 0) scale(${beat.scale})`;
     };
     window.addEventListener("jk-cosmic-camera", camera);
 
