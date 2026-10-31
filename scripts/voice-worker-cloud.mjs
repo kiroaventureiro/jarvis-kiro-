@@ -17,13 +17,23 @@ const api = (process.env.JARVIS_VOICE_WORKER_URL || "").replace(/\/+$/, "");
 if (!/^https:\/\//.test(api)) throw Error("JARVIS_VOICE_WORKER_URL_HTTPS_REQUIRED");
 
 async function call(action, body = {}, token) {
+  const protectionBypass = process.env.JARVIS_VERCEL_PROTECTION_BYPASS || "";
   const response = await fetch(api + "/api/voice/worker", {
     method: "POST", redirect: "error", cache: "no-store",
-    headers: { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(protectionBypass ? { "x-vercel-protection-bypass": protectionBypass } : {}),
+      ...(token ? { Authorization: "Bearer " + token } : {}),
+    },
     body: JSON.stringify({ action, ...body }), signal: AbortSignal.timeout(15000),
   });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw Error(data.error || "VOICE_WORKER_API_" + response.status);
+  if (!response.ok) {
+    if (response.status === 401 && String(data.message || "").includes("Protected by Vercel Authentication")) {
+      throw Error("VERCEL_DEPLOYMENT_PROTECTION: configure JARVIS_VERCEL_PROTECTION_BYPASS locally");
+    }
+    throw Error(data.error || data.message || "VOICE_WORKER_API_" + response.status);
+  }
   return data;
 }
 async function pair(code) {
