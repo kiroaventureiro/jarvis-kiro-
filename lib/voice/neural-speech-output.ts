@@ -63,9 +63,19 @@ export class NeuralSpeechOutput implements SpeechOutput {
       const audio = new Audio(this.objectUrl);
       this.audio = audio;
       await new Promise<void>((resolve, reject) => {
-        audio.onended = () => resolve();
-        audio.onerror = () => reject(new Error("Audio playback failed"));
-        void audio.play().catch(reject);
+        let settled = false;
+        const finish = (error?: Error) => {
+          if (settled) return;
+          settled = true;
+          controller.signal.removeEventListener("abort", onAbort);
+          error ? reject(error) : resolve();
+        };
+        const onAbort = () => finish(new DOMException("Cancelado", "AbortError"));
+        controller.signal.addEventListener("abort", onAbort, { once: true });
+        audio.onended = () => finish();
+        audio.onerror = () => finish(new Error("Audio playback failed"));
+        if (controller.signal.aborted) onAbort();
+        else void audio.play().catch(error => finish(error));
       });
     } catch (error) {
       if (signal.aborted || controller.signal.aborted)
