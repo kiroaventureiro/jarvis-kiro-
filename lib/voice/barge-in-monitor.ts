@@ -23,6 +23,7 @@ export function createBargeInMonitor(onSpeech: () => void) {
     const currentSession = ++session;
     fired = false;
     speechFrames = 0;
+    baseline = 0.006;
     try {
       const mic = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -32,7 +33,14 @@ export function createBargeInMonitor(onSpeech: () => void) {
         return;
       }
       stream = mic;
+      for (const track of mic.getAudioTracks()) {
+        track.addEventListener("ended", () => {
+          if (active && currentSession === session) stop();
+        }, { once: true });
+      }
       context = new AudioContext();
+      if (context.state === "suspended") await context.resume();
+      if (!active || currentSession !== session) return;
       source = context.createMediaStreamSource(mic);
       analyser = context.createAnalyser();
       analyser.fftSize = 1024;
