@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { validJob, executeLocalJob } from "../scripts/voice-worker-local.mjs";
+import { validJob, executeLocalJob, reserveVoiceJobId } from "../scripts/voice-worker-local.mjs";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -98,6 +98,18 @@ test("Windows worker CLI refuses unsigned jobs before any local request", async 
     assert.equal(result.status, 1);
     assert.match(result.stderr, /VOICE_JOB_AUTHENTICATION_REQUIRED/);
     await assert.rejects(readFile(output), { code: "ENOENT" });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("durable claim refuses a repeated signed job id", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "jarvis-voice-claims-"));
+  try {
+    const marker = await reserveVoiceJobId("voice_replay_test_123", dir);
+    assert.match(marker, /voice_replay_test_123\.claimed$/);
+    await assert.rejects(reserveVoiceJobId("voice_replay_test_123", dir), { code: "EEXIST" });
+    await assert.rejects(reserveVoiceJobId("../traversal", dir), /INVALID_VOICE_JOB_ID/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
