@@ -38,7 +38,30 @@ export async function executeLocalJob(job, output, fetcher = fetch) {
   const type = response.headers.get("content-type") || "";
   if (!type.startsWith("audio/") && type !== "application/octet-stream")
     throw Error("UNEXPECTED_AUDIO_TYPE");
-  const data = new Uint8Array(await response.arrayBuffer());
+  // Bound the response while streaming rather than buffering untrusted bytes
+  // before checking their size. The VoiceStudio process is local but can fail.
+  const reader = response.body?.getReader();
+  if (!reader) throw Error("EMPTY_AUDIO_RESPONSE");
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > 3_000_000) throw Error("AUDIO_SIZE_LIMIT");
+      chunks.push(value);
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+  }
+  const data = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    data.set(chunk, offset);
+    offset += chunk.length;
+  }
   if (data.length < 44 || data.length > 3_000_000 ||
       Buffer.from(data.subarray(0,4)).toString("ascii") !== "RIFF" ||
       Buffer.from(data.subarray(8,12)).toString("ascii") !== "WAVE")
