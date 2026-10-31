@@ -237,7 +237,8 @@ export class VoiceController {
         const text = result[0]?.transcript?.trim() || "";
         if (!text) continue;
         this.retries = 0;
-        const parsed = parseWake(text, this.now() < this.armedUntil);
+        // Once listening is enabled, the assistant name is optional.
+        const parsed = parseWake(text, true);
         if (!parsed.accepted) {
           this.emit("waiting", "Microfone ativo · aguardando Jarvis.");
           continue;
