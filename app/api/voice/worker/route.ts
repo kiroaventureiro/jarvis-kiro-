@@ -34,11 +34,11 @@ async function db(path: string, method = "GET", body?: unknown) {
   if (!response.ok) throw new Error("VOICE_WORKER_STORE_UNAVAILABLE");
   return response.status === 204 ? [] : response.json();
 }
-async function readBody(request: Request) {
+async function readBody(request: Request, max = 4096) {
   if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
     throw new Error("INVALID_CONTENT_TYPE");
   const raw = await request.text();
-  if (raw.length > 4096) throw new Error("BODY_TOO_LARGE");
+  if (raw.length > max) throw new Error("BODY_TOO_LARGE");
   const value = JSON.parse(raw);
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("INVALID_BODY");
@@ -54,7 +54,7 @@ async function device(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await readBody(request);
+    const body = await readBody(request, 4100000);
     const action = body.action;
     if (action === "create_pairing") {
       if (!(await authorized())) return json({ error: "Não autorizado" }, 401);
@@ -101,6 +101,17 @@ export async function POST(request: Request) {
       if (!/^voice_[A-Za-z0-9_-]{12,80}$/.test(id) ||
           (status !== "completed" && status !== "failed"))
         return json({ error: "Resultado inválido" }, 400);
+      if (status === "completed") {
+        const audio = typeof body.audioBase64 === "string" ? body.audioBase64 : "";
+        if (!audio || audio.length > 4000000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(audio))
+          return json({ error: "Áudio inválido" }, 400);
+        const bytes = Buffer.from(audio, "base64");
+        if (bytes.length < 44 || bytes.length > 3000000 ||
+            bytes.toString("ascii", 0, 4) !== "RIFF" ||
+            bytes.toString("ascii", 8, 12) !== "WAVE")
+          return json({ error: "WAV inválido" }, 400);
+        await db("jarvis_voice_worker_audio", "POST", { job_id: id, audio_base64: audio });
+      }
       const result = await db("jarvis_voice_jobs?id=eq." + encodeURIComponent(id) +
         "&device_id=eq." + encodeURIComponent(deviceId) + "&status=eq.processing",
         "PATCH", {
@@ -117,6 +128,31 @@ export async function POST(request: Request) {
     const status = message === "BODY_TOO_LARGE" ? 413 :
       message === "INVALID_CONTENT_TYPE" || message === "INVALID_BODY" ? 400 : 503;
     return json({ error: status === 503 ? "Serviço de voz indisponível" : "Requisição inválida" }, status);
+  }
+}
+
+export async function GET(request: Request) {
+  if (!(await authorized())) return json({ error: "Não autorizado" }, 401);
+  const id = new URL(request.url).searchParams.get("id") || "";
+  if (!/^voice_[A-Za-z0-9_-]{12,80}$/.test(id))
+    return json({ error: "Identificador inválido" }, 400);
+  try {
+    const jobs = await db("jarvis_voice_jobs?id=eq." + encodeURIComponent(id) +
+      "&select=id,status,error_code&limit=1");
+    if (!Array.isArray(jobs) || !jobs.length) return json({ error: "Tarefa não encontrada" }, 404);
+    const job = jobs[0];
+    if (job.status === "failed") return json({ status: "failed", errorCode: job.error_code });
+    if (job.status !== "completed") return json({ status: job.status });
+    const files = await db("jarvis_voice_worker_audio?job_id=eq." +
+      encodeURIComponent(id) + "&select=audio_base64&limit=1");
+    if (!Array.isArray(files) || !files.length) return json({ status: "processing" });
+    const bytes = Buffer.from(String(files[0].audio_base64), "base64");
+    return new Response(new Uint8Array(bytes), {
+      status: 200, headers: { ...headers, "Content-Type": "audio/wav",
+        "Content-Length": String(bytes.length), "X-Content-Type-Options": "nosniff" },
+    });
+  } catch {
+    return json({ error: "Não foi possível consultar a tarefa" }, 503);
   }
 }
 
