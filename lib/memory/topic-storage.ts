@@ -66,8 +66,12 @@ export async function readMemoryTopics(owner: string, signal?: AbortSignal): Pro
   });
 }
 export async function writeMemoryTopic(owner: string, topic: MemoryTopic, signal?: AbortSignal): Promise<void> {
-  if (!validId(owner) || !validId(topic.id) || !topic.title.trim() || topic.title.length > 120 ||
-      topic.summary.length > 800 || (topic.tags?.length ?? 0) > 12) throw Error("INVALID_TOPIC_INPUT");
+  if (!validId(owner) || !validId(topic.id) || typeof topic.title !== "string" ||
+      !topic.title.trim() || topic.title.length > 120 || typeof topic.summary !== "string" ||
+      topic.summary.length > 800 || (topic.tags !== undefined &&
+      (!Array.isArray(topic.tags) || topic.tags.length > 12 ||
+      !topic.tags.every((tag) => typeof tag === "string" && tag.length > 0 && tag.length <= 60))))
+    throw Error("INVALID_TOPIC_INPUT");
   const c = configuration();
   await query("POST", owner, topic.id, encrypt(topic, c.secret, owner), signal);
 }
