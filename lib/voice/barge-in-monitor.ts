@@ -8,6 +8,8 @@ export function createBargeInMonitor(onSpeech: () => void) {
   let context: AudioContext | null = null;
   let source: MediaStreamAudioSourceNode | null = null;
   let analyser: AnalyserNode | null = null;
+  let highPass: BiquadFilterNode | null = null;
+  let lowPass: BiquadFilterNode | null = null;
   let timer: ReturnType<typeof setInterval> | null = null;
   let active = false;
   let speechFrames = 0;
@@ -34,7 +36,17 @@ export function createBargeInMonitor(onSpeech: () => void) {
       source = context.createMediaStreamSource(mic);
       analyser = context.createAnalyser();
       analyser.fftSize = 1024;
-      source.connect(analyser);
+      // Remove low-frequency hum and high-frequency hiss before detection.
+      // Frequency filtering is not speaker identification or full echo cancellation.
+      highPass = context.createBiquadFilter();
+      highPass.type = "highpass";
+      highPass.frequency.value = 120;
+      lowPass = context.createBiquadFilter();
+      lowPass.type = "lowpass";
+      lowPass.frequency.value = 3400;
+      source.connect(highPass);
+      highPass.connect(lowPass);
+      lowPass.connect(analyser);
       const values = new Float32Array(analyser.fftSize);
       timer = setInterval(() => {
         if (!active || currentSession !== session || !analyser || fired) return;
@@ -65,6 +77,10 @@ export function createBargeInMonitor(onSpeech: () => void) {
     timer = null;
     source?.disconnect();
     source = null;
+    highPass?.disconnect();
+    highPass = null;
+    lowPass?.disconnect();
+    lowPass = null;
     analyser?.disconnect();
     analyser = null;
     stream?.getTracks().forEach(t => t.stop());
