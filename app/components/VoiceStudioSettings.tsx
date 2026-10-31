@@ -5,8 +5,26 @@ export default function VoiceStudioSettings() {
   const [status, setStatus] = useState<StudioStatus | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
+  const localPreviewRef = useRef<string | null>(null);
   const current = useRef<AbortController | null>(null);
-  useEffect(() => () => current.current?.abort(), []);
+  useEffect(() => () => {
+    current.current?.abort();
+    if (localPreviewRef.current) URL.revokeObjectURL(localPreviewRef.current);
+  }, []);
+  function selectLocalPreview(file?: File) {
+    if (localPreviewRef.current) URL.revokeObjectURL(localPreviewRef.current);
+    localPreviewRef.current = null;
+    setLocalPreviewUrl(null);
+    if (!file || !/\\.(wav|mp3|ogg)$/i.test(file.name) || file.size > 15_000_000) {
+      if (file) setError("Selecione um áudio WAV, MP3 ou OGG de até 15 MB.");
+      return;
+    }
+    setError("");
+    const url = URL.createObjectURL(file);
+    localPreviewRef.current = url;
+    setLocalPreviewUrl(url);
+  }
   async function inspect() {
     current.current?.abort();
     const controller = new AbortController();
@@ -55,6 +73,17 @@ export default function VoiceStudioSettings() {
         endereço localhost do servidor hospedado não aponta para seu computador.
         A configuração é feita no servidor, sem chaves no navegador.
       </p>
+      <div className="glass notice">
+        <h3>Prévia local da voz oficial</h3>
+        <p>Selecione o arquivo WAV gerado no VoiceStudio para ouvir a voz dentro do Jarvis. O arquivo fica somente neste navegador: não é enviado ao servidor e não altera sua voz atual.</p>
+        <input
+          type="file"
+          accept=".wav,.mp3,.ogg,audio/wav,audio/mpeg,audio/ogg"
+          aria-label="Selecionar áudio local da voz oficial"
+          onChange={(event) => selectLocalPreview(event.currentTarget.files?.[0])}
+        />
+        {localPreviewUrl && <audio controls src={localPreviewUrl} preload="none" />}
+      </div>
       <a
         href="https://github.com/debpalash/VoiceStudio"
         target="_blank"
