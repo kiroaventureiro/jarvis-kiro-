@@ -10,7 +10,8 @@ export function voiceSessionPolicy(env: Record<string, string | undefined>) {
         turn_detection: {
           type: "server_vad",
           create_response: true,
-          interrupt_response: true,
+          // Prevent assistant audio from triggering an unintended interruption.
+          interrupt_response: false,
         },
       },
       output: { voice: "marin" },
