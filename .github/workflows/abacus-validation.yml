@@ -1,0 +1,33 @@
+name: Jarvis Abacus Validation
+
+on:
+  push:
+    branches:
+      - feature/diretor-tecnico-agent
+    paths:
+      - 'lib/abacus/**'
+      - 'tests/abacus-capability-status.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/abacus-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  abacus-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Test capability authorization without provider calls
+        run: node --test tests/abacus-capability-status.test.mjs
+      - name: Type-check project
+        run: npx tsc --noEmit
