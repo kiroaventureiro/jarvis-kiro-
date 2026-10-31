@@ -26,7 +26,8 @@ export async function executeLocalJob(job, output, fetcher = fetch) {
   if (!validJob(job)) throw Error("INVALID_OR_EXPIRED_VOICE_JOB");
   const profiles = await fetcher(BASE + "/profiles", { signal: AbortSignal.timeout(8000), redirect: "error" });
   if (!profiles.ok) throw Error("VOICESTUDIO_UNAVAILABLE");
-  const available = await profiles.json();
+  const discovered = await profiles.json();
+  const available = Array.isArray(discovered) ? discovered : discovered?.value;
   if (!Array.isArray(available) || !available.some(p => p?.id === PROFILE))
     throw Error("OFFICIAL_PROFILE_NOT_FOUND");
   const response = await fetcher(BASE + "/v1/audio/speech", {
@@ -73,7 +74,8 @@ export async function executeLocalJob(job, output, fetcher = fetch) {
   try {
     await writeFile(temporary, data, { flag: "wx", mode: 0o600 });
     // Atomic no-clobber on Windows/NTFS and POSIX: never overwrite a prior WAV.
-    await link(temporary, destination);\n    await unlink(temporary);
+    await link(temporary, destination);
+    await unlink(temporary);
   } catch (error) {
     await unlink(temporary).catch(() => {});
     throw error;
