@@ -28,6 +28,7 @@ import {
 } from "../../../../lib/operational/server";
 import { abacusUsage, tokenLimit } from "../../../../lib/abacus/usage";
 import { ABACUS_CAPABILITIES } from "../../../../lib/abacus/capabilities";
+import { buildAbacusCapabilityReport } from "../../../../lib/abacus/capability-status";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
 import { askAbacus, streamAbacus } from "../../../../lib/abacus-routellm";
@@ -58,6 +59,14 @@ export async function GET() {
       telemetry: abacusUsage.stats(),
       tokenLimitPerHour: tokenLimit(process.env),
       capabilities: ABACUS_CAPABILITIES,
+      // Publicly documented features are not proof of account authorization.
+      capabilityStatus: buildAbacusCapabilityReport({
+        chat_streaming: { documented: true, authorized: false, apiAvailable: false, verified: false },
+        persistent_conversation: { documented: true, authorized: false, apiAvailable: false, verified: false },
+        agent_execution: { documented: true, authorized: false, apiAvailable: false, verified: false },
+        connected_tools: { documented: true, authorized: false, apiAvailable: false, verified: false },
+        provider_memory: { documented: true, authorized: false, apiAvailable: false, verified: false },
+      }),
       webResearch: {
         configured:
           webResearchPolicy(process.env).enabled &&
