@@ -65,6 +65,14 @@ export function buildAbacusCapabilityReport(
 export function canUseAbacusCapability(
   report: CapabilityReport,
   capability: AbacusCapability,
+  now: number = Date.now(),
+  maxAgeMs: number = 15 * 60 * 1000,
 ): boolean {
-  return report[capability]?.stage === "verified";
+  const record = report[capability];
+  if (record?.stage !== "verified" || !record.checkedAt) return false;
+  const checkedAt = Date.parse(record.checkedAt);
+  if (!Number.isFinite(checkedAt) || !Number.isFinite(now)) return false;
+  if (!Number.isFinite(maxAgeMs) || maxAgeMs <= 0) return false;
+  // Fail closed for stale evidence or timestamps set in the future.
+  return checkedAt <= now && now - checkedAt <= maxAgeMs;
 }
