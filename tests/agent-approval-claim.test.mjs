@@ -68,3 +68,42 @@ test("uses server-side service key and exact scoped parameters, without leaking 
     }
   }
 });
+
+test("rejects insecure or unexpected database endpoints before any request", async () => {
+ const oldUrl = process.env.SUPABASE_URL;
+ const oldKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+ const oldFetch = globalThis.fetch;
+ let count = 0;
+ globalThis.fetch = async () => { count++; throw Error("unexpected network"); };
+ process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
+ try {
+   for (const url of ["http://example.supabase.co", "https://attacker.example", "https://fake.supabase.co/hidden"]) {
+     process.env.SUPABASE_URL = url;
+     await assert.rejects(claimJarvisApproval(valid, "owner1"), /INVALID_APPROVAL_ENDPOINT/);
+   }
+   assert.equal(count, 0);
+ } finally {
+   globalThis.fetch = oldFetch;
+   if (oldUrl === undefined) delete process.env.SUPABASE_URL;
+   else process.env.SUPABASE_URL = oldUrl;
+   if (oldKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+   else process.env.SUPABASE_SERVICE_ROLE_KEY = oldKey;
+ }
+});
+test("fails closed on database errors and does not imply permission", async () => {
+ const oldUrl = process.env.SUPABASE_URL;
+ const oldKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+ const oldFetch = globalThis.fetch;
+ process.env.SUPABASE_URL = "https://jarvis-test.supabase.co";
+ process.env.SUPABASE_SERVICE_ROLE_KEY = "test-key";
+ globalThis.fetch = async () => new Response("service unavailable", {status:503});
+ try {
+   await assert.rejects(claimJarvisApproval(valid, "owner1"), /APPROVAL_CLAIM_UNAVAILABLE/);
+ } finally {
+   globalThis.fetch = oldFetch;
+   if (oldUrl === undefined) delete process.env.SUPABASE_URL;
+   else process.env.SUPABASE_URL = oldUrl;
+   if (oldKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+   else process.env.SUPABASE_SERVICE_ROLE_KEY = oldKey;
+ }
+});
