@@ -5,7 +5,7 @@
  * Node.js 22+, VoiceStudio already running at 127.0.0.1:3900.
  * Usage: node scripts/voice-worker-local.mjs job.json result.wav
  */
-import { readFile, writeFile, rename, unlink } from "node:fs/promises";
+import { readFile, writeFile, link, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
@@ -70,7 +70,8 @@ export async function executeLocalJob(job, output, fetcher = fetch) {
   const temporary = destination + "." + randomUUID() + ".tmp";
   try {
     await writeFile(temporary, data, { flag: "wx", mode: 0o600 });
-    await rename(temporary, destination);
+    // Atomic no-clobber on Windows/NTFS and POSIX: never overwrite a prior WAV.
+    await link(temporary, destination);\n    await unlink(temporary);
   } catch (error) {
     await unlink(temporary).catch(() => {});
     throw error;
