@@ -66,3 +66,15 @@ test("unverified or only authorized capabilities cannot execute", () => {
   assert.equal(canUseAbacusCapability(granted, "agent_execution"), true);
   assert.equal(canUseAbacusCapability(granted, "connected_tools"), false);
 });
+
+test("execution blocks stale, future, or missing verification time", () => {
+  const now = 1793408400000;
+  const verified = (checkedAt) => buildAbacusCapabilityReport({
+    agent_execution: evidence({ authorized: true, apiAvailable: true, verified: true, checkedAt }),
+  });
+  assert.equal(canUseAbacusCapability(verified(undefined), "agent_execution", now), false);
+  assert.equal(canUseAbacusCapability(verified("not-a-date"), "agent_execution", now), false);
+  assert.equal(canUseAbacusCapability(verified(new Date(now - 16 * 60 * 1000).toISOString()), "agent_execution", now), false);
+  assert.equal(canUseAbacusCapability(verified(new Date(now + 1000).toISOString()), "agent_execution", now), false);
+  assert.equal(canUseAbacusCapability(verified(new Date(now - 60 * 1000).toISOString()), "agent_execution", now), true);
+});
