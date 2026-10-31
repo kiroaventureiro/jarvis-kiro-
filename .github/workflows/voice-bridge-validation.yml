@@ -1,0 +1,32 @@
+name: Jarvis Voice Bridge Validation
+on:
+  push:
+    branches:
+      - feature/jarvis-visual-fc19556-integrated
+    paths:
+      - 'scripts/voice-worker-local.mjs'
+      - 'lib/voice/windows-bridge-contract.ts'
+      - 'tests/voice-worker-local.test.mjs'
+      - 'tests/windows-bridge-contract.test.mjs'
+      - '.github/workflows/voice-bridge-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-voice-bridge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install project dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Test local worker and bridge contract
+        run: node --test tests/voice-worker-local.test.mjs tests/windows-bridge-contract.test.mjs
+      - name: Check TypeScript
+        run: npx tsc --noEmit
