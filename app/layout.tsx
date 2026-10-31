@@ -5,6 +5,8 @@ import "./cinematic.css";
 import "./holo-v2.css";
 import "./holo-v3.css";
 import "./holo-freedom.css";
+import "./cosmic.css";
+import "./refined-core.css";
 import { HoloSessionProvider } from "./components/holo/HoloSession";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
