@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { validJob, executeLocalJob } from "../scripts/voice-worker-local.mjs";
 import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 
 const now = Date.now();
 const job = { id: "voice_test_123456", kind: "synthesize", profileId: "af5bbbba", text: "Olá, Jarvis.", expiresAt: now + 60_000 };
@@ -78,6 +79,25 @@ test("does not overwrite an existing WAV", async () => {
     await writeFile(output, existing);
     await assert.rejects(executeLocalJob(job, output, fetcher), { code: "EEXIST" });
     assert.deepEqual(await readFile(output), existing);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("Windows worker CLI refuses unsigned jobs before any local request", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "jarvis-voice-auth-"));
+  const input = join(dir, "job.json");
+  const output = join(dir, "result.wav");
+  try {
+    await writeFile(input, JSON.stringify(job));
+    const result = spawnSync(process.execPath, [resolve("scripts/voice-worker-local.mjs"), input, output], {
+      encoding: "utf8",
+      env: { ...process.env, JARVIS_VOICE_WORKER_SECRET: "" },
+      timeout: 5000,
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /VOICE_JOB_AUTHENTICATION_REQUIRED/);
+    await assert.rejects(readFile(output), { code: "ENOENT" });
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
