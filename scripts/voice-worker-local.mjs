@@ -5,8 +5,9 @@
  * Node.js 22+, VoiceStudio already running at 127.0.0.1:3900.
  * Usage: node scripts/voice-worker-local.mjs job.json result.wav
  */
-import { readFile, writeFile, link, unlink } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile, writeFile, link, unlink, mkdir } from "node:fs/promises";
+import { resolve, join } from "node:path";
+import { homedir } from "node:os";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { verifyVoiceJob } from "./voice-job-auth.mjs";
@@ -79,6 +80,18 @@ export async function executeLocalJob(job, output, fetcher = fetch) {
   }
   return { jobId: job.id, status: "completed", bytes: data.length, output: destination };
 }
+/** Reserve a signed job ID before any synthesis. Reservations are durable and
+ * intentionally not cleared on errors: delivery is at-most-once, not retryable.
+ * This does not replace server-side authentication or device pairing.
+ */
+export async function reserveVoiceJobId(id, directory = join(homedir(), ".jarvis-kiro", "voice-job-claims")) {
+  if (typeof id !== "string" || !/^[A-Za-z0-9_-]{12,80}$/.test(id))
+    throw Error("INVALID_VOICE_JOB_ID");
+  await mkdir(directory, { recursive: true, mode: 0o700 });
+  const marker = join(directory, id + ".claimed");
+  await writeFile(marker, new Date().toISOString(), { flag: "wx", mode: 0o600 });
+  return marker;
+}
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const [input, output] = process.argv.slice(2);
   if (!input || !output) {
@@ -90,6 +103,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       const secret = process.env.JARVIS_VOICE_WORKER_SECRET;
       if (!secret || !verifyVoiceJob(envelope?.job, envelope?.signature, secret))
         throw Error("VOICE_JOB_AUTHENTICATION_REQUIRED");
+      await reserveVoiceJobId(envelope.job.id);
       const result = await executeLocalJob(envelope.job, output);
       process.stdout.write(JSON.stringify(result) + "\n");
     } catch (error) {
