@@ -4,6 +4,7 @@ import type { HoloScene } from "../holo/types";
 import { emitSpeechProgress } from "../holo/speech-progress";
 import type { SpeechOutput, VoicePreferences } from "./voice-types";
 import { readVoicePreferences, selectVoice } from "./voice-preferences";
+import { NeuralSpeechOutput } from "./neural-speech-output";
 export interface SpeechAdapter {
   getVoices(): SpeechSynthesisVoice[];
   speak(utterance: SpeechSynthesisUtterance): void;
@@ -254,6 +255,13 @@ export class BrowserSpeechOutput implements SpeechOutput {
   }
 }
 let manager: BrowserSpeechOutput | null = null;
+let neuralManager: NeuralSpeechOutput | null = null;
+
+/**
+ * Returns the currently approved browser voice. Neural synthesis is never
+ * selected automatically; it requires a verified endpoint and explicit
+ * selection after pricing, privacy and voice audition are approved.
+ */
 export function getVoiceManager() {
   if (!manager)
     manager = new BrowserSpeechOutput(
@@ -264,4 +272,14 @@ export function getVoiceManager() {
       (text) => new SpeechSynthesisUtterance(text),
     );
   return manager;
+}
+
+/** Experimental adapter, isolated from the production voice selection. */
+export function getNeuralVoiceCandidate() {
+  if (!neuralManager)
+    neuralManager = new NeuralSpeechOutput(
+      "/api/voice/neural",
+      getVoiceManager(),
+    );
+  return neuralManager;
 }
