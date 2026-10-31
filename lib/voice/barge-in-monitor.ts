@@ -16,6 +16,7 @@ export function createBargeInMonitor(onSpeech: () => void) {
   let baseline = 0.006;
   let fired = false;
   let session = 0;
+  let recentHits = 0;
 
   async function start() {
     if (active) return;
@@ -23,6 +24,7 @@ export function createBargeInMonitor(onSpeech: () => void) {
     const currentSession = ++session;
     fired = false;
     speechFrames = 0;
+    recentHits = 0;
     baseline = 0.006;
     try {
       const mic = await navigator.mediaDevices.getUserMedia({
@@ -64,12 +66,19 @@ export function createBargeInMonitor(onSpeech: () => void) {
         const rms = Math.sqrt(square / values.length);
         // Conservative relative threshold: transient noises are not sufficient.
         const threshold = Math.max(0.035, baseline * 3.5);
-        if (rms > threshold) speechFrames++;
-        else {
+        if (rms > threshold) {
+          speechFrames++;
+          recentHits = Math.min(8, recentHits + 2);
+        } else {
           speechFrames = 0;
+          recentHits = Math.max(0, recentHits - 2);
           baseline = baseline * 0.98 + Math.min(rms, 0.03) * 0.02;
         }
-        if (speechFrames >= 5) { fired = true; onSpeech(); }
+        // Require sustained energy; still not a true voice activity detector.
+        if (speechFrames >= 5 && recentHits >= 8) {
+          fired = true;
+          onSpeech();
+        }
       }, 25);
     } catch {
       if (currentSession !== session) return;
