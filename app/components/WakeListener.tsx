@@ -6,6 +6,7 @@ import {
   type VoiceSnapshot,
 } from "../../lib/voice/voice-controller";
 import { getVoiceManager } from "../../lib/voice/speech-output";
+import { createBargeInMonitor } from "../../lib/voice/barge-in-monitor";
 import { readVoicePreferences } from "../../lib/voice/voice-preferences";
 import type {
   RecognitionConstructor,
@@ -28,6 +29,7 @@ export default function WakeListener(props: Props) {
   const callback = useRef(props);
   callback.current = props;
   const engine = useRef<VoiceController | null>(null);
+  const bargeIn = useRef<ReturnType<typeof createBargeInMonitor> | null>(null);
   const [snapshot, setSnapshot] = useState<VoiceSnapshot>({
       phase: "off",
       enabled: false,
@@ -68,6 +70,7 @@ export default function WakeListener(props: Props) {
       navigate: (path) => router.push(path),
     });
     engine.current = controller;
+    bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
     props.registerStop(() => controller.stop());
     const visibility = () => {
       if (document.hidden)
@@ -77,10 +80,20 @@ export default function WakeListener(props: Props) {
     return () => {
       mounted = false;
       document.removeEventListener("visibilitychange", visibility);
+      bargeIn.current?.stop();
+      bargeIn.current = null;
       controller.stop();
       engine.current = null;
     };
   }, [router]);
+  useEffect(() => {
+    if (snapshot.phase === "speaking" && snapshot.enabled && !props.blocked) {
+      void bargeIn.current?.start();
+    } else {
+      bargeIn.current?.stop();
+    }
+    return () => bargeIn.current?.stop();
+  }, [snapshot.phase, snapshot.enabled, props.blocked]);
   useEffect(() => {
     if (props.blocked) {
       engine.current?.stop("Escuta desligada durante outra operação.");
