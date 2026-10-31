@@ -5,6 +5,7 @@ import { emitSpeechProgress } from "../holo/speech-progress";
 import type { SpeechOutput, VoicePreferences } from "./voice-types";
 import { readVoicePreferences, selectVoice } from "./voice-preferences";
 import { NeuralSpeechOutput } from "./neural-speech-output";
+import { WorkerSpeechOutput } from "./worker-speech-output";
 export interface SpeechAdapter {
   getVoices(): SpeechSynthesisVoice[];
   speak(utterance: SpeechSynthesisUtterance): void;
@@ -254,26 +255,27 @@ export class BrowserSpeechOutput implements SpeechOutput {
     });
   }
 }
-let manager: BrowserSpeechOutput | null = null;
+let manager: WorkerSpeechOutput | null = null;
+let browserManager: BrowserSpeechOutput | null = null;
 let neuralManager: NeuralSpeechOutput | null = null;
 
-/**
- * Returns the currently approved browser voice. Neural synthesis is never
- * selected automatically; it requires a verified endpoint and explicit
- * selection after pricing, privacy and voice audition are approved.
- */
-export function getVoiceManager() {
-  if (!manager)
-    manager = new BrowserSpeechOutput(
+/** The paired Windows VoiceStudio is the approved primary Jarvis voice. */
+export function getVoiceManager(): WorkerSpeechOutput {
+  if (!manager) manager = new WorkerSpeechOutput();
+  return manager;
+}
+
+function getBrowserVoiceManager(): BrowserSpeechOutput {
+  if (!browserManager)
+    browserManager = new BrowserSpeechOutput(
       () =>
         typeof window !== "undefined" && "speechSynthesis" in window
           ? window.speechSynthesis
           : null,
       (text) => new SpeechSynthesisUtterance(text),
     );
-  return manager;
+  return browserManager;
 }
-
 /** Experimental adapter, isolated from the production voice selection. */
 export function getNeuralVoiceCandidate() {
   if (!neuralManager)
