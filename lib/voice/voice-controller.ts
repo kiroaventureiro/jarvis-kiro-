@@ -101,6 +101,26 @@ export class VoiceController {
       this.options.speech.cancel();
     }
   }
+  /**
+   * Called by a confirmed near-end voice activity detector (not by keyword
+   * recognition). Stop outgoing speech immediately and reopen the listener.
+   * The detector must reject playback echo before calling this method.
+   */
+  interruptForUserSpeech() {
+    if (!this.enabled || !this.speechPending) return false;
+    this.epoch++;
+    this.clearTimers();
+    this.skipSpeech = true;
+    this.speechPending = false;
+    this.abort?.abort();
+    this.abort = null;
+    this.options.speech.cancel();
+    this.busy = false;
+    this.pause();
+    this.emit("resuming", "Fala do usuário detectada · ouvindo…");
+    this.later(() => this.listen(), 0);
+    return true;
+  }
   start() {
     if (this.enabled) return;
     if (!this.options.recognition) {
