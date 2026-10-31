@@ -124,6 +124,27 @@ export default function VoiceStudioSettings() {
           </p>
         )}
       </div>
+      <div className="glass notice">
+        <h3>Parear o VoiceStudio deste computador</h3>
+        <p>Gere um código temporário, válido por cinco minutos. Depois, use-o no PowerShell para autorizar este computador.</p>
+        <button type="button" onClick={createPairing} disabled={pairingBusy}>
+          {pairingBusy ? "Aguarde…" : "Gerar código de pareamento"}
+        </button>
+        {pairingCode && (
+          <div role="status" aria-live="polite">
+            <p><strong>Código de pareamento</strong></p>
+            <p style={{ fontSize: 28, letterSpacing: 5, fontWeight: 700 }}>{pairingCode}</p>
+            <button type="button" onClick={() => navigator.clipboard.writeText(pairingCode)}>
+              Copiar código
+            </button>
+            <p>Digite este código no comando de pareamento do PowerShell antes que expire.</p>
+            <button type="button" onClick={queueTest} disabled={pairingBusy}>
+              {pairingBusy ? "Aguardando VoiceStudio…" : "Testar geração e retorno da voz"}
+            </button>
+          </div>
+        )}
+        {queueMessage && <p role="status" aria-live="polite">{queueMessage}</p>}
+      </div>
       <p>
         O JK na Vercel precisa de um serviço privado acessível por HTTPS. O
         endereço localhost do servidor hospedado não aponta para seu computador.
@@ -131,7 +152,7 @@ export default function VoiceStudioSettings() {
       </p>
       <div className="glass notice">
         <h3>Prévia local da voz oficial</h3>
-        <p>Selecione o arquivo WAV gerado no VoiceStudio para ouvir a voz dentro do Jarvis. O arquivo fica somente neste navegador: não é enviado ao servidor e não altera sua voz atual.</p>
+        <p>O áudio recebido do VoiceStudio aparecerá aqui para reprodução. Você também pode selecionar um arquivo local para uma prévia manual.</p>
         <input
           type="file"
           accept=".wav,.mp3,.ogg,audio/wav,audio/mpeg,audio/ogg"
