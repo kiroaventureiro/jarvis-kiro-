@@ -1,0 +1,69 @@
+/**
+ * Lightweight near-end speech detector. It monitors microphone energy only
+ * while Jarvis is speaking; no samples are stored or transmitted.
+ * Browser echoCancellation is requested but cannot guarantee echo rejection.
+ */
+export function createBargeInMonitor(onSpeech: () => void) {
+  let stream: MediaStream | null = null;
+  let context: AudioContext | null = null;
+  let source: MediaStreamAudioSourceNode | null = null;
+  let analyser: AnalyserNode | null = null;
+  let timer: ReturnType<typeof setInterval> | null = null;
+  let active = false;
+  let speechFrames = 0;
+  let baseline = 0.006;
+  let fired = false;
+
+  async function start() {
+    if (active) return;
+    active = true;
+    fired = false;
+    speechFrames = 0;
+    try {
+      const mic = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      if (!active) { mic.getTracks().forEach(t => t.stop()); return; }
+      stream = mic;
+      context = new AudioContext();
+      source = context.createMediaStreamSource(mic);
+      analyser = context.createAnalyser();
+      analyser.fftSize = 1024;
+      source.connect(analyser);
+      const values = new Float32Array(analyser.fftSize);
+      timer = setInterval(() => {
+        if (!analyser || fired) return;
+        analyser.getFloatTimeDomainData(values);
+        let square = 0;
+        for (const v of values) square += v * v;
+        const rms = Math.sqrt(square / values.length);
+        // Conservative relative threshold: transient noises are not sufficient.
+        const threshold = Math.max(0.035, baseline * 3.5);
+        if (rms > threshold) speechFrames++;
+        else {
+          speechFrames = 0;
+          baseline = baseline * 0.98 + Math.min(rms, 0.03) * 0.02;
+        }
+        if (speechFrames >= 5) { fired = true; onSpeech(); }
+      }, 25);
+    } catch {
+      stop();
+      // The original recognition flow remains available if access is denied.
+    }
+  }
+
+  function stop() {
+    active = false;
+    if (timer) clearInterval(timer);
+    timer = null;
+    source?.disconnect();
+    source = null;
+    analyser?.disconnect();
+    analyser = null;
+    stream?.getTracks().forEach(t => t.stop());
+    stream = null;
+    if (context) void context.close().catch(() => {});
+    context = null;
+  }
+  return { start, stop };
+}
