@@ -10,6 +10,7 @@ export class NeuralSpeechOutput implements SpeechOutput {
   private controller: AbortController | null = null;
   private objectUrl: string | null = null;
   private active = false;
+  private generation = 0;
 
   constructor(
     private endpoint: string,
@@ -22,6 +23,7 @@ export class NeuralSpeechOutput implements SpeechOutput {
   isSpeaking() { return this.active; }
 
   cancel() {
+    this.generation++;
     this.controller?.abort();
     this.controller = null;
     if (this.audio) {
@@ -40,6 +42,7 @@ export class NeuralSpeechOutput implements SpeechOutput {
     this.cancel();
     if (signal.aborted) throw new DOMException("Cancelado", "AbortError");
     this.active = true;
+    const generation = this.generation;
     const controller = new AbortController();
     this.controller = controller;
     const abort = () => this.cancel();
@@ -57,7 +60,7 @@ export class NeuralSpeechOutput implements SpeechOutput {
       const type = response.headers.get("content-type") || "";
       if (!type.startsWith("audio/")) throw new Error("Invalid voice response");
       const bytes = await response.blob();
-      if (signal.aborted || controller.signal.aborted)
+      if (signal.aborted || controller.signal.aborted || generation !== this.generation)
         throw new DOMException("Cancelado", "AbortError");
       this.objectUrl = URL.createObjectURL(bytes);
       const audio = new Audio(this.objectUrl);
@@ -78,13 +81,13 @@ export class NeuralSpeechOutput implements SpeechOutput {
         else void audio.play().catch(error => finish(error));
       });
     } catch (error) {
-      if (signal.aborted || controller.signal.aborted)
+      if (signal.aborted || controller.signal.aborted || generation !== this.generation)
         throw new DOMException("Cancelado", "AbortError");
       // Fallback only for genuine service failures, never after barge-in.
       await this.fallback.speak(text, signal);
     } finally {
       signal.removeEventListener("abort", abort);
-      this.cancel();
+      if (generation === this.generation) this.cancel();
     }
   }
 }
