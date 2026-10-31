@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authorized } from "../../../lib/auth";
+import { authorized } from "../../../../lib/auth";
 
 /**
  * Neural TTS integration gate. Intentionally inactive until a provider,
