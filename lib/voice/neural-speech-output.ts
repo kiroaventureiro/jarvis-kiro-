@@ -46,7 +46,8 @@ export class NeuralSpeechOutput implements SpeechOutput {
     const controller = new AbortController();
     let playbackStarted = false;
     this.controller = controller;
-    const abort = () => this.cancel();
+    // A stale abort from an older reply must never cancel a newer reply.
+    const abort = () => { if (generation === this.generation) this.cancel(); };
     signal.addEventListener("abort", abort, { once: true });
     try {
       const response = await fetch(this.endpoint, {
