@@ -101,6 +101,12 @@ export async function POST(request: Request) {
         ? await answerKnowledge(message, signal)
         : null),
     prepare: async (message, signal, input) => {
+      // Skip retrieval for ordinary conversation. Research is optional, not a
+      // prerequisite for every response; this avoids serial pre-model latency.
+      const wantsResearch =
+        input.task === "research" ||
+        /\b(pesquis[ae]|pesquisar|busqu[ae]|buscar|fontes?|refer[eê]ncias?|documenta[cç][aã]o|investig[ae]|compare|comparar|dados atuais|informa[cç][oõ]es recentes)\b/i.test(message);
+      if (!wantsResearch) return input;
       try {
         const research = await knowledgeResearch.search(message, signal);
         return research?.sources.length ? { ...input, research } : input;
