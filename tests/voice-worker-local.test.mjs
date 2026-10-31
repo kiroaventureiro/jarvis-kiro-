@@ -38,7 +38,7 @@ test("writes valid generated WAV and preserves voice id", async () => {
   const fetcher = async (url, options) => {
     urls.push({ url, options });
     if (url.endsWith("/profiles"))
-      return { ok: true, json: async () => [{ id: "af5bbbba" }] };
+      return { ok: true, json: async () => ({ value: [{ id: "af5bbbba" }], Count: 1 }) };
     return new Response(Uint8Array.from(wav), { headers: { "content-type": "audio/wav" } });
   };
   try {
@@ -55,7 +55,7 @@ test("rejects malformed audio without creating an output file", async () => {
   const dir = await mkdtemp(join(tmpdir(), "jarvis-voice-test-"));
   const output = join(dir, "voice.wav");
   const fetcher = async (url) => url.endsWith("/profiles")
-    ? { ok: true, json: async () => [{ id: "af5bbbba" }] }
+    ? { ok: true, json: async () => ({ value: [{ id: "af5bbbba" }], Count: 1 }) }
     : new Response(new Uint8Array(64), { headers: { "content-type": "audio/wav" } });
   try {
     await assert.rejects(executeLocalJob(job, output, fetcher), /INVALID_WAV/);
@@ -73,7 +73,7 @@ test("does not overwrite an existing WAV", async () => {
   generated.write("RIFF", 0, "ascii");
   generated.write("WAVE", 8, "ascii");
   const fetcher = async (url) => url.endsWith("/profiles")
-    ? { ok: true, json: async () => [{ id: "af5bbbba" }] }
+    ? { ok: true, json: async () => ({ value: [{ id: "af5bbbba" }], Count: 1 }) }
     : new Response(generated, { headers: { "content-type": "audio/wav" } });
   try {
     await writeFile(output, existing);
