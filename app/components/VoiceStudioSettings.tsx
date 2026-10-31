@@ -56,7 +56,27 @@ export default function VoiceStudioSettings() {
       });
       const data = await r.json();
       if (!r.ok) throw Error(data.error || "Não foi possível enviar o teste.");
-      setQueueMessage("Teste enviado à fila: " + data.id);
+      setQueueMessage("Teste enviado. Aguardando o VoiceStudio gerar a fala…");
+      for (let attempt = 0; attempt < 90; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const audioResponse = await fetch("/api/voice/worker?id=" + encodeURIComponent(data.id), {
+          credentials: "same-origin", cache: "no-store",
+        });
+        const contentType = audioResponse.headers.get("content-type") || "";
+        if (audioResponse.ok && contentType.startsWith("audio/wav")) {
+          const blob = await audioResponse.blob();
+          if (localPreviewRef.current) URL.revokeObjectURL(localPreviewRef.current);
+          const url = URL.createObjectURL(blob);
+          localPreviewRef.current = url;
+          setLocalPreviewUrl(url);
+          setQueueMessage("Voz oficial gerada e recebida. Use o player abaixo para ouvir.");
+          return;
+        }
+        const state = await audioResponse.json().catch(() => ({}));
+        if (state.status === "failed") throw Error("VoiceStudio falhou: " + (state.errorCode || "erro não identificado"));
+        if (!audioResponse.ok) throw Error(state.error || "Falha ao receber o áudio.");
+      }
+      throw Error("O VoiceStudio ainda não concluiu em três minutos. O worker continua disponível para novo teste.");
     } catch (e) {
       setQueueMessage(e instanceof Error ? e.message : "Fila indisponível.");
     } finally { setPairingBusy(false); }
