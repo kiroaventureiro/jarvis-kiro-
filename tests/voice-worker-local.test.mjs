@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { validJob, executeLocalJob } from "../scripts/voice-worker-local.mjs";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -59,6 +59,25 @@ test("rejects malformed audio without creating an output file", async () => {
   try {
     await assert.rejects(executeLocalJob(job, output, fetcher), /INVALID_WAV/);
     await assert.rejects(readFile(output), { code: "ENOENT" });
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("does not overwrite an existing WAV", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "jarvis-voice-test-"));
+  const output = join(dir, "voice.wav");
+  const existing = Buffer.from("EXISTING AUDIO");
+  const generated = Buffer.alloc(64);
+  generated.write("RIFF", 0, "ascii");
+  generated.write("WAVE", 8, "ascii");
+  const fetcher = async (url) => url.endsWith("/profiles")
+    ? { ok: true, json: async () => [{ id: "af5bbbba" }] }
+    : new Response(generated, { headers: { "content-type": "audio/wav" } });
+  try {
+    await writeFile(output, existing);
+    await assert.rejects(executeLocalJob(job, output, fetcher), { code: "EEXIST" });
+    assert.deepEqual(await readFile(output), existing);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
