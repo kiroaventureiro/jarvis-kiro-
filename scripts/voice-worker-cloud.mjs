@@ -52,8 +52,9 @@ async function run() {
         const { mkdir: makeDir } = await import("node:fs/promises");
         await makeDir(join(root, "voice-inbox", "audio"), { recursive: true, mode: 0o700 });
         const audio = await executeLocalJob(job, output);
-        await call("complete", { id: job.id, status: "completed" }, credentials.token);
-        process.stdout.write("Áudio gerado: " + audio.output + "\n");
+        const audioBase64 = (await readFile(output)).toString("base64");
+        await call("complete", { id: job.id, status: "completed", audioBase64 }, credentials.token);
+        process.stdout.write("Áudio gerado e entregue ao Jarvis: " + audio.output + "\\n");
       } catch (error) {
         const code = String(error?.message || "VOICE_JOB_FAILED").replace(/[^A-Z0-9_]/g, "_").toUpperCase().slice(0,80);
         await call("complete", { id: job.id, status: "failed", errorCode: code }, credentials.token).catch(() => {});
