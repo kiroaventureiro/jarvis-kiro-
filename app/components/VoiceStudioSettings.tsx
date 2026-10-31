@@ -5,6 +5,9 @@ export default function VoiceStudioSettings() {
   const [status, setStatus] = useState<StudioStatus | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pairingBusy, setPairingBusy] = useState(false);
+  const [pairingCode, setPairingCode] = useState("");
+  const [queueMessage, setQueueMessage] = useState("");
   const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null);
   const localPreviewRef = useRef<string | null>(null);
   const current = useRef<AbortController | null>(null);
@@ -24,6 +27,39 @@ export default function VoiceStudioSettings() {
     const url = URL.createObjectURL(file);
     localPreviewRef.current = url;
     setLocalPreviewUrl(url);
+  }
+  async function createPairing() {
+    setPairingBusy(true);
+    setError("");
+    setPairingCode("");
+    try {
+      const r = await fetch("/api/voice/worker", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create_pairing" }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw Error(data.error || "Não foi possível gerar o código.");
+      setPairingCode(data.code);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Pareamento indisponível.");
+    } finally { setPairingBusy(false); }
+  }
+  async function queueTest() {
+    setPairingBusy(true);
+    setQueueMessage("");
+    try {
+      const r = await fetch("/api/voice/worker", {
+        method: "PUT", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: "Jarvis Kiro conectado. A voz oficial está pronta para o teste." }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw Error(data.error || "Não foi possível enviar o teste.");
+      setQueueMessage("Teste enviado à fila: " + data.id);
+    } catch (e) {
+      setQueueMessage(e instanceof Error ? e.message : "Fila indisponível.");
+    } finally { setPairingBusy(false); }
   }
   async function inspect() {
     current.current?.abort();
