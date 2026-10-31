@@ -283,3 +283,20 @@ export function getNeuralVoiceCandidate() {
     );
   return neuralManager;
 }
+
+let voiceStudioCandidate: NeuralSpeechOutput | null = null;
+
+/**
+ * Explicitly selectable VoiceStudio output. Kept separate from the browser
+ * voice so it cannot override the stable microphone/reply flow by default.
+ * NeuralSpeechOutput automatically falls back to the browser when the
+ * protected synthesis endpoint is unavailable before playback begins.
+ */
+export function getVoiceStudioCandidate(): NeuralSpeechOutput {
+  if (!voiceStudioCandidate)
+    voiceStudioCandidate = new NeuralSpeechOutput(
+      "/api/voice/studio/speech",
+      getVoiceManager(),
+    );
+  return voiceStudioCandidate;
+}
