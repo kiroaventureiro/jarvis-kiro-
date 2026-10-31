@@ -61,9 +61,9 @@ test("unverified or only authorized capabilities cannot execute", () => {
   assert.equal(canUseAbacusCapability(denied, "agent_execution"), false);
   assert.equal(canUseAbacusCapability(denied, "connected_tools"), false);
   const granted = buildAbacusCapabilityReport({
-    agent_execution: evidence({ authorized: true, apiAvailable: true, verified: true, checkedAt: new Date().toISOString() }),
+    agent_execution: evidence({ authorized: true, apiAvailable: true, verified: true, checkedAt: "2026-10-31T01:00:00.000Z" }),
   });
-  assert.equal(canUseAbacusCapability(granted, "agent_execution"), true);
+  assert.equal(canUseAbacusCapability(granted, "agent_execution", Date.parse("2026-10-31T01:01:00.000Z")), true);
   assert.equal(canUseAbacusCapability(granted, "connected_tools"), false);
 });
 
@@ -77,4 +77,12 @@ test("execution blocks stale, future, or missing verification time", () => {
   assert.equal(canUseAbacusCapability(verified(new Date(now - 16 * 60 * 1000).toISOString()), "agent_execution", now), false);
   assert.equal(canUseAbacusCapability(verified(new Date(now + 1000).toISOString()), "agent_execution", now), false);
   assert.equal(canUseAbacusCapability(verified(new Date(now - 60 * 1000).toISOString()), "agent_execution", now), true);
+});
+
+test("metadata inspection never enables agent execution without independent evidence", () => {
+  const metadataVerified = true;
+  const report = buildAbacusCapabilityReport();
+  assert.equal(metadataVerified, true);
+  assert.equal(canUseAbacusCapability(report, "agent_execution"), false);
+  assert.equal(canUseAbacusCapability(report, "connected_tools"), false);
 });
