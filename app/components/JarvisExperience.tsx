@@ -498,7 +498,11 @@ export default function JarvisExperience() {
       };
       if (withMicrophone) {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
         });
         if (attempt !== generation.current) {
           stream.getTracks().forEach((t) => t.stop());
