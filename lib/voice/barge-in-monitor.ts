@@ -13,17 +13,22 @@ export function createBargeInMonitor(onSpeech: () => void) {
   let speechFrames = 0;
   let baseline = 0.006;
   let fired = false;
+  let session = 0;
 
   async function start() {
     if (active) return;
     active = true;
+    const currentSession = ++session;
     fired = false;
     speechFrames = 0;
     try {
       const mic = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-      if (!active) { mic.getTracks().forEach(t => t.stop()); return; }
+      if (!active || currentSession !== session) {
+        mic.getTracks().forEach(t => t.stop());
+        return;
+      }
       stream = mic;
       context = new AudioContext();
       source = context.createMediaStreamSource(mic);
@@ -32,7 +37,7 @@ export function createBargeInMonitor(onSpeech: () => void) {
       source.connect(analyser);
       const values = new Float32Array(analyser.fftSize);
       timer = setInterval(() => {
-        if (!analyser || fired) return;
+        if (!active || currentSession !== session || !analyser || fired) return;
         analyser.getFloatTimeDomainData(values);
         let square = 0;
         for (const v of values) square += v * v;
@@ -47,12 +52,14 @@ export function createBargeInMonitor(onSpeech: () => void) {
         if (speechFrames >= 5) { fired = true; onSpeech(); }
       }, 25);
     } catch {
+      if (currentSession !== session) return;
       stop();
       // The original recognition flow remains available if access is denied.
     }
   }
 
   function stop() {
+    session++;
     active = false;
     if (timer) clearInterval(timer);
     timer = null;
