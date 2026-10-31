@@ -16,7 +16,7 @@ export default function VoiceStudioSettings() {
     if (localPreviewRef.current) URL.revokeObjectURL(localPreviewRef.current);
     localPreviewRef.current = null;
     setLocalPreviewUrl(null);
-    if (!file || !/\\.(wav|mp3|ogg)$/i.test(file.name) || file.size > 15_000_000) {
+    if (!file || !/\.(wav|mp3|ogg)$/i.test(file.name) || file.size > 15_000_000) {
       if (file) setError("Selecione um áudio WAV, MP3 ou OGG de até 15 MB.");
       return;
     }
@@ -82,7 +82,12 @@ export default function VoiceStudioSettings() {
           aria-label="Selecionar áudio local da voz oficial"
           onChange={(event) => selectLocalPreview(event.currentTarget.files?.[0])}
         />
-        {localPreviewUrl && <audio controls src={localPreviewUrl} preload="none" />}
+        {localPreviewUrl && (
+          <div className="voice-local-preview">
+            <p role="status">Áudio local carregado. Reproduza abaixo.</p>
+            <audio controls src={localPreviewUrl} preload="metadata" style={{ display: "block", width: "100%", maxWidth: 560 }} />
+          </div>
+        )}
       </div>
       <a
         href="https://github.com/debpalash/VoiceStudio"
