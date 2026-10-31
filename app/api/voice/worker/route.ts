@@ -1,0 +1,139 @@
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { authorized } from "../../../../lib/auth";
+import { sameOrigin } from "../../../../lib/abacus/http";
+
+export const dynamic = "force-dynamic";
+const headers = { "Cache-Control": "private, no-store" };
+const json = (data: unknown, status = 200) =>
+  Response.json(data, { status, headers });
+const digest = (value: string) => createHash("sha256").update(value).digest("hex");
+
+function config() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/.test(url))
+    throw new Error("VOICE_WORKER_STORE_NOT_CONFIGURED");
+  return { url, key };
+}
+async function db(path: string, method = "GET", body?: unknown) {
+  const c = config();
+  const response = await fetch(c.url + "/rest/v1/" + path, {
+    method,
+    headers: {
+      apikey: c.key,
+      Authorization: "Bearer " + c.key,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Prefer: "return=representation",
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    cache: "no-store",
+    redirect: "error",
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!response.ok) throw new Error("VOICE_WORKER_STORE_UNAVAILABLE");
+  return response.status === 204 ? [] : response.json();
+}
+async function readBody(request: Request) {
+  if (!request.headers.get("content-type")?.toLowerCase().startsWith("application/json"))
+    throw new Error("INVALID_CONTENT_TYPE");
+  const raw = await request.text();
+  if (raw.length > 4096) throw new Error("BODY_TOO_LARGE");
+  const value = JSON.parse(raw);
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("INVALID_BODY");
+  return value as Record<string, unknown>;
+}
+async function device(request: Request) {
+  const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+  if (!/^[a-f0-9]{64}$/.test(token)) return null;
+  const rows = await db("jarvis_voice_worker_devices?token_hash=eq." + digest(token) +
+    "&revoked_at=is.null&select=id&limit=1");
+  return Array.isArray(rows) && rows[0]?.id ? String(rows[0].id) : null;
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await readBody(request);
+    const action = body.action;
+    if (action === "create_pairing") {
+      if (!(await authorized())) return json({ error: "Não autorizado" }, 401);
+      if (!sameOrigin(request)) return json({ error: "Origem inválida" }, 403);
+      const code = randomBytes(4).toString("hex").toUpperCase();
+      await db("jarvis_voice_worker_pairings", "POST", {
+        code_hash: digest(code), expires_at: new Date(Date.now() + 300000).toISOString(),
+      });
+      return json({ code, expiresInSeconds: 300 });
+    }
+    if (action === "pair") {
+      const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
+      if (!/^[A-F0-9]{8}$/.test(code)) return json({ error: "Código inválido" }, 400);
+      const pairs = await db("jarvis_voice_worker_pairings?code_hash=eq." + digest(code) +
+        "&consumed_at=is.null&expires_at=gt." + encodeURIComponent(new Date().toISOString()) +
+        "&select=code_hash&limit=1");
+      if (!Array.isArray(pairs) || !pairs.length) return json({ error: "Código expirado ou já utilizado" }, 410);
+      const consumed = await db("jarvis_voice_worker_pairings?code_hash=eq." + digest(code) +
+        "&consumed_at=is.null", "PATCH", { consumed_at: new Date().toISOString() });
+      if (!Array.isArray(consumed) || !consumed.length) return json({ error: "Código já utilizado" }, 409);
+      const token = randomBytes(32).toString("hex");
+      const id = randomUUID();
+      await db("jarvis_voice_worker_devices", "POST", { id, token_hash: digest(token) });
+      return json({ deviceId: id, token });
+    }
+    const deviceId = await device(request);
+    if (!deviceId) return json({ error: "Dispositivo não autorizado" }, 401);
+    if (action === "claim") {
+      const jobs = await db("jarvis_voice_jobs?status=eq.queued&select=id,payload,created_at&order=created_at.asc&limit=1");
+      if (!Array.isArray(jobs) || !jobs.length) return json({ job: null });
+      const job = jobs[0];
+      const claimed = await db("jarvis_voice_jobs?id=eq." + encodeURIComponent(job.id) +
+        "&status=eq.queued", "PATCH", {
+          status: "processing", device_id: deviceId, claimed_at: new Date().toISOString(),
+        });
+      if (!Array.isArray(claimed) || !claimed.length) return json({ job: null });
+      await db("jarvis_voice_worker_devices?id=eq." + encodeURIComponent(deviceId),
+        "PATCH", { last_seen_at: new Date().toISOString() });
+      return json({ job: { id: job.id, ...job.payload } });
+    }
+    if (action === "complete") {
+      const id = typeof body.id === "string" ? body.id : "";
+      const status = body.status;
+      if (!/^voice_[A-Za-z0-9_-]{12,80}$/.test(id) ||
+          (status !== "completed" && status !== "failed"))
+        return json({ error: "Resultado inválido" }, 400);
+      const result = await db("jarvis_voice_jobs?id=eq." + encodeURIComponent(id) +
+        "&device_id=eq." + encodeURIComponent(deviceId) + "&status=eq.processing",
+        "PATCH", {
+          status, completed_at: new Date().toISOString(),
+          error_code: status === "failed" && typeof body.errorCode === "string" &&
+            /^[A-Z0-9_]{1,80}$/.test(body.errorCode) ? body.errorCode : null,
+        });
+      if (!Array.isArray(result) || !result.length) return json({ error: "Tarefa não encontrada" }, 404);
+      return json({ ok: true });
+    }
+    return json({ error: "Ação desconhecida" }, 400);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const status = message === "BODY_TOO_LARGE" ? 413 :
+      message === "INVALID_CONTENT_TYPE" || message === "INVALID_BODY" ? 400 : 503;
+    return json({ error: status === 503 ? "Serviço de voz indisponível" : "Requisição inválida" }, status);
+  }
+}
+
+export async function PUT(request: Request) {
+  if (!(await authorized())) return json({ error: "Não autorizado" }, 401);
+  if (!sameOrigin(request)) return json({ error: "Origem inválida" }, 403);
+  try {
+    const body = await readBody(request);
+    const text = typeof body.text === "string" ? body.text.trim() : "";
+    if (!text || text.length > 350) return json({ error: "Texto inválido" }, 400);
+    const id = "voice_" + randomUUID().replace(/-/g, "");
+    await db("jarvis_voice_jobs", "POST", {
+      id, payload: { kind: "synthesize", profileId: "af5bbbba", text,
+        expiresAt: Date.now() + 600000 },
+    });
+    return json({ id, status: "queued" }, 202);
+  } catch {
+    return json({ error: "Não foi possível enfileirar a fala" }, 503);
+  }
+}
