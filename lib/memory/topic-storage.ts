@@ -43,7 +43,10 @@ async function query(method: "GET" | "POST" | "DELETE", owner: string, id?: stri
   const url = new URL(c.origin + "/rest/v1/jarvis_memory_topics");
   url.searchParams.set("owner_id", "eq." + owner);
   if (id) url.searchParams.set("topic_id", "eq." + id);
-  if (method === "GET") url.searchParams.set("select", "topic_id,encrypted_payload");
+  if (method === "GET") {
+    url.searchParams.set("select", "topic_id,encrypted_payload");
+    url.searchParams.set("limit", "201");
+  }
   const response = await fetch(url, {
     method, redirect: "error", cache: "no-store",
     headers: { apikey: c.key, Authorization: "Bearer " + c.key,
@@ -73,7 +76,14 @@ export async function writeMemoryTopic(owner: string, topic: MemoryTopic, signal
       !topic.tags.every((tag) => typeof tag === "string" && tag.length > 0 && tag.length <= 60))))
     throw Error("INVALID_TOPIC_INPUT");
   const c = configuration();
-  await query("POST", owner, topic.id, encrypt(topic, c.secret, owner), signal);
+  const bounded: MemoryTopic = {
+    id: topic.id,
+    title: topic.title,
+    summary: topic.summary,
+    tags: topic.tags ? [...topic.tags] : [],
+    sensitive: topic.sensitive === true,
+  };
+  await query("POST", owner, topic.id, encrypt(bounded, c.secret, owner), signal);
 }
 export async function deleteMemoryTopic(owner: string, id: string, signal?: AbortSignal): Promise<void> {
   await query("DELETE", owner, id, undefined, signal);
