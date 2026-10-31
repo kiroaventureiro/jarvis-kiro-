@@ -61,7 +61,7 @@ test("unverified or only authorized capabilities cannot execute", () => {
   assert.equal(canUseAbacusCapability(denied, "agent_execution"), false);
   assert.equal(canUseAbacusCapability(denied, "connected_tools"), false);
   const granted = buildAbacusCapabilityReport({
-    agent_execution: evidence({ authorized: true, apiAvailable: true, verified: true }),
+    agent_execution: evidence({ authorized: true, apiAvailable: true, verified: true, checkedAt: new Date().toISOString() }),
   });
   assert.equal(canUseAbacusCapability(granted, "agent_execution"), true);
   assert.equal(canUseAbacusCapability(granted, "connected_tools"), false);
