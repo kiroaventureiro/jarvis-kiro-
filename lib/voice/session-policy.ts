@@ -10,7 +10,9 @@ export function voiceSessionPolicy(env: Record<string, string | undefined>) {
         turn_detection: {
           type: "server_vad",
           create_response: true,
-          interrupt_response: true,
+          // Avoid treating the assistant's own speaker output as a new user turn.
+          // Deliberate interruption remains available through explicit controls.
+          interrupt_response: false,
         },
       },
       output: { voice: "marin" },
