@@ -70,3 +70,18 @@ test("rejects invalid topic data before storage", async () => {
   await assert.rejects(writeMemoryTopic("owner1", { id: "bad", title: "Bad", summary: null }), /INVALID_TOPIC_INPUT/);
   assert.equal(calls.length, before);
 });
+
+test("unknown properties are not persisted in encrypted topic records", async () => {
+  await writeMemoryTopic("owner1", {
+    id: "restricted",
+    title: "Projeto",
+    summary: "Resumo",
+    unexpectedSecret: "should-not-be-stored",
+  });
+  const topics = await readMemoryTopics("owner1");
+  const stored = topics.find((topic) => topic.id === "restricted");
+  assert.ok(stored);
+  assert.equal(Object.hasOwn(stored, "unexpectedSecret"), false);
+  assert.equal(stored.summary, "Resumo");
+  await deleteMemoryTopic("owner1", "restricted");
+});
