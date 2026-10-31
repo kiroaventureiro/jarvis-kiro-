@@ -20,7 +20,10 @@ export async function synthesizeJarvisOfficial(
   const endpoint = new URL(config.base);
   if (endpoint.protocol !== "https:" || !config.key)
     throw Error("VOICESTUDIO_PRIVATE_ENDPOINT_REQUIRED");
-  // The measured OmniVoice CPU request took 333.7 seconds. Allow enough time\n  // for a private long-running worker; a serverless deployment may impose\n  // a shorter independent execution limit.\n  const timeout = AbortSignal.timeout(600_000);
+  // The measured OmniVoice CPU request took 333.7 seconds. Allow enough time
+  // for a private long-running worker; a serverless deployment may impose
+  // a shorter independent execution limit.
+  const timeout = AbortSignal.timeout(600_000);
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
   const response = await fetch(config.base + "/v1/audio/speech", {
     method: "POST",
