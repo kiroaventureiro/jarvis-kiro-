@@ -1,6 +1,7 @@
 import "server-only";
 import { readJsonBounded } from "./hub";
 import { abacusAgentCapabilities } from "./agent-capabilities";
+import { buildAbacusCapabilityReport, canUseAbacusCapability } from "./capability-status";
 /** Probe the documented read API; a UI conversation identifier is only a candidate until the API confirms it. */
 export async function probeAgentConversation(
   id: string,
@@ -114,6 +115,10 @@ export async function answerAbacusAgentQuestion(
     provider: "local_operational" as const,
     usage: null,
     capabilities: abacusAgentCapabilities(false),
+    agentExecution: {
+      permitted: canUseAbacusCapability(buildAbacusCapabilityReport(), "agent_execution"),
+      reason: "Metadados de conversa não comprovam permissão para executar agentes. Requer verificação específica e recente.",
+    },
     ...(probe ? { conversationProbe: probe } : {}),
   };
 }
