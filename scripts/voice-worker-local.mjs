@@ -8,6 +8,7 @@
 import { readFile, writeFile, rename, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 const PROFILE = "af5bbbba";
 const BASE = "http://127.0.0.1:3900";
@@ -53,7 +54,7 @@ export async function executeLocalJob(job, output, fetcher = fetch) {
   }
   return { jobId: job.id, status: "completed", bytes: data.length, output: destination };
 }
-if (process.argv[1] && import.meta.url === new URL("file://" + resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const [input, output] = process.argv.slice(2);
   if (!input || !output) {
     process.stderr.write("Usage: node scripts/voice-worker-local.mjs job.json output.wav\n");
