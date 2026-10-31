@@ -31,18 +31,18 @@ export function speechChunks(text: string) {
   const chunks: string[] = [];
   let pending = "";
   for (const sentence of sentences) {
-    if (pending.length + sentence.length <= 640) {
+    if (pending.length + sentence.length <= 180) {
       pending += sentence;
       continue;
     }
     if (pending.trim()) chunks.push(pending.trim());
     pending = "";
-    if (sentence.length <= 640) {
+    if (sentence.length <= 180) {
       pending = sentence;
       continue;
     }
     for (const unit of sentence.match(/\S+\s*|\s+/gu) || []) {
-      if (pending.length + unit.length > 640 && pending) {
+      if (pending.length + unit.length > 180 && pending) {
         chunks.push(pending.trim());
         pending = "";
       }
