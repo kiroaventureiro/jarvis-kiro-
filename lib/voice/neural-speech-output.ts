@@ -44,6 +44,7 @@ export class NeuralSpeechOutput implements SpeechOutput {
     this.active = true;
     const generation = this.generation;
     const controller = new AbortController();
+    let playbackStarted = false;
     this.controller = controller;
     const abort = () => this.cancel();
     signal.addEventListener("abort", abort, { once: true });
@@ -78,12 +79,14 @@ export class NeuralSpeechOutput implements SpeechOutput {
         audio.onended = () => finish();
         audio.onerror = () => finish(new Error("Audio playback failed"));
         if (controller.signal.aborted) onAbort();
-        else void audio.play().catch(error => finish(error));
+        else void audio.play().then(() => { playbackStarted = true; }).catch(error => finish(error));
       });
     } catch (error) {
       if (signal.aborted || controller.signal.aborted || generation !== this.generation)
         throw new DOMException("Cancelado", "AbortError");
-      // Fallback only for genuine service failures, never after barge-in.
+      // Do not repeat an answer if neural audio may already have been heard.
+      // Browser fallback is safe only before successful neural playback.
+      if (playbackStarted) throw error;
       await this.fallback.speak(text, signal);
     } finally {
       signal.removeEventListener("abort", abort);
