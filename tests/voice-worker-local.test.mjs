@@ -38,8 +38,7 @@ test("writes valid generated WAV and preserves voice id", async () => {
     urls.push({ url, options });
     if (url.endsWith("/profiles"))
       return { ok: true, json: async () => [{ id: "af5bbbba" }] };
-    return { ok: true, headers: new Headers({ "content-type": "audio/wav" }),
-      arrayBuffer: async () => Uint8Array.from(wav).buffer };
+    return new Response(Uint8Array.from(wav), { headers: { "content-type": "audio/wav" } });
   };
   try {
     const result = await executeLocalJob(job, join(dir, "voice.wav"), fetcher);
@@ -56,8 +55,7 @@ test("rejects malformed audio without creating an output file", async () => {
   const output = join(dir, "voice.wav");
   const fetcher = async (url) => url.endsWith("/profiles")
     ? { ok: true, json: async () => [{ id: "af5bbbba" }] }
-    : { ok: true, headers: new Headers({ "content-type": "audio/wav" }),
-        arrayBuffer: async () => new Uint8Array(64).buffer };
+    : new Response(new Uint8Array(64), { headers: { "content-type": "audio/wav" } });
   try {
     await assert.rejects(executeLocalJob(job, output, fetcher), /INVALID_WAV/);
     await assert.rejects(readFile(output), { code: "ENOENT" });
