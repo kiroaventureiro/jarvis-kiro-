@@ -60,3 +60,11 @@ export function buildAbacusCapabilityReport(
   }
   return report;
 }
+
+/** Fail closed: do not execute a capability unless it passed every verification stage. */
+export function canUseAbacusCapability(
+  report: CapabilityReport,
+  capability: AbacusCapability,
+): boolean {
+  return report[capability]?.stage === "verified";
+}
