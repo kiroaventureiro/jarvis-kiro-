@@ -73,8 +73,10 @@ export default function WakeListener(props: Props) {
     bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
     props.registerStop(() => controller.stop());
     const visibility = () => {
-      if (document.hidden)
+      if (document.hidden) {
+        bargeIn.current?.stop();
         controller.stop("Escuta desligada porque a página ficou oculta.");
+      }
     };
     document.addEventListener("visibilitychange", visibility);
     return () => {
@@ -133,10 +135,10 @@ export default function WakeListener(props: Props) {
         aria-label={
           snapshot.enabled
             ? "Desligar escuta contínua"
-            : "Ativar escuta por Jarvis"
+            : "Ativar escuta de voz"
         }
         aria-pressed={snapshot.enabled}
-        title="Escuta por palavra de ativação"
+        title="Escuta de voz"
         className={"icon-button " + (snapshot.enabled ? "active" : "")}
         data-voice-phase={snapshot.phase}
       >
@@ -171,8 +173,8 @@ export default function WakeListener(props: Props) {
           <p>
             O navegador terá acesso ao microfone e poderá usar o serviço remoto
             de reconhecimento do fornecedor. Nada é gravado de forma persistente
-            pelo Jarvis. Somente comandos após “Jarvis” são encaminhados à
-            conversa; cumprimentos e navegação são locais.
+            pelo Jarvis. Com a escuta ativada, você pode falar naturalmente,
+            sem precisar dizer uma palavra de ativação.
           </p>
           <p>
             {ios.current
