@@ -9,6 +9,7 @@ import { readFile, writeFile, link, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { verifyVoiceJob } from "./voice-job-auth.mjs";
 
 const PROFILE = "af5bbbba";
 const BASE = "http://127.0.0.1:3900";
@@ -85,8 +86,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     process.exitCode = 2;
   } else {
     try {
-      const job = JSON.parse(await readFile(resolve(input), "utf8"));
-      const result = await executeLocalJob(job, output);
+      const envelope = JSON.parse(await readFile(resolve(input), "utf8"));
+      const secret = process.env.JARVIS_VOICE_WORKER_SECRET;
+      if (!secret || !verifyVoiceJob(envelope?.job, envelope?.signature, secret))
+        throw Error("VOICE_JOB_AUTHENTICATION_REQUIRED");
+      const result = await executeLocalJob(envelope.job, output);
       process.stdout.write(JSON.stringify(result) + "\n");
     } catch (error) {
       process.stderr.write(String(error?.message ?? error) + "\n");
