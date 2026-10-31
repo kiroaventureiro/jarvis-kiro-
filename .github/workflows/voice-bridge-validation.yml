@@ -5,8 +5,10 @@ on:
       - feature/jarvis-visual-fc19556-integrated
     paths:
       - 'scripts/voice-worker-local.mjs'
+      - 'scripts/voice-job-auth.mjs'
       - 'lib/voice/windows-bridge-contract.ts'
       - 'tests/voice-worker-local.test.mjs'
+      - 'tests/voice-job-auth.test.mjs'
       - 'tests/windows-bridge-contract.test.mjs'
       - '.github/workflows/voice-bridge-validation.yml'
   workflow_dispatch:
@@ -27,6 +29,6 @@ jobs:
       - name: Install project dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Test local worker and bridge contract
-        run: node --test tests/voice-worker-local.test.mjs tests/windows-bridge-contract.test.mjs
+        run: node --test tests/voice-worker-local.test.mjs tests/windows-bridge-contract.test.mjs tests/voice-job-auth.test.mjs
       - name: Check TypeScript
         run: npx tsc --noEmit
