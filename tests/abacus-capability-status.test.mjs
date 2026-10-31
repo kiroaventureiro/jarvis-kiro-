@@ -11,7 +11,7 @@ const compiled = ts.transpileModule(source, {
 }).outputText;
 const module = { exports: {} };
 new Function("module", "exports", "require", compiled)(module, module.exports, require);
-const { capabilityStage, buildAbacusCapabilityReport } = module.exports;
+const { capabilityStage, buildAbacusCapabilityReport, canUseAbacusCapability } = module.exports;
 
 const evidence = (overrides = {}) => ({
   documented: true,
@@ -52,4 +52,17 @@ test("report limits evidence to named capabilities", () => {
   assert.equal(Object.keys(report).length, 5);
   assert.equal(report.chat_streaming.stage, "api_available");
   assert.equal(report.agent_execution.stage, "unknown");
+});
+
+test("unverified or only authorized capabilities cannot execute", () => {
+  const denied = buildAbacusCapabilityReport({
+    agent_execution: evidence({ authorized: true, apiAvailable: true }),
+  });
+  assert.equal(canUseAbacusCapability(denied, "agent_execution"), false);
+  assert.equal(canUseAbacusCapability(denied, "connected_tools"), false);
+  const granted = buildAbacusCapabilityReport({
+    agent_execution: evidence({ authorized: true, apiAvailable: true, verified: true }),
+  });
+  assert.equal(canUseAbacusCapability(granted, "agent_execution"), true);
+  assert.equal(canUseAbacusCapability(granted, "connected_tools"), false);
 });
