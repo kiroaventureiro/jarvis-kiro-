@@ -281,7 +281,7 @@ export function getNeuralVoiceCandidate() {
   if (!neuralManager)
     neuralManager = new NeuralSpeechOutput(
       "/api/voice/neural",
-      getVoiceManager(),
+      getBrowserVoiceManager(),
     );
   return neuralManager;
 }
@@ -298,7 +298,7 @@ export function getVoiceStudioCandidate(): NeuralSpeechOutput {
   if (!voiceStudioCandidate)
     voiceStudioCandidate = new NeuralSpeechOutput(
       "/api/voice/studio/speech",
-      getVoiceManager(),
+      getBrowserVoiceManager(),
     );
   return voiceStudioCandidate;
 }
