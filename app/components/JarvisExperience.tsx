@@ -70,6 +70,9 @@ const labels: Record<AssistantState, string> = {
   error: "Conexão indisponível",
 };
 export default function JarvisExperience() {
+  // Install the browser audio-unlock listener before the first user interaction.
+  // The VoiceStudio response arrives asynchronously after the chat request.
+  useEffect(() => { getVoiceManager(); }, []);
   const [state, setState] = useState<AssistantState>("idle"),
     [connected, setConnected] = useState(false),
     [mic, setMic] = useState(false),
