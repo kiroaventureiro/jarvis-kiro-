@@ -1,4 +1,5 @@
 import type { SpeechOutput } from "./voice-types";
+import type { HoloScene } from "../holo/types";
 
 /**
  * Speaks through the paired Windows VoiceStudio worker.
@@ -29,7 +30,7 @@ export class WorkerSpeechOutput implements SpeechOutput {
     this.active = false;
   }
 
-  async speak(text: string, signal: AbortSignal) {
+  async speak(text: string, signal: AbortSignal, _options?: { scene?: HoloScene }) {
     this.cancel();
     if (signal.aborted) throw new DOMException("Cancelado", "AbortError");
     const generation = this.generation;
