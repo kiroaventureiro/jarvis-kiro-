@@ -10,6 +10,7 @@ test("wake listener delegates lifecycle to a controller and requires initial con
   assert.match(wake, /controller\.stop\(/);
   assert.doesNotMatch(wake, /document\.addEventListener\(["']visibilitychange/);
   assert.doesNotMatch(wake, /document\.hidden/);
+  assert.match(wake, /engine\.current instanceof VoiceController/);
 });
 test("spoken requests retain authenticated same-origin routing", () => {
   assert.match(hud, /<WakeListener/);
