@@ -1293,9 +1293,13 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
                   : voiceSnapshot.phase === "command"
                     ? "Ouvindo comando"
                     : labels[state]
-                : voiceSnapshot.connected
-                  ? "Em espera"
-                  : labels[state]}
+                : voiceSnapshot.connected && state === "responding"
+                  ? "Respondendo"
+                  : voiceSnapshot.connected && state === "processing"
+                    ? "Pensando"
+                    : voiceSnapshot.connected
+                      ? "Em espera"
+                      : labels[state]}
           <span className="connection-label">
             {workspace.busy
               ? "Arquivos em análise"
