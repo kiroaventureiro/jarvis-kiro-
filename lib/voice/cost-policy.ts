@@ -1,11 +1,15 @@
-export type MeteredProvider = "abacus" | "openai-voice";
+export type MeteredProvider = "abacus" | "openai-voice" | "gemini-live";
 export type CostPermission = { allowed: boolean; callsPerHour: number };
 export function costPermission(
   provider: MeteredProvider,
   env: Record<string, string | undefined>,
 ): CostPermission {
   const prefix =
-    provider === "abacus" ? "JARVIS_ABACUS" : "JARVIS_OPENAI_VOICE";
+    provider === "abacus"
+      ? "JARVIS_ABACUS"
+      : provider === "openai-voice"
+        ? "JARVIS_OPENAI_VOICE"
+        : "JARVIS_GEMINI_LIVE";
   const count = Number(env[prefix + "_MAX_CALLS_PER_HOUR"]);
   return {
     allowed:
