@@ -49,7 +49,8 @@ function setup({
     replies = [],
     speeches = [],
     calls = [],
-    unavailable = [];
+    unavailable = [],
+    cancellations = 0;
   let resolveSpeech = null;
   class Rec {
     start() {
@@ -73,7 +74,7 @@ function setup({
     }
   }
   const speech = {
-    cancel() {},
+    cancel() { cancellations++; },
     speak(text, signal) {
       speeches.push(text);
       return new Promise((resolve, reject) => {
@@ -118,6 +119,7 @@ function setup({
     speeches,
     calls,
     unavailable,
+    cancellations: () => cancellations,
     finish: async () => {
       resolveSpeech?.();
       await flush();
@@ -179,6 +181,23 @@ test("greeting is local, spoken and recognition pauses until speech ends", async
   assert.equal(t.instances.length, 3);
   assert.equal(t.instances.at(-1).started, true);
   assert.equal(t.states.at(-1).phase, "command");
+  t.engine.stop();
+});
+test("explicit stop phrase cancels TTS while ordinary speech does not", async () => {
+  const t = setup();
+  t.engine.start();
+  t.instances[0].emit("Bom dia, Jarvis");
+  await flush();
+  assert.equal(t.instances.length, 2);
+  const interruptRecognizer = t.instances[1];
+  interruptRecognizer.emit("está tudo bem?");
+  assert.equal(t.cancellations(), 0);
+  assert.equal(t.states.at(-1).phase, "speaking");
+  interruptRecognizer.emit("Jarvis, pare de falar");
+  assert.equal(t.cancellations(), 1);
+  assert.equal(interruptRecognizer.started, false);
+  assert.equal(t.states.at(-1).phase, "resuming");
+  assert.equal(t.states.at(-1).message, "Fala interrompida. Retomando a escuta…");
   t.engine.stop();
 });
 test("bare wake asks for next command and no repeated mic clicks are needed", async () => {
