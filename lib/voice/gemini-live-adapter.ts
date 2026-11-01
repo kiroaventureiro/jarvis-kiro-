@@ -22,6 +22,8 @@ export class GeminiLiveVoiceAdapter {
   private epoch = 0;
   private connection = 0;
   private handle: string | undefined;
+  // Stable for this adapter instance; reconnects reuse the same hourly admission.
+  private readonly clientSessionId = crypto.randomUUID();
   private attempts = 0;
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private abort: AbortController | null = null;
@@ -72,7 +74,7 @@ export class GeminiLiveVoiceAdapter {
       const response = await fetch("/api/voice/gemini-token", {
         method: "POST", credentials: "same-origin", cache: "no-store",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle: this.handle }), signal: this.provisioning.signal,
+        body: JSON.stringify({ handle: this.handle, clientSessionId: this.clientSessionId }), signal: this.provisioning.signal,
       });
       const token = await response.json().catch(() => ({}));
       if (!response.ok) {
