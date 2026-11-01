@@ -40,6 +40,9 @@ export async function admitVoiceSession(
     if (!s.voiceUsage || now - s.voiceUsage.since >= 3600000)
       s.voiceUsage = { since: now, started: 0, sessions: {} };
     const v = s.voiceUsage;
+    // A reconnect within the same logical browser session reuses its admission.
+    // It must not consume another hourly slot or reset already reported usage.
+    if (v.sessions[id]) return { persistent: true, sessionId: id };
     if (v.started >= limit) throw Error("VOICE_SESSION_LIMIT");
     v.started++;
     v.sessions[id] = { at: now, seen: [], input: 0, output: 0, reports: 0 };
