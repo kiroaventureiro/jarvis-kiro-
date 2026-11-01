@@ -52,6 +52,7 @@ export interface SpeechOutput {
   cancel(): void;
 }
 export type VoiceReply = {
+  speechPending?: boolean;
   text: string;
   navigate?: string;
   provider?: string;

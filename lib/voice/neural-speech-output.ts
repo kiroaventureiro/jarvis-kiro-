@@ -1,3 +1,4 @@
+import { assertLegacyAudioAllowed } from "./audio-owner";
 import type { SpeechOutput } from "./voice-types";
 
 /**
@@ -39,6 +40,7 @@ export class NeuralSpeechOutput implements SpeechOutput {
   }
 
   async speak(text: string, signal: AbortSignal) {
+    assertLegacyAudioAllowed();
     this.cancel();
     if (signal.aborted) throw new DOMException("Cancelado", "AbortError");
     this.active = true;
