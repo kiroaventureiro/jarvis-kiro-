@@ -1,6 +1,6 @@
 # Gemini Live — experimento híbrido do Jarvis Kiro
 
-**Status:** preparação aprovada; experimento isolado, não habilitado em produção.  
+**Status:** adaptador híbrido implementado; experimento isolado, não habilitado em produção. Consulte [relatório de implementação](GEMINI-LIVE-IMPLEMENTATION.md).
 **Branch:** `experiment/gemini-live-hybrid`  
 **Base:** `feature/diretor-tecnico-agent`  
 **Regra principal:** não alterar o HUD, a home, os estados visuais, os conectores existentes nem substituir o OpenAI Realtime durante a avaliação.
@@ -31,7 +31,7 @@ Fluxo proposto:
 - Operações de escrita, publicação, compra, envio, exclusão e outras ações consequenciais continuam exigindo aprovação explícita.
 - A voz do Gemini deve ser avaliada por audição real em pt-BR. Não prometer clonagem ou imitação de ator/dublador. VoiceStudio e Browser Speech permanecem independentes.
 
-## Componentes a implementar
+## Componentes do experimento
 
 ### Backend
 - `app/api/voice/gemini-token/route.ts`: autenticação Jarvis, feature gate, orçamento/limite, emissão de token efêmero Google com `uses: 1`, expiração curta e `liveConnectConstraints` fixadas.
@@ -50,8 +50,8 @@ Fluxo proposto:
 
 ### Orquestração
 - Criar uma ponte de ferramentas Gemini → Jarvis para as capacidades já implementadas.
-- Começar somente com ferramentas de leitura de status/pesquisa já autorizadas.
-- Reutilizar a lógica de `jarvis_operational_status` e `jarvis_visual_research`; não duplicar lógica nem conceder ferramentas extras.
+- A implementação usa uma única ponte `jarvis_conversation` sem argumentos: encaminha a transcrição original ao callback Jarvis já existente, incluindo memória, agentes e suas autorizações. Não recebe planos ou aprovações gerados pelo Gemini.
+- Status/pesquisa e demais capacidades continuam no fluxo Jarvis existente; não duplicar lógica nem conceder ferramentas administrativas ao Gemini.
 - Preservar memória Jarvis e contexto operacional como fonte de verdade; Gemini recebe apenas o contexto mínimo de sessão.
 - Não confundir memória de sessão Live com memória persistente Jarvis.
 

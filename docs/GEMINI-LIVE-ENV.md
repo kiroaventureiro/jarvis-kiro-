@@ -9,15 +9,19 @@ Configure these variables only in the Vercel Preview environment for the isolate
 
 The endpoint `POST /api/voice/gemini-token` requires the existing Jarvis authorization cookie and both feature/cost gates. It returns a single-use ephemeral token, a 30-minute connection expiry and a one-minute session-start expiry. The permanent API key is never returned.
 
-## Current phase status
+## Implemented client
 
-The endpoint is implemented but disabled by default. No frontend connects to it yet. No audio is captured or sent to Google by this change. No Gemini Live session can start until the remaining client transport, audio pipeline, integration bridge and tests are implemented.
+The client adapter is implemented and opt-in via `/?voice=gemini-live`, using the existing continuous-listening button and consent dialog. The server still requires authentication, both gates and a persistent session budget. The token endpoint refuses `VERCEL_ENV=production` regardless of gates. No environment variables were changed by this implementation.
+
+Only an explicitly authorized Preview test should enable both gates and set a budget. The key alone does not enable this experiment. Reconnects provision fresh constrained tokens and count against the same session budget. Closing/hiding the page releases the microphone and clears the in-memory resumption handle. No raw audio, tokens or handles are stored by the Jarvis client.
+
+See `GEMINI-LIVE-IMPLEMENTATION.md` for test evidence and remaining acoustic validation.
 
 ## Preview-only validation
 
 1. Add the variables to Vercel Preview for `experiment/gemini-live-hybrid`.
 2. Keep both gates false while configuring.
 3. Verify unauthorized requests return 401 and disabled requests return 403.
-4. Only after the client adapter and tests exist, enable the feature gate for a limited owner-only test.
+4. After explicit cost approval, enable both gates for a limited owner-only Preview test; open `/?voice=gemini-live`, sign into Jarvis and activate the existing listening control. Use headphones first, then evaluate speakers and echo rejection.
 5. Never add the API key to `NEXT_PUBLIC_*`, browser storage, source code, screenshots or logs.
 6. Keep Production variables unchanged.

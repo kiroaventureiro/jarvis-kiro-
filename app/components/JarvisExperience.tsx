@@ -134,7 +134,7 @@ export default function JarvisExperience() {
           // Do not interrupt an active voice exchange; use visual/text alert instead.
           if(document.visibilityState==="visible" && !muteRef.current &&
              readVoicePreferences().volume>0 && !getVoiceManager().isSpeaking() &&
-             !typingAbort.current && !fileSpeech.current && !connected) {
+             !typingAbort.current && !fileSpeech.current && !connected && !wakeWasActive.current) {
             const noticeController=new AbortController();
             void getVoiceManager().speak(alert.speech,noticeController.signal).catch(()=>{});
           }
@@ -255,6 +255,7 @@ export default function JarvisExperience() {
   }, []);
   const [wakeHandoff, setWakeHandoff] = useState(false);
   const wakeWasActive = useRef(false);
+  const liveText = useRef<((text: string) => boolean) | null>(null);
   const wakeStop = useRef<() => void>(() => {});
   const typingAbort = useRef<AbortController | null>(null);
   const fileSpeech = useRef<AbortController | null>(null);
@@ -1025,6 +1026,10 @@ export default function JarvisExperience() {
       if (success) setDraft("");
       return;
     }
+    if (!workspace.files.length && liveText.current?.(text)) {
+      setDraft("");
+      return;
+    }
     if (connected || peer.current) stop();
     fileSpeech.current?.abort();
     fileSpeech.current = null;
@@ -1452,12 +1457,17 @@ export default function JarvisExperience() {
         <div className="dock-controls glass">
           <button type="button" className="subtle-button" aria-expanded={appsOpen} onClick={()=>setAppsOpen(open=>!open)}>Aplicativos</button>
           <WakeListener
+            desktopAudio={desktopVoice}
+            registerLiveText={(send) => { liveText.current = send; }}
             muted={muted}
             blocked={workspace.files.length > 0 || state === "connecting"}
             externalBusy={typingRequest || connected}
             registerStop={registerWakeStop}
             beforeStart={() => {
-              if (connected) setWakeHandoff(true);
+              if (new URLSearchParams(window.location.search).get("voice") === "gemini-live") {
+                stop();
+                getVoiceManager().cancel();
+              } else if (connected) setWakeHandoff(true);
               setError("");
             }}
             onUser={(spoken) => {

@@ -6,6 +6,8 @@ import {
   type VoiceSnapshot,
 } from "../../lib/voice/voice-controller";
 import { getVoiceManager } from "../../lib/voice/speech-output";
+import { GeminiLiveVoiceAdapter } from "../../lib/voice/gemini-live-adapter";
+import { VOICE_PREF_EVENT } from "../../lib/voice/voice-preferences";
 import { createBargeInMonitor } from "../../lib/voice/barge-in-monitor";
 import { readVoicePreferences } from "../../lib/voice/voice-preferences";
 import type {
@@ -13,6 +15,7 @@ import type {
   VoiceReply,
 } from "../../lib/voice/voice-types";
 type Props = {
+  registerLiveText?: (send: ((text: string) => boolean) | null) => void;
   onMessage: (text: string, signal: AbortSignal) => Promise<VoiceReply>;
   onUser: (text: string) => void;
   onReply: (reply: VoiceReply) => VoiceReply | void;
@@ -21,6 +24,7 @@ type Props = {
   beforeStart: () => void;
   registerStop: (stop: () => void) => void;
   muted: boolean;
+  desktopAudio?: boolean;
   blocked: boolean;
   externalBusy?: boolean;
 };
@@ -28,7 +32,7 @@ export default function WakeListener(props: Props) {
   const router = useRouter();
   const callback = useRef(props);
   callback.current = props;
-  const engine = useRef<VoiceController | null>(null);
+  const engine = useRef<VoiceController | GeminiLiveVoiceAdapter | null>(null);
   const bargeIn = useRef<ReturnType<typeof createBargeInMonitor> | null>(null);
   const [snapshot, setSnapshot] = useState<VoiceSnapshot>({
       phase: "off",
@@ -49,7 +53,23 @@ export default function WakeListener(props: Props) {
     ios.current =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const controller = new VoiceController({
+    // Explicit opt-in, with independent authentication/feature/cost gates on the server.
+    const experimental = new URLSearchParams(window.location.search).get("voice") === "gemini-live";
+    const shared = {
+      command: (text: string, signal: AbortSignal) => callback.current.onMessage(text, signal),
+      onUser: (text: string) => callback.current.onUser(text),
+      onReply: (reply: VoiceReply) => callback.current.onReply(reply),
+      onSpeechUnavailable: () => callback.current.onSpeechUnavailable(),
+      onState: (state: VoiceSnapshot) => {
+        if (mounted) { setSnapshot(state); callback.current.onState(state); }
+      },
+      navigate: (path: string) => router.push(path),
+    };
+    const controller = experimental ? new GeminiLiveVoiceAdapter({
+      ...shared,
+      desktopAudioAllowed: () => callback.current.desktopAudio === true,
+      volume: () => callback.current.muted ? 0 : readVoicePreferences().volume,
+    }) : new VoiceController({
       recognition: api.SpeechRecognition || api.webkitSpeechRecognition || null,
       speech: getVoiceManager(),
       externalSpeechActive: () =>
@@ -70,7 +90,11 @@ export default function WakeListener(props: Props) {
       navigate: (path) => router.push(path),
     });
     engine.current = controller;
-    bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
+    if (controller instanceof VoiceController)
+      bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
+    else callback.current.registerLiveText?.(text => controller.sendText(text));
+    const preferences = () => { if (controller instanceof GeminiLiveVoiceAdapter) controller.updateVolume(); };
+    window.addEventListener(VOICE_PREF_EVENT, preferences);
     props.registerStop(() => controller.stop());
     const visibility = () => {
       if (document.hidden) {
@@ -81,6 +105,8 @@ export default function WakeListener(props: Props) {
     document.addEventListener("visibilitychange", visibility);
     return () => {
       mounted = false;
+      callback.current.registerLiveText?.(null);
+      window.removeEventListener(VOICE_PREF_EVENT, preferences);
       document.removeEventListener("visibilitychange", visibility);
       bargeIn.current?.stop();
       bargeIn.current = null;
@@ -103,7 +129,7 @@ export default function WakeListener(props: Props) {
     }
   }, [props.blocked]);
   useEffect(() => {
-    if (props.muted) engine.current?.audioMuted();
+    if (props.muted || engine.current instanceof GeminiLiveVoiceAdapter) engine.current?.audioMuted();
   }, [props.muted]);
   useEffect(() => {
     if (props.externalBusy) engine.current?.suspendForExternal();
