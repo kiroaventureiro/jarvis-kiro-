@@ -84,8 +84,8 @@ test("Gemini Live hybrid lifecycle", async t => {
 });
 test("AudioWorklet emits signed PCM in 20ms chunks without monitoring input", () => {
   let Processor; const chunks = [];
-  vm.runInNewContext(fs.readFileSync("public/voice/gemini-capture.js", "utf8"), {
-    AudioWorkletProcessor: class { port = { postMessage: value => chunks.push(value) }; },
+  vm.runInNewContext(fs.readFileSync("public/voice/gemini-capture.js", "utf8").replace('import { PlaybackEchoGuard } from "./gemini-echo-guard.js";', fs.readFileSync("public/voice/gemini-echo-guard.js", "utf8").replace("export class", "class")), {
+    AudioWorkletProcessor: class { port = { postMessage: value => chunks.push(value.pcm) }; },
     registerProcessor: (_name, value) => { Processor = value; }, Int16Array, Math,
   });
   const worklet = new Processor();
@@ -115,7 +115,7 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
   const audio = new GeminiAudio(); let pcm;
   await audio.start(data => { pcm = data; });
   assert.equal(contexts[0].config.sampleRate, 16000);
-  globalThis.__capture.port.onmessage({ data: new Int16Array([32767, -32768]).buffer });
+  globalThis.__capture.port.onmessage({ data: { pcm: new Int16Array([32767, -32768]).buffer, echoFrames: 0 } });
   assert.deepEqual([...Buffer.from(pcm, "base64")], [255, 127, 0, 128]);
   audio.play(pcm); assert.equal(contexts[0].decoded[0], 32767 / 32768); assert.equal(contexts[0].decoded[1], -1);
   audio.play(pcm); assert.ok(nodes[1].time > nodes[0].time);
@@ -125,4 +125,53 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
   navigator.mediaDevices.getUserMedia = () => new Promise(r => { grant = r; });
   const late = new GeminiAudio(); const pending = late.start(() => {}); await tick(); late.close();
   const t = track(); grant({ getTracks: () => [t] }); await pending; assert.ok(t.stopped);
+});
+test("HTTP failures are actionable and never open microphone or alternate TTS", async () => {
+  const adapter = await setup(); adapter.stop();
+  for (const [status, code] of [[401, "AUTH_REQUIRED"], [403, "LIVE_DISABLED"], [503, "SESSION_BUDGET_INVALID"]]) {
+    const captures = state.audio.length, connections = state.connects;
+    globalThis.fetch = async () => ({ ok: false, status, json: async () => ({ code, error: "unsafe upstream token should never be shown" }) });
+    adapter.start(); await tick();
+    assert.equal(state.audio.length, captures); assert.equal(state.connects, connections);
+    assert.equal(states.at(-1).phase, "error"); assert.match(states.at(-1).message, new RegExp(`HTTP ${status}.*${code}`));
+    assert.ok(!states.at(-1).message.includes("unsafe upstream"));
+    assert.equal(adapter.sendText("No fallback"), false); adapter.stop();
+  }
+});
+test("late playback transcript does not cancel own audio or become a Jarvis command", async () => {
+  const adapter = await setup(); message(transcript("Uma consulta")); message(tool()); await tick();
+  message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm", data: "audio" } }] } } });
+  const audio = state.audio.at(-1), interrupted = audio.interrupted;
+  message(transcript("Vazamento da própria resposta")); await tick();
+  assert.equal(audio.interrupted, interrupted); assert.equal(calls.length, 1);
+  message({ serverContent: { interrupted: true, inputTranscription: { text: "Fala humana nova", finished: true } } });
+  message(tool("call-human")); await tick();
+  assert.equal(audio.interrupted > interrupted, true); assert.equal(calls.at(-1).text, "Fala humana nova"); adapter.stop();
+});
+test("playback reference rejects delayed echo and preserves near-end/double-talk", async () => {
+  const { PlaybackEchoGuard } = await import(`data:text/javascript;base64,${Buffer.from(fs.readFileSync("public/voice/gemini-echo-guard.js", "utf8")).toString("base64")}`);
+  const guard = new PlaybackEchoGuard(); let seed = 17;
+  const noise = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return (seed / 0x100000000 - 0.5) * 0.4; };
+  const previous = [];
+  for (let frame = 0; frame < 16; frame++) {
+    const ref = Float32Array.from({ length: 320 }, noise); previous.push(ref);
+    const echo = frame >= 4 ? Float32Array.from(previous[frame - 4], v => v * 0.55) : new Float32Array(320);
+    assert.equal(guard.process(echo, ref), frame >= 4, `echo at frame ${frame}`);
+  }
+  const human = Float32Array.from({ length: 320 }, noise);
+  assert.equal(guard.process(human, new Float32Array(320)), false);
+  const mixed = Float32Array.from(previous.at(-2), (v, i) => v * 0.5 + human[i]);
+  assert.equal(guard.process(mixed, Float32Array.from({ length: 320 }, noise)), false);
+});
+test("exclusive owner blocks browser and neural speech until released", async () => {
+  const { claimGeminiAudio, assertLegacyAudioAllowed } = await compile("lib/voice/audio-owner.ts");
+  assert.doesNotThrow(assertLegacyAudioAllowed); const release = claimGeminiAudio();
+  assert.throws(assertLegacyAudioAllowed, /GEMINI_EXCLUSIVE/); release(); release();
+  assert.doesNotThrow(assertLegacyAudioAllowed);
+  for (const file of ["speech-output.ts", "neural-speech-output.ts"])
+    assert.match(fs.readFileSync(`lib/voice/${file}`, "utf8"), /assertLegacyAudioAllowed\(\)/);
+  const parent = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.match(parent, /if \(geminiRequested && !workspace.files.length\) \{ liveActivate.current\?\.\(\); return; \}/);
+  assert.match(parent, /shown.length && !holoSession.current && \(typing \|\| history\)/);
+  assert.ok(!fs.readFileSync("app/components/WakeListener.tsx", "utf8").includes('const experimental = new URLSearchParams'));
 });

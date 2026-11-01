@@ -8,6 +8,7 @@ export class GeminiAudio {
   private next = 0;
   private epoch = 0;
   onDrained = () => {};
+  onEchoEvidence = (_frames: number, _aec: boolean) => {};
   onMicrophoneEnded = () => {};
   async start(onPCM: (data: string) => void) {
     const epoch = ++this.epoch;
@@ -21,13 +22,18 @@ export class GeminiAudio {
     this.stream = stream;
     await context.audioWorklet.addModule("/voice/gemini-capture.js");
     if (epoch !== this.epoch) return;
-    const capture = new AudioWorkletNode(context, "gemini-capture");
+    const capture = new AudioWorkletNode(context, "gemini-capture", { numberOfInputs: 2, numberOfOutputs: 1 });
     this.capture = capture;
-    capture.port.onmessage = (event: MessageEvent<ArrayBuffer>) => {
+    const aec = stream.getAudioTracks()[0].getSettings?.().echoCancellation === true;
+    let lastEchoFrames = 0;
+    this.onEchoEvidence(0, aec);
+    capture.port.onmessage = (event: MessageEvent<{ pcm: ArrayBuffer; echoFrames: number }>) => {
       if (epoch !== this.epoch) return;
-      const view = new DataView(event.data), bytes = new Uint8Array(event.data);
+      const { pcm, echoFrames } = event.data;
+      if (echoFrames > lastEchoFrames) { lastEchoFrames = echoFrames; this.onEchoEvidence(echoFrames, aec); }
+      const view = new DataView(pcm), bytes = new Uint8Array(pcm);
       // Explicit little-endian on the wire (including non-little-endian hosts).
-      const samples = new Int16Array(event.data);
+      const samples = new Int16Array(pcm);
       for (let i = 0; i < samples.length; i++) view.setInt16(i * 2, samples[i], true);
       onPCM(btoa(String.fromCharCode(...bytes)));
     };
@@ -36,6 +42,8 @@ export class GeminiAudio {
     const silence = context.createGain(); silence.gain.value = 0;
     capture.connect(silence).connect(context.destination);
     this.gain = context.createGain(); this.gain.connect(context.destination);
+    // Post-volume reference, resampled by the same AudioContext as the microphone.
+    this.gain.connect(capture, 0, 1);
     stream.getAudioTracks()[0].onended = () => { this.close(); this.onMicrophoneEnded(); };
   }
   volume(value: number) { if (this.gain) this.gain.gain.value = Math.max(0, Math.min(1, value)); }

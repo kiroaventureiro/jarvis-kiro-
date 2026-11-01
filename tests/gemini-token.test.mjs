@@ -17,7 +17,7 @@ const replacements = {
   "../../../../lib/request-origin": `const requestOriginAllowed = globalThis.__tokenOrigin;`,
   "next/server": `const NextResponse = { json: (body, options) => Response.json(body, options) };`,
   "../../../../lib/auth": `const authorized = async () => globalThis.__tokenTest.authorized;`,
-  "../../../../lib/connectors/server": `const connectorStore = {};`,
+  "../../../../lib/connectors/server": `const connectorStore = { configured: () => true };`,
   "../../../../lib/voice/ledger": `const admitVoiceSession = async () => { const s = globalThis.__tokenTest; s.admitted++; if (s.limited) throw new Error("VOICE_SESSION_LIMIT"); return {sessionId: "session-test", persistent:true}; };`,
   "../../../../lib/jarvis-profile": `const getJarvisProfile = () => ({ identity: {name:"Jarvis",role:"assistant"},voice:{style:"calm"},principles:[] }); const getIntegrationStatus = () => [];`,
   "../../../../lib/jarvis-operational-context": `const jarvisOperationalContext = async () => "context";`,
@@ -25,7 +25,7 @@ const replacements = {
   "../../../../lib/cognitive/protocol": `const cognitiveProtocol = () => "protocol";`,
 };
 for (const [name, value] of Object.entries(replacements)) code = code.replace(new RegExp(`import[^;]+from "${name}";`, "g"), value);
-const { POST } = await import(url(code));
+const { POST, GET } = await import(url(code));
 const request = (origin = "https://preview.example", body = {}) => new Request("https://preview.example/api/voice/gemini-token", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify(body) });
 function reset() {
   Object.assign(state, { authorized: true, requests: [], admitted: 0, fail: false, limited: false });
@@ -62,4 +62,12 @@ test("token endpoint enforces security before contacting Google", async t => {
     reset(); state.fail = true; const response = await POST(request()); assert.equal(response.status, 503);
     assert.ok(!(await response.text()).includes("sensitive upstream"));
   });
+});
+
+test("read-only endpoint readiness never issues tokens or admits sessions", async () => {
+  reset(); const response = await GET(request()); assert.equal(response.status, 200);
+  assert.equal(state.requests.length, 0); assert.equal(state.admitted, 0);
+  reset(); process.env.JARVIS_GEMINI_LIVE_ENABLED = "false";
+  const blocked = await GET(request()); assert.equal(blocked.status, 403); assert.equal((await blocked.json()).code, "LIVE_DISABLED");
+  reset(); state.authorized = false; assert.equal((await GET(request())).status, 401);
 });

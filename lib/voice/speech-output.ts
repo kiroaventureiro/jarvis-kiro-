@@ -1,3 +1,4 @@
+import { assertLegacyAudioAllowed } from "./audio-owner";
 import { spokenExplanation } from "../cognitive/narration";
 import { narrationCoordinator } from "../holo/narration";
 import type { HoloScene } from "../holo/types";
@@ -83,6 +84,7 @@ export class BrowserSpeechOutput implements SpeechOutput {
     signal: AbortSignal,
     options?: { scene?: HoloScene },
   ) {
+    assertLegacyAudioAllowed();
     this.cancel();
     const lease = this.lease;
     this.active = true;
@@ -282,4 +284,11 @@ export function getNeuralVoiceCandidate() {
       getVoiceManager(),
     );
   return neuralManager;
+}
+
+/** Switch to Live only after cancelling all existing local synthesis owners. */
+export function cancelLegacyAudio() {
+  manager?.cancel();
+  neuralManager?.cancel();
+  if (typeof window !== "undefined") window.speechSynthesis?.cancel();
 }

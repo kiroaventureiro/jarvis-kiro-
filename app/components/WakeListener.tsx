@@ -5,7 +5,8 @@ import {
   VoiceController,
   type VoiceSnapshot,
 } from "../../lib/voice/voice-controller";
-import { getVoiceManager } from "../../lib/voice/speech-output";
+import { getVoiceManager, cancelLegacyAudio } from "../../lib/voice/speech-output";
+import { claimGeminiAudio } from "../../lib/voice/audio-owner";
 import { GeminiLiveVoiceAdapter } from "../../lib/voice/gemini-live-adapter";
 import { VOICE_PREF_EVENT } from "../../lib/voice/voice-preferences";
 import { createBargeInMonitor } from "../../lib/voice/barge-in-monitor";
@@ -15,11 +16,14 @@ import type {
   VoiceReply,
 } from "../../lib/voice/voice-types";
 type Props = {
+  geminiRequested?: boolean;
+  registerActivate?: (activate: (() => void) | null) => void;
   registerLiveText?: (send: ((text: string) => boolean) | null) => void;
   onMessage: (text: string, signal: AbortSignal) => Promise<VoiceReply>;
   onUser: (text: string) => void;
   onReply: (reply: VoiceReply) => VoiceReply | void;
   onSpeechUnavailable: () => void;
+  onSpeechAvailable?: () => void;
   onState: (state: VoiceSnapshot) => void;
   beforeStart: () => void;
   registerStop: (stop: () => void) => void;
@@ -43,6 +47,15 @@ export default function WakeListener(props: Props) {
     [consent, setConsent] = useState(false),
     [authorized, setAuthorized] = useState(false);
   const ios = useRef(false);
+  const [diagnostic, setDiagnostic] = useState("");
+  async function diagnose() {
+    try {
+      const response = await fetch("/api/voice/gemini-token", { cache: "no-store", credentials: "same-origin" });
+      const data = await response.json();
+      const code = typeof data.code === "string" && /^[A-Z0-9_]{1,60}$/.test(data.code) ? data.code : "ENDPOINT_ERROR";
+      setDiagnostic(`Gemini Live · HTTP ${response.status} · ${code} · teste sem custo, sem token, sem microfone`);
+    } catch { setDiagnostic("Gemini Live · falha de rede no diagnóstico; TTS bloqueado."); }
+  }
   useEffect(() => {
     let mounted = true;
     window.speechSynthesis?.getVoices();
@@ -54,7 +67,9 @@ export default function WakeListener(props: Props) {
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     // Explicit opt-in, with independent authentication/feature/cost gates on the server.
-    const experimental = new URLSearchParams(window.location.search).get("voice") === "gemini-live";
+    const experimental = props.geminiRequested === true;
+    const releaseAudio = experimental ? claimGeminiAudio() : () => {};
+    if (experimental) cancelLegacyAudio();
     const shared = {
       command: (text: string, signal: AbortSignal) => callback.current.onMessage(text, signal),
       onUser: (text: string) => callback.current.onUser(text),
@@ -67,6 +82,7 @@ export default function WakeListener(props: Props) {
     };
     const controller = experimental ? new GeminiLiveVoiceAdapter({
       ...shared,
+      onSpeechAvailable: () => callback.current.onSpeechAvailable?.(),
       desktopAudioAllowed: () => callback.current.desktopAudio === true,
       volume: () => callback.current.muted ? 0 : readVoicePreferences().volume,
     }) : new VoiceController({
@@ -111,9 +127,10 @@ export default function WakeListener(props: Props) {
       bargeIn.current?.stop();
       bargeIn.current = null;
       controller.stop();
+      releaseAudio();
       engine.current = null;
     };
-  }, [router]);
+  }, [router, props.geminiRequested]);
   useEffect(() => {
     if (snapshot.phase === "speaking" && snapshot.enabled && !props.blocked) {
       void bargeIn.current?.start();
@@ -134,6 +151,10 @@ export default function WakeListener(props: Props) {
   useEffect(() => {
     if (props.externalBusy) engine.current?.suspendForExternal();
   }, [props.externalBusy]);
+  useEffect(() => {
+    props.registerActivate?.(activate);
+    return () => props.registerActivate?.(null);
+  });
   function activate() {
     if (snapshot.enabled) {
       engine.current?.disableListening();
@@ -164,7 +185,7 @@ export default function WakeListener(props: Props) {
             : "Ativar escuta de voz"
         }
         aria-pressed={snapshot.enabled}
-        title="Escuta de voz"
+        title={props.geminiRequested ? "Gemini Live · entrada e saída · sem TTS alternativo" : "Escuta de voz"}
         className={"icon-button " + (snapshot.enabled ? "active" : "")}
         data-voice-phase={snapshot.phase}
       >
@@ -195,7 +216,7 @@ export default function WakeListener(props: Props) {
           aria-modal="false"
           aria-labelledby="voice-consent-title"
         >
-          <h2 id="voice-consent-title">Ativar escuta do Jarvis?</h2>
+          <h2 id="voice-consent-title">{props.geminiRequested ? "Ativar Gemini Live do Jarvis?" : "Ativar escuta do Jarvis?"}</h2>
           <p>
             O navegador terá acesso ao microfone e poderá usar o serviço remoto
             de reconhecimento do fornecedor. Nada é gravado de forma persistente
@@ -209,6 +230,10 @@ export default function WakeListener(props: Props) {
             Provedores pagos continuam sujeitos à autorização e ao limite
             configurados no servidor.
           </p>
+          {props.geminiRequested ? <>
+            <button type="button" onClick={() => { void diagnose(); }}>Verificar endpoint Gemini sem consumo</button>
+            {diagnostic ? <p role="status">{diagnostic}</p> : null}
+          </> : null}
           <div className="form-actions">
             <button type="button" onClick={allow}>
               Ativar escuta

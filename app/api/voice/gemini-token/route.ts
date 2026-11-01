@@ -35,31 +35,34 @@ async function buildInstructions() {
   ].join("\n");
 }
 
+function failure(code: string, error: string, status: number) {
+  return NextResponse.json({ code, error, engine: "gemini-live" }, { status, headers: { "Cache-Control": "no-store" } });
+}
+async function checkAccess(request: Request, requireOrigin = true) {
+  if (!requestOriginAllowed(request, undefined, requireOrigin)) return failure("ORIGIN_DENIED", "Origem não autorizada.", 403);
+  if (process.env.VERCEL_ENV === "production") return failure("PRODUCTION_BLOCKED", "Experimento indisponível em produção.", 403);
+  if (!(await authorized())) return failure("AUTH_REQUIRED", "Entre na área privada para usar Gemini Live.", 401);
+  if (process.env.JARVIS_GEMINI_LIVE_ENABLED !== "true") return failure("LIVE_DISABLED", "JARVIS_GEMINI_LIVE_ENABLED não está habilitado no servidor.", 403);
+  if (!process.env.GEMINI_API_KEY) return failure("KEY_MISSING", "GEMINI_API_KEY indisponível neste deployment.", 503);
+  if (process.env.JARVIS_GEMINI_LIVE_PAID_ALLOWED !== "true") return failure("COST_NOT_APPROVED", "JARVIS_GEMINI_LIVE_PAID_ALLOWED não autoriza consumo pago.", 403);
+  const budget = Number(process.env.JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR);
+  if (!Number.isInteger(budget) || budget < 1 || budget > 120) return failure("SESSION_BUDGET_INVALID", "JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR deve estar entre 1 e 120.", 503);
+  if (!connectorStore.configured()) return failure("PERSISTENT_LIMIT_UNAVAILABLE", "Armazenamento do limite persistente de sessões indisponível.", 503);
+  return null;
+}
+/** Read-only readiness probe: no token, no ledger admission, no Google request. */
+export async function GET(request: Request) {
+  const denied = await checkAccess(request, false);
+  if (denied) return denied;
+  return NextResponse.json({ engine: "gemini-live", code: "READY_FOR_APPROVED_TEST", ready: true,
+    maxCallsPerHour: Number(process.env.JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR),
+  }, { headers: { "Cache-Control": "no-store" } });
+}
 export async function POST(request: Request) {
-  if (!requestOriginAllowed(request)) return NextResponse.json({ error: "Origem não autorizada." }, { status: 403 });
-  if (process.env.VERCEL_ENV === "production") return NextResponse.json({ error: "Experimento indisponível em produção." }, { status: 403 });
-  if (!(await authorized())) {
-    return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
-  }
-
-  if (process.env.JARVIS_GEMINI_LIVE_ENABLED !== "true") {
-    return NextResponse.json({ error: "Gemini Live experimental está desativado no servidor." }, { status: 403 });
-  }
-
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) {
-    return NextResponse.json({ error: "Configure GEMINI_API_KEY no ambiente do servidor." }, { status: 503 });
-  }
-
-  if (process.env.JARVIS_GEMINI_LIVE_PAID_ALLOWED !== "true") {
-    return NextResponse.json({ error: "Uso pago do Gemini Live não autorizado. Ative a autorização e configure um limite no servidor." }, { status: 403 });
-  }
-
+  const denied = await checkAccess(request);
+  if (denied) return denied;
+  const key = process.env.GEMINI_API_KEY!;
   const callsPerHour = Number(process.env.JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR);
-  if (!Number.isInteger(callsPerHour) || callsPerHour < 1 || callsPerHour > 120) {
-    return NextResponse.json({ error: "Configure JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR entre 1 e 120." }, { status: 503 });
-  }
-
   const body = await request.json().catch(() => ({}));
   if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some(k => k !== "handle") ||
       (body.handle !== undefined && (typeof body.handle !== "string" || body.handle.length > 4096))) {
@@ -75,7 +78,7 @@ export async function POST(request: Request) {
       uses: 1, expireTime: expires, newSessionExpireTime: newSessionExpires,
       liveConnectConstraints: { model: MODEL, config: geminiLiveConfig(await buildInstructions(), body.handle) },
     } });
-    if (!data.name) throw new Error("TOKEN_UNAVAILABLE");
+    if (!data.name) return failure("TOKEN_UNAVAILABLE", "Google não retornou uma credencial temporária.", 502);
 
     return NextResponse.json({
       token: data.name,
@@ -87,8 +90,9 @@ export async function POST(request: Request) {
     }, { headers: { "Cache-Control": "no-store, max-age=0", Pragma: "no-cache" } });
   } catch (error) {
     const limited = error instanceof Error && error.message === "VOICE_SESSION_LIMIT";
-    return NextResponse.json({
-      error: limited ? "Limite persistente de sessões Gemini Live atingido. Aguarde a próxima janela." : "Não foi possível preparar a sessão experimental Gemini Live.",
-    }, { status: limited ? 429 : 503 });
+    if (limited) return failure("SESSION_LIMIT", "Limite persistente de sessões Gemini Live atingido.", 429);
+    const upstreamStatus = typeof error === "object" && error !== null && "status" in error ? Number(error.status) : 0;
+    if (upstreamStatus >= 400 && upstreamStatus <= 599) return failure(`GOOGLE_HTTP_${upstreamStatus}`, `Google recusou a emissão do token (HTTP ${upstreamStatus}). Verifique credencial, modelo e quota no servidor.`, 502);
+    return failure("SESSION_PREPARATION_FAILED", "Não foi possível preparar Gemini Live; verifique o armazenamento de limites e a conexão com Google.", 503);
   }
 }
