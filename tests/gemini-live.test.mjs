@@ -13,7 +13,7 @@ const state = { audio: [], callbacks: null, responses: [], inputs: [], connects:
 globalThis.__geminiTest = state;
 const { GeminiLiveVoiceAdapter } = await compile("lib/voice/gemini-live-adapter.ts", {
   "@google/genai": `const GoogleGenAI = class { constructor(options) { globalThis.__geminiTest.credentials = options; } live = { connect: async ({callbacks, config}) => { const s = globalThis.__geminiTest; s.callbacks = callbacks; s.config = config; s.connects++; return { close() {}, sendRealtimeInput(v) { s.inputs.push(v); }, sendClientContent(v) { s.typed = v; }, sendToolResponse(v) { s.responses.push(v); } }; } }; };`,
-  "./gemini-audio": `const GeminiAudio = class { async start(fn) { this.capture = fn; globalThis.__geminiTest.audio.push(this); } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
+  "./gemini-audio": `const GeminiAudio = class { async start(fn) { this.capture = fn; this.starts = (this.starts || 0) + 1; globalThis.__geminiTest.audio.push(this); } pauseCapture() { this.paused = (this.paused || 0) + 1; } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
   "./gemini-config": `const GEMINI_JARVIS_TOOL = "jarvis_conversation";`,
 });
 let calls = [], states = [], users = [], replies = [], volume = 0.4, command;
@@ -47,6 +47,26 @@ test("Gemini Live hybrid lifecycle", async t => {
     const before = audio.interrupted; message({ serverContent: { interrupted: true } });
     assert.equal(audio.interrupted, before + 1); assert.equal(calls[0].signal.aborted, true);
     adapter.stop(); assert.equal(audio.closed, true); assert.equal(states.at(-1).enabled, false);
+  });
+  await t.test("infinite listening toggle pauses only the microphone; Gemini session and text replies stay connected", async () => {
+    const adapter = await setup();
+    const connects = state.connects;
+    const audio = state.audio.at(-1);
+    adapter.disableListening();
+    assert.equal(audio.paused, 1);
+    assert.equal(states.at(-1).enabled, false);
+    assert.equal(states.at(-1).connected, true);
+    assert.equal(adapter.sendText("Responder mesmo com o infinito desligado"), true);
+    message(tool("text-while-paused"));
+    await tick();
+    assert.equal(calls.at(-1).text, "Responder mesmo com o infinito desligado");
+    assert.equal(state.connects, connects);
+    adapter.start();
+    await tick();
+    assert.equal(state.connects, connects);
+    assert.equal(state.audio.at(-1).starts, 2);
+    assert.equal(states.at(-1).enabled, true);
+    adapter.stop();
   });
   await t.test("tool before final transcript waits; duplicate calls cannot replay actions", async () => {
     const adapter = await setup(); message(tool()); await tick(); assert.equal(calls.length, 0);
@@ -194,5 +214,12 @@ test("exclusive owner blocks browser and neural speech until released", async ()
   assert.match(parent, /desktopVoice && !geminiRequested && !muteRef.current/);
   assert.match(parent, /resposta somente por texto/);
   assert.match(parent, /shown.length && !holoSession.current && \(typing \|\| history\)/);
-  assert.ok(!fs.readFileSync("app/components/WakeListener.tsx", "utf8").includes('const experimental = new URLSearchParams'));
+  const wake = fs.readFileSync("app/components/WakeListener.tsx", "utf8");
+  assert.ok(!wake.includes('const experimental = new URLSearchParams'));
+  assert.doesNotMatch(wake, /document\.hidden[\\s\\S]{0,180}controller\.stop/);
+  assert.match(wake, /controller\.disableListening\(\)/);
+  const adapter = fs.readFileSync("lib/voice/gemini-live-adapter.ts", "utf8");
+  assert.match(adapter, /sessionActive/);
+  assert.match(adapter, /connected: this\.sessionActive && this\.ready/);
+  assert.match(adapter, /sendText\(text: string\)[\\s\\S]*?if \(!this\.sessionActive\) return false/);
 });
