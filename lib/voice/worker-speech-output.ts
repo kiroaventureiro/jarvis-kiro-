@@ -2,16 +2,45 @@ import type { SpeechOutput } from "./voice-types";
 import type { HoloScene } from "../holo/types";
 
 /**
+ * Unlock Web Audio on the user's first real interaction. The VoiceStudio job
+ * can take several seconds, so calling HTMLMediaElement.play() only after the
+ * remote job completes may be rejected by Chrome's autoplay policy.
+ */
+let playbackContext: AudioContext | null = null;
+let unlockInstalled = false;
+
+function unlockPlayback() {
+  if (typeof window === "undefined" || !("AudioContext" in window)) return;
+  try {
+    playbackContext ??= new AudioContext();
+    if (playbackContext.state === "suspended")
+      void playbackContext.resume().catch(() => {});
+  } catch {
+    // The speech request will surface a clear playback error if unavailable.
+  }
+}
+
+function installPlaybackUnlock() {
+  if (unlockInstalled || typeof window === "undefined") return;
+  unlockInstalled = true;
+  for (const event of ["pointerdown", "keydown", "touchstart"] as const)
+    window.addEventListener(event, unlockPlayback, { capture: true, passive: true });
+}
+
+/**
  * Speaks through the paired Windows VoiceStudio worker.
  * Requests are queued on the authenticated same-origin API; audio is polled
- * until complete and played in-browser. Abort cancels playback and polling.
+ * until complete and decoded into the already-unlocked browser audio context.
  */
 export class WorkerSpeechOutput implements SpeechOutput {
-  private audio: HTMLAudioElement | null = null;
+  private source: AudioBufferSourceNode | null = null;
   private controller: AbortController | null = null;
-  private objectUrl: string | null = null;
   private active = false;
   private generation = 0;
+
+  constructor() {
+    installPlaybackUnlock();
+  }
 
   isSpeaking() { return this.active; }
 
@@ -19,14 +48,11 @@ export class WorkerSpeechOutput implements SpeechOutput {
     this.generation++;
     this.controller?.abort();
     this.controller = null;
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.removeAttribute("src");
-      this.audio.load();
-      this.audio = null;
+    if (this.source) {
+      try { this.source.stop(); } catch {}
+      this.source.disconnect();
+      this.source = null;
     }
-    if (this.objectUrl) URL.revokeObjectURL(this.objectUrl);
-    this.objectUrl = null;
     this.active = false;
   }
 
@@ -51,7 +77,7 @@ export class WorkerSpeechOutput implements SpeechOutput {
       const job = await queued.json().catch(() => ({}));
       if (!queued.ok || typeof job.id !== "string")
         throw new Error(job.error || "Não foi possível enviar a fala ao VoiceStudio.");
-      let blob: Blob | null = null;
+      let audioBytes: ArrayBuffer | null = null;
       const deadline = Date.now() + 8 * 60 * 1000;
       while (Date.now() < deadline) {
         if (controller.signal.aborted || generation !== this.generation)
@@ -69,7 +95,7 @@ export class WorkerSpeechOutput implements SpeechOutput {
         });
         const type = response.headers.get("content-type") || "";
         if (response.ok && type.startsWith("audio/wav")) {
-          blob = await response.blob();
+          audioBytes = await response.arrayBuffer();
           break;
         }
         const state = await response.json().catch(() => ({}));
@@ -77,26 +103,44 @@ export class WorkerSpeechOutput implements SpeechOutput {
         if (state.status === "failed")
           throw new Error("VoiceStudio falhou: " + (state.errorCode || "erro não identificado"));
       }
-      if (!blob) throw new Error("Tempo limite aguardando o VoiceStudio.");
+      if (!audioBytes) throw new Error("Tempo limite aguardando o VoiceStudio.");
       if (controller.signal.aborted || generation !== this.generation)
         throw new DOMException("Cancelado", "AbortError");
-      this.objectUrl = URL.createObjectURL(blob);
-      const audio = new Audio(this.objectUrl);
-      this.audio = audio;
+
+      // The context is primed synchronously by pointer/keyboard interaction
+      // before the network round-trip, avoiding Chrome's delayed-playback block.
+      unlockPlayback();
+      const context = playbackContext;
+      if (!context) throw new Error("Áudio do navegador indisponível.");
+      if (context.state === "suspended") await context.resume();
+      if (context.state !== "running")
+        throw new Error("O navegador bloqueou o áudio. Clique uma vez na página e tente novamente.");
+      const buffer = await context.decodeAudioData(audioBytes.slice(0));
+      if (controller.signal.aborted || generation !== this.generation)
+        throw new DOMException("Cancelado", "AbortError");
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.connect(context.destination);
+      this.source = source;
       await new Promise<void>((resolve, reject) => {
         let settled = false;
         const finish = (error?: Error) => {
           if (settled) return;
           settled = true;
           controller.signal.removeEventListener("abort", onAbort);
+          source.onended = null;
           error ? reject(error) : resolve();
         };
         const onAbort = () => finish(new DOMException("Cancelado", "AbortError"));
         controller.signal.addEventListener("abort", onAbort, { once: true });
-        audio.onended = () => finish();
-        audio.onerror = () => finish(new Error("Falha ao reproduzir o áudio oficial."));
+        source.onended = () => finish();
         if (controller.signal.aborted) onAbort();
-        else void audio.play().catch((error) => finish(error instanceof Error ? error : new Error("Reprodução bloqueada.")));
+        else {
+          try { source.start(0); }
+          catch (error) {
+            finish(error instanceof Error ? error : new Error("Falha ao iniciar o áudio oficial."));
+          }
+        }
       });
     } finally {
       signal.removeEventListener("abort", abort);
