@@ -52,8 +52,14 @@ test("Gemini Live hybrid lifecycle", async t => {
     const adapter = await setup();
     const connects = state.connects;
     const audio = state.audio.at(-1);
+    message(transcript("Pergunta antes de pausar"));
+    message(tool("spoken-before-pause"));
+    await tick();
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm", data: "reply-audio" } }] } } });
+    assert.deepEqual(audio.played, ["reply-audio"]);
     adapter.disableListening();
     assert.equal(audio.paused, 1);
+    assert.equal(states.at(-1).phase, "speaking", "pausing the mic must not demote an active reply to idle");
     assert.equal(states.at(-1).enabled, false);
     assert.equal(states.at(-1).connected, true);
     assert.equal(adapter.sendText("Responder mesmo com o infinito desligado"), true);
