@@ -291,7 +291,8 @@ export class GeminiLiveVoiceAdapter {
   }
   updateVolume() { this.audio.volume(this.options.volume()); }
   audioMuted() { this.updateVolume(); }
-  suspendForExternal() { this.disableListening(); }
+  // Gemini Live owns full-duplex VAD; external UI panels must not toggle off user listening.
+  suspendForExternal() { /* Intentionally keep the session and microphone active. */ }
   disableListening() {
     if (!this.enabled) return;
     this.enabled = false;
