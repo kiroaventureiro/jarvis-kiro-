@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRef, useState } from "react";
 export const areas = [
-  ["/", "Jarvis"],
+  ["/", "Jarvis Kiro"],
   ["/integracoes", "Integrações"],
   ["/conexoes", "Conexões"],
   ["/resultados", "Resultados"],
@@ -29,7 +29,7 @@ export default function JarvisNavigation() {
       <button
         ref={trigger}
         className="icon-button"
-        aria-label={open ? "Fechar navegação" : "Abrir navegação"}
+        aria-label={open ? "Fechar navegação do Jarvis Kiro" : "Abrir navegação do Jarvis Kiro"}
         aria-expanded={open}
         aria-controls="jarvis-navigation"
         onClick={() => setOpen(!open)}
@@ -37,7 +37,7 @@ export default function JarvisNavigation() {
         {open ? "×" : "☰"}
       </button>
       {open ? (
-        <nav id="jarvis-navigation" aria-label="Áreas do Jarvis">
+        <nav id="jarvis-navigation" aria-label="Áreas do Jarvis Kiro">
           {areas.map(([href, label]) => (
             <Link key={href} href={href} onClick={() => setOpen(false)}>
               {label}
