@@ -5,7 +5,8 @@ export class GeminiAudio {
   private capture: AudioWorkletNode | null = null;
   private gain: GainNode | null = null;
   private sources = new Set<AudioBufferSourceNode>();
-  private next = 0;
+  private playbackQueue: string[] = [];
+  private scheduling = false;
   private epoch = 0;
   onDrained = () => {};
   onEchoEvidence = (_frames: number, _aec: boolean) => {};
@@ -62,24 +63,62 @@ export class GeminiAudio {
     this.stream = null;
   }
   volume(value: number) { if (this.gain) this.gain.gain.value = Math.max(0, Math.min(1, value)); }
+  /**
+   * Queue Gemini chunks and schedule one buffer at a time. Scheduling an entire
+   * response against AudioContext.currentTime can create a huge future backlog
+   * when Chrome suspends/interupts the context, eventually killing the session.
+   * A serial queue preserves chunk order and lets playback resume without
+   * tearing down the Gemini connection.
+   */
   play(data: string) {
+    if (!this.context || !this.gain || this.context.state === "closed") return;
+    this.playbackQueue.push(data);
+    this.scheduleNext();
+  }
+  private scheduleNext() {
+    if (this.scheduling || this.sources.size || !this.playbackQueue.length) return;
     const context = this.context;
-    if (!context || !this.gain || context.state === "closed") return;
-    if (this.next - context.currentTime > 15) throw new Error("A reprodução atrasou. Reinicie a sessão.");
-    const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0));
-    const view = new DataView(bytes.buffer);
-    const buffer = context.createBuffer(1, Math.floor(bytes.length / 2), 24000);
-    const floats = buffer.getChannelData(0);
-    for (let i = 0; i < floats.length; i++) floats[i] = view.getInt16(i * 2, true) / 32768;
-    const source = context.createBufferSource(); source.buffer = buffer; source.connect(this.gain);
-    this.sources.add(source);
-    source.onended = () => { this.sources.delete(source); if (!this.sources.size) this.onDrained(); };
-    this.next = Math.max(context.currentTime + 0.02, this.next);
-    source.start(this.next); this.next += buffer.duration;
+    const gain = this.gain;
+    if (!context || !gain || context.state === "closed") return;
+    if (context.state !== "running") {
+      this.scheduling = true;
+      void context.resume().then(() => {
+        this.scheduling = false;
+        this.scheduleNext();
+      }).catch(() => {
+        this.scheduling = false;
+        // Keep queued audio intact; a later chunk or user gesture retries resume.
+      });
+      return;
+    }
+    const data = this.playbackQueue.shift();
+    if (data === undefined) return;
+    this.scheduling = true;
+    try {
+      const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+      const view = new DataView(bytes.buffer);
+      const buffer = context.createBuffer(1, Math.floor(bytes.length / 2), 24000);
+      const floats = buffer.getChannelData(0);
+      for (let i = 0; i < floats.length; i++) floats[i] = view.getInt16(i * 2, true) / 32768;
+      const source = context.createBufferSource(); source.buffer = buffer; source.connect(gain);
+      this.sources.add(source);
+      source.onended = () => {
+        this.sources.delete(source);
+        if (this.playbackQueue.length) this.scheduleNext();
+        else if (!this.sources.size) this.onDrained();
+      };
+      source.start(context.currentTime + 0.01);
+    } catch (error) {
+      this.playbackQueue.unshift(data);
+      throw error;
+    } finally {
+      this.scheduling = false;
+    }
   }
   interrupt() {
+    this.playbackQueue = [];
     for (const source of this.sources) { source.onended = null; source.stop(); source.disconnect(); }
-    this.sources.clear(); this.next = 0;
+    this.sources.clear();
   }
   close() {
     this.pauseCapture(); this.interrupt();
