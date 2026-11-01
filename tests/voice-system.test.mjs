@@ -198,6 +198,8 @@ test("explicit stop phrase cancels TTS while ordinary speech does not", async ()
   assert.equal(interruptRecognizer.started, false);
   assert.equal(t.states.at(-1).phase, "resuming");
   assert.equal(t.states.at(-1).message, "Fala interrompida. Retomando a escuta…");
+  interruptRecognizer.emit("pare");
+  assert.equal(t.cancellations(), 1, "one utterance cannot trigger duplicate cancellation");
   t.engine.stop();
 });
 test("bare wake asks for next command and no repeated mic clicks are needed", async () => {
