@@ -85,6 +85,14 @@ export async function POST(request: Request) {
     if (action === "claim") {
       // A stopped worker must not cause expired requests to block new speech.
       // Older jobs are marked failed and are never sent for synthesis.
+      // Also retire abandoned processing jobs after the local synthesis
+      // deadline plus a recovery margin, without retrying an unsafe job.
+      const abandoned = new Date(Date.now() - 1200000).toISOString();
+      await db("jarvis_voice_jobs?status=eq.processing&claimed_at=lt." +
+        encodeURIComponent(abandoned), "PATCH", {
+          status: "failed", error_code: "VOICE_WORKER_TIMED_OUT",
+          completed_at: new Date().toISOString(),
+        });
       const cutoff = new Date(Date.now() - 600000).toISOString();
       await db("jarvis_voice_jobs?status=eq.queued&created_at=lt." +
         encodeURIComponent(cutoff), "PATCH", {
