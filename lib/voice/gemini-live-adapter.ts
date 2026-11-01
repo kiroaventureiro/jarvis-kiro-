@@ -94,7 +94,11 @@ export class GeminiLiveVoiceAdapter {
     this.enabled = true;
     this.attempts = 0;
     ++this.epoch;
-    if (this.sessionActive && this.ready) { void this.startCapture(); return; }
+    if (this.sessionActive) {
+      if (this.ready) void this.startCapture();
+      else this.emit("resuming", "Gemini Live continua conectando · escuta será retomada quando estiver pronto");
+      return;
+    }
     this.sessionActive = true;
     this.emit("resuming", "Gemini Live selecionado · verificando endpoint…");
     void this.connect();
@@ -181,7 +185,10 @@ export class GeminiLiveVoiceAdapter {
     if (!this.sessionActive) return;
     this.connection++; this.ready = false; this.clearTimers(); this.abort?.abort();
     this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false;
-    this.audio.interrupt(); this.session?.close(); this.session = null;
+    this.audio.interrupt();
+    this.audio.pauseCapture();
+    this.audioStarted = false;
+    this.session?.close(); this.session = null;
     this.clearTranscriptTimers();
     this.transcript = ""; this.transcriptReady = false;
     if (++this.attempts > 3) { this.fail("A sessão caiu repetidamente. Reative a escuta para tentar novamente."); return; }
