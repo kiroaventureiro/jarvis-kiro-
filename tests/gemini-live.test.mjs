@@ -132,7 +132,7 @@ test("AudioWorklet emits signed PCM in 20ms chunks without monitoring input", ()
   assert.equal(chunks.length, 2); assert.equal(chunks[0].byteLength, 640);
   assert.equal(new Int16Array(chunks[0])[0], 32767); assert.equal(new Int16Array(chunks[0])[128], -32768);
 });
-test("audio capture, PCM decode, cancellable playback and late permission cleanup", async () => {
+test("audio capture stays 16 kHz while speaker playback stays native-rate and gapless", async () => {
   const contexts = [], tracks = [], nodes = [];
   globalThis.AudioContext = class {
     state = "running"; currentTime = 1; destination = {}; audioWorklet = { addModule: async () => {} };
@@ -140,9 +140,10 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
     async resume() { this.state = "running"; }
     addEventListener() {}
     createGain() { return { gain: { value: 1 }, connect() { return this; }, disconnect() {} }; }
-    createMediaStreamSource() { return { connect() {} }; }
+    createMediaStreamDestination() { return { stream: {}, connect() {} }; }
+    createMediaStreamSource(stream) { return { stream, connect() {}, disconnect() {} }; }
     createBuffer(_channels, length, rate) { const floats = new Float32Array(length); this.decoded = floats; return { getChannelData: () => floats, duration: length / rate }; }
-    createBufferSource() { const source = { onended: null, connect() {}, disconnect() {}, start(time) { this.time = time; }, stop() { this.stopped = true; } }; nodes.push(source); return source; }
+    createBufferSource() { const source = { onended: null, buffer: null, connect() {}, disconnect() {}, start(time) { this.time = time; }, stop() { this.stopped = true; } }; nodes.push(source); return source; }
     async close() { this.state = "closed"; }
   };
   globalThis.AudioWorkletNode = class { port = {}; constructor() { globalThis.__capture = this; } connect() { return this; } disconnect() {} };
@@ -155,30 +156,41 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
   const audio = new GeminiAudio(); let pcm, drained = 0;
   audio.onDrained = () => { drained++; };
   await audio.start(data => { pcm = data; });
-  assert.equal(contexts[0].config.sampleRate, 16000);
-  globalThis.__capture.port.onmessage({ data: { pcm: new Int16Array([32767, -32768]).buffer, echoFrames: 0 } });
-  assert.deepEqual([...Buffer.from(pcm, "base64")], [255, 127, 0, 128]);
-  audio.play(pcm); assert.equal(contexts[0].decoded[0], 32767 / 32768); assert.equal(contexts[0].decoded[1], -1);
-  audio.play(pcm); assert.equal(nodes.length, 1, "only one buffer is scheduled at a time");
-  nodes[0].onended(); assert.equal(nodes.length, 2); assert.ok(nodes[1].time >= nodes[0].time);
+  assert.equal(contexts.length, 2, "capture and playback use independent AudioContexts");
+  assert.equal(contexts[0].config, undefined, "speaker playback uses the device's native sample rate");
+  assert.equal(contexts[1].config.sampleRate, 16000, "microphone capture remains at Gemini's 16 kHz input rate");
+  globalThis.__capture.port.onmessage({ data: { pcm: new Int16Array([32767, -32768, ...new Array(318).fill(0)]).buffer, echoFrames: 0 } });
+  assert.deepEqual([...Buffer.from(pcm, "base64").slice(0, 4)], [255, 127, 0, 128]);
+  const samples = new Int16Array(320); samples[0] = 32767; samples[1] = -32768;
+  const playbackPCM = btoa(String.fromCharCode(...new Uint8Array(samples.buffer)));
+  audio.play(playbackPCM);
+  assert.equal(contexts[0].decoded[0], 32767 / 32768);
+  assert.equal(contexts[0].decoded[1], -1);
+  audio.play(playbackPCM);
+  assert.equal(nodes.length, 2, "a short look-ahead pre-schedules the next chunk");
+  assert.ok(Math.abs(nodes[1].time - (nodes[0].time + nodes[0].buffer.duration)) < 1e-9, "adjacent chunks are scheduled without a gap");
+  const finish = source => { contexts[0].currentTime = source.time + source.buffer.duration; source.onended?.(); };
+  finish(nodes[0]);
   audio.interrupt(); assert.equal(nodes[1].stopped, true);
   audio.pauseCapture();
   assert.ok(tracks[0].stopped);
-  assert.equal(contexts[0].state, "running", "pausing the infinite microphone must preserve the Gemini output context");
+  assert.equal(contexts[0].state, "running", "pausing the infinite microphone preserves speaker playback");
   contexts[0].state = "suspended";
-  for (let i = 0; i < 200; i++) audio.play(pcm);
+  for (let i = 0; i < 200; i++) audio.play(playbackPCM);
   await tick();
-  assert.equal(contexts[0].state, "running", "playback automatically resumes a suspended AudioContext");
-  assert.equal(nodes.length, 3, "a long reply is queued instead of scheduling seconds into the future");
-  for (let i = 2; i < 201; i++) nodes[i].onended();
-  assert.equal(nodes.length, 202, "all queued audio chunks are played in order");
-  nodes[201].onended();
+  assert.equal(contexts[0].state, "running", "playback automatically resumes a suspended speaker context");
+  assert.equal(nodes.length, 10, "only a short rolling audio window is scheduled ahead");
+  for (let i = 2; i < 202; i++) {
+    assert.ok(nodes[i], "the next chunk is scheduled as playback advances");
+    finish(nodes[i]);
+  }
   await new Promise(resolve => setTimeout(resolve, 350));
+  assert.equal(nodes.length, 202, "all queued audio chunks are played in order");
   assert.equal(drained, 1, "drain notification waits for the final chunk instead of firing between chunks");
   await audio.start(() => {});
-  assert.equal(contexts.length, 1, "re-enabling the microphone must reuse the live audio context");
+  assert.equal(contexts.length, 2, "re-enabling the microphone reuses both audio contexts");
   assert.equal(tracks.length, 2);
-  audio.close(); assert.ok(tracks[1].stopped); assert.equal(contexts[0].state, "closed");
+  audio.close(); assert.ok(tracks[1].stopped); assert.equal(contexts[0].state, "closed"); assert.equal(contexts[1].state, "closed");
   let grant;
   navigator.mediaDevices.getUserMedia = () => new Promise(r => { grant = r; });
   const late = new GeminiAudio(); const pending = late.start(() => {}); await tick(); late.close();
