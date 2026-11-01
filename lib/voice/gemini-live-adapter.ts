@@ -92,6 +92,7 @@ export class GeminiLiveVoiceAdapter {
   start() {
     if (this.enabled) return;
     if (!this.options.desktopAudioAllowed()) { this.emit("off", "Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
+    this.audio.unlockPlayback();
     this.enabled = true;
     this.attempts = 0;
     ++this.epoch;
