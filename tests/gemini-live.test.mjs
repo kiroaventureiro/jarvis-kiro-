@@ -267,13 +267,14 @@ test("exclusive owner blocks browser and neural speech until released", async ()
 test("a core timeout returns a truthful tool result without dropping Gemini Live", async t => {
   const adapter = await setup();
   t.after(() => adapter.stop());
+  const initialConnections = state.connects;
   command = async () => { throw new Error("ABACUS_TIMEOUT"); };
   message(transcript("Faça uma consulta demorada"));
   message(tool("core-timeout"));
   const deadline = Date.now() + 3000;
   while (!state.responses.length && Date.now() < deadline)
     await new Promise(resolve => setTimeout(resolve, 20));
-  assert.equal(state.connects, 1, "core timeout must not create a new Gemini session");
+  assert.equal(state.connects, initialConnections, "core timeout must not create a new Gemini session");
   assert.equal(state.responses.length, 1);
   const response = state.responses[0].functionResponses[0].response.text;
   assert.match(response, /ultrapassou o tempo de resposta/);
