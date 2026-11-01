@@ -55,6 +55,17 @@ async function run() {
       const result = await call("claim", {}, credentials.token);
       if (!result.job) { await delay(1800); continue; }
       const job = result.job;
+      // Synthesis may take several minutes. Report liveness while busy,
+      // not only when polling the queue. Never overlap heartbeat requests.
+      let heartbeatInFlight = false;
+      const heartbeat = setInterval(async () => {
+        if (heartbeatInFlight || stopping) return;
+        heartbeatInFlight = true;
+        try { await call("heartbeat", {}, credentials.token); }
+        catch { process.stderr.write("Worker heartbeat temporarily unavailable.\n"); }
+        finally { heartbeatInFlight = false; }
+      }, 30_000);
+      heartbeat.unref();
       try {
         if (!validJob(job)) throw Error("INVALID_OR_EXPIRED_VOICE_JOB");
         await reserveVoiceJobId(job.id);
@@ -69,6 +80,8 @@ async function run() {
         const code = String(error?.message || "VOICE_JOB_FAILED").toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0,80);
         await call("complete", { id: job.id, status: "failed", errorCode: code }, credentials.token).catch(() => {});
         process.stderr.write("Falha na tarefa " + job.id + ": " + code + "\n");
+      } finally {
+        clearInterval(heartbeat);
       }
     } catch (error) {
       process.stderr.write("Worker: " + String(error?.message || error) + "\n");
