@@ -195,7 +195,7 @@ export class GeminiLiveVoiceAdapter {
     this.session?.close(); this.session = null;
     this.clearTranscriptTimers();
     this.transcript = ""; this.transcriptReady = false;
-    if (++this.attempts > 3) { this.fail("A sessão caiu repetidamente. Reative a escuta para tentar novamente."); return; }
+    if (++this.attempts > 5) { this.fail("A sessão caiu repetidamente. Reative a escuta para tentar novamente."); return; }
     this.emit("resuming", "Reconectando Gemini Live…");
     this.later(() => { void this.connect(); }, 500 * 2 ** (this.attempts - 1));
   }
@@ -272,9 +272,24 @@ export class GeminiLiveVoiceAdapter {
       this.outputAllowed = true;
       this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
       if (reply.navigate) { this.stop(); this.options.navigate(reply.navigate); }
-    } catch {
+    } catch (error) {
       this.processing = false;
-      if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
+      // A failed core request is not a failed Gemini transport. Preserve the
+      // live session and return a truthful tool result so the user can retry.
+      if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) return;
+      const detail = error instanceof Error ? error.message : "";
+      const fallbackText = /ABACUS_TIMEOUT|504|tempo.*limite|timeout/i.test(detail)
+        ? "A consulta ao núcleo Jarvis ultrapassou o tempo de resposta. A conexão de voz continua ativa; você pode repetir o pedido."
+        : "O núcleo Jarvis está temporariamente indisponível para esta consulta. A conexão de voz continua ativa; você pode repetir o pedido.";
+      this.options.onReply({ text: fallbackText, provider: "local_operational", speechPending: true });
+      this.outputAllowed = true;
+      try {
+        this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: fallbackText } }] });
+      } catch {
+        this.reconnect();
+        return;
+      }
+      this.emit(this.enabled ? "waiting" : "off", "Consulta não concluída · Gemini Live permanece conectado");
     }
   }
   /** Keyboard shares this session and the same Jarvis callback, not a second TTS. */
