@@ -42,6 +42,7 @@ function setup({
 } = {}) {
   let now = 0,
     id = 0;
+  let cancellations = 0;
   const timers = new Map(),
     instances = [],
     states = [],
@@ -73,7 +74,7 @@ function setup({
     }
   }
   const speech = {
-    cancel() {},
+    cancel() { cancellations++; },
     speak(text, signal) {
       speeches.push(text);
       return new Promise((resolve, reject) => {
@@ -118,6 +119,7 @@ function setup({
     speeches,
     calls,
     unavailable,
+    cancellations: () => cancellations,
     finish: async () => {
       resolveSpeech?.();
       await flush();
@@ -167,14 +169,37 @@ test("greeting is local, spoken and recognition pauses until speech ends", async
   assert.match(t.speeches[0], /Bom dia! Estou à disposição/);
   assert.equal(t.states.at(-1).phase, "speaking");
   assert.equal(t.instances[0].started, false);
-  t.instances[0].emit("Jarvis responda a você mesmo");
-  assert.equal(t.users.length, 1);
+  assert.equal(t.instances.length, 2);
+  assert.equal(t.instances[1].started, true);
+  // During TTS, the secondary recognizer accepts only explicit stop phrases.
+  t.instances[1].emit("está tudo bem?");
+  assert.equal(t.calls.length, 0);
   await t.advance(2000);
-  assert.equal(t.instances.length, 1);
+  assert.equal(t.instances.length, 2);
   await t.finish();
   await t.advance(450);
-  assert.equal(t.instances.length, 2);
+  assert.equal(t.instances.length, 3);
+  assert.equal(t.instances.at(-1).started, true);
   assert.equal(t.states.at(-1).phase, "command");
+  t.engine.stop();
+});
+test("explicit stop phrase cancels TTS while ordinary speech does not", async () => {
+  const t = setup();
+  t.engine.start();
+  t.instances[0].emit("Bom dia, Jarvis");
+  await flush();
+  assert.equal(t.instances.length, 2);
+  const interruptRecognizer = t.instances[1];
+  interruptRecognizer.emit("está tudo bem?");
+  assert.equal(t.cancellations(), 0);
+  assert.equal(t.states.at(-1).phase, "speaking");
+  interruptRecognizer.emit("Jarvis, pare de falar");
+  assert.equal(t.cancellations(), 1);
+  assert.equal(interruptRecognizer.started, false);
+  assert.equal(t.states.at(-1).phase, "resuming");
+  assert.equal(t.states.at(-1).message, "Fala interrompida. Retomando a escuta…");
+  interruptRecognizer.emit("pare");
+  assert.equal(t.cancellations(), 1, "one utterance cannot trigger duplicate cancellation");
   t.engine.stop();
 });
 test("bare wake asks for next command and no repeated mic clicks are needed", async () => {
@@ -185,7 +210,7 @@ test("bare wake asks for next command and no repeated mic clicks are needed", as
   assert.match(t.speeches[0], /O que você precisa/);
   await t.finish();
   await t.advance(450);
-  t.instances[1].emit("Preciso de ideias para o canal");
+  t.instances.at(-1).emit("Preciso de ideias para o canal");
   await flush();
   assert.deepEqual(t.calls, ["Preciso de ideias para o canal"]);
   await t.finish();
@@ -276,7 +301,8 @@ test("manual mode answers once and returns fully off", async () => {
   await flush();
   await t.finish();
   await t.advance(5000);
-  assert.equal(t.instances.length, 1);
+  assert.equal(t.instances.length, 2);
+  assert.equal(t.instances[1].started, false);
   assert.equal(t.states.at(-1).phase, "off");
 });
 test("voice selection never guesses gender from a name and preferences are bounded", () => {
