@@ -137,11 +137,12 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
   globalThis.AudioContext = class {
     state = "running"; currentTime = 1; destination = {}; audioWorklet = { addModule: async () => {} };
     constructor(config) { this.config = config; contexts.push(this); }
-    async resume() {}
+    async resume() { this.state = "running"; }
+    addEventListener() {}
     createGain() { return { gain: { value: 1 }, connect() { return this; }, disconnect() {} }; }
     createMediaStreamSource() { return { connect() {} }; }
     createBuffer(_channels, length, rate) { const floats = new Float32Array(length); this.decoded = floats; return { getChannelData: () => floats, duration: length / rate }; }
-    createBufferSource() { const source = { connect() {}, disconnect() {}, start(time) { this.time = time; }, stop() { this.stopped = true; } }; nodes.push(source); return source; }
+    createBufferSource() { const source = { onended: null, connect() {}, disconnect() {}, start(time) { this.time = time; }, stop() { this.stopped = true; } }; nodes.push(source); return source; }
     async close() { this.state = "closed"; }
   };
   globalThis.AudioWorkletNode = class { port = {}; constructor() { globalThis.__capture = this; } connect() { return this; } disconnect() {} };
@@ -151,18 +152,29 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
     const t = track(); return { getTracks: () => [t], getAudioTracks: () => [t] };
   } } } });
   const { GeminiAudio } = await compile("lib/voice/gemini-audio.ts");
-  const audio = new GeminiAudio(); let pcm;
+  const audio = new GeminiAudio(); let pcm, drained = 0;
+  audio.onDrained = () => { drained++; };
   await audio.start(data => { pcm = data; });
   assert.equal(contexts[0].config.sampleRate, 16000);
   globalThis.__capture.port.onmessage({ data: { pcm: new Int16Array([32767, -32768]).buffer, echoFrames: 0 } });
   assert.deepEqual([...Buffer.from(pcm, "base64")], [255, 127, 0, 128]);
   audio.play(pcm); assert.equal(contexts[0].decoded[0], 32767 / 32768); assert.equal(contexts[0].decoded[1], -1);
-  audio.play(pcm); assert.ok(nodes[1].time > nodes[0].time);
-  audio.interrupt(); assert.ok(nodes.every(n => n.stopped));
+  audio.play(pcm); assert.equal(nodes.length, 1, "only one buffer is scheduled at a time");
+  nodes[0].onended(); assert.equal(nodes.length, 2); assert.ok(nodes[1].time >= nodes[0].time);
+  audio.interrupt(); assert.equal(nodes[1].stopped, true);
   audio.pauseCapture();
   assert.ok(tracks[0].stopped);
   assert.equal(contexts[0].state, "running", "pausing the infinite microphone must preserve the Gemini output context");
-  audio.play(pcm);
+  contexts[0].state = "suspended";
+  for (let i = 0; i < 200; i++) audio.play(pcm);
+  await tick();
+  assert.equal(contexts[0].state, "running", "playback automatically resumes a suspended AudioContext");
+  assert.equal(nodes.length, 3, "a long reply is queued instead of scheduling seconds into the future");
+  for (let i = 2; i < 201; i++) nodes[i].onended();
+  assert.equal(nodes.length, 202, "all queued audio chunks are played in order");
+  nodes[201].onended();
+  await new Promise(resolve => setTimeout(resolve, 350));
+  assert.equal(drained, 1, "drain notification waits for the final chunk instead of firing between chunks");
   await audio.start(() => {});
   assert.equal(contexts.length, 1, "re-enabling the microphone must reuse the live audio context");
   assert.equal(tracks.length, 2);
