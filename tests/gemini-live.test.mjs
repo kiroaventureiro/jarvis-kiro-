@@ -150,7 +150,14 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
   audio.play(pcm); assert.equal(contexts[0].decoded[0], 32767 / 32768); assert.equal(contexts[0].decoded[1], -1);
   audio.play(pcm); assert.ok(nodes[1].time > nodes[0].time);
   audio.interrupt(); assert.ok(nodes.every(n => n.stopped));
-  audio.close(); assert.ok(tracks[0].stopped); assert.equal(contexts[0].state, "closed");
+  audio.pauseCapture();
+  assert.ok(tracks[0].stopped);
+  assert.equal(contexts[0].state, "running", "pausing the infinite microphone must preserve the Gemini output context");
+  audio.play(pcm);
+  await audio.start(() => {});
+  assert.equal(contexts.length, 1, "re-enabling the microphone must reuse the live audio context");
+  assert.equal(tracks.length, 2);
+  audio.close(); assert.ok(tracks[1].stopped); assert.equal(contexts[0].state, "closed");
   let grant;
   navigator.mediaDevices.getUserMedia = () => new Promise(r => { grant = r; });
   const late = new GeminiAudio(); const pending = late.start(() => {}); await tick(); late.close();
