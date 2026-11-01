@@ -224,7 +224,7 @@ test("exclusive owner blocks browser and neural speech until released", async ()
   const wake = fs.readFileSync("app/components/WakeListener.tsx", "utf8");
   assert.ok(!wake.includes('const experimental = new URLSearchParams'));
   assert.doesNotMatch(wake, /document\.hidden[\\s\\S]{0,180}controller\.stop/);
-  assert.match(wake, /controller\.disableListening\(\)/);
+  assert.match(wake, /engine\.current\?\.disableListening\(\)/);
   const adapter = fs.readFileSync("lib/voice/gemini-live-adapter.ts", "utf8");
   assert.match(adapter, /sessionActive/);
   assert.match(adapter, /connected: this\.sessionActive && this\.ready/);
