@@ -1,4 +1,4 @@
-/** One local audio owner; never routes playback to a worker or remote output. */
+/** One local audio owner; microphone capture can pause without destroying playback/session audio. */
 export class GeminiAudio {
   private context: AudioContext | null = null;
   private stream: MediaStream | null = null;
@@ -12,8 +12,13 @@ export class GeminiAudio {
   onMicrophoneEnded = () => {};
   async start(onPCM: (data: string) => void) {
     const epoch = ++this.epoch;
-    const context = new AudioContext({ sampleRate: 16000 });
-    this.context = context;
+    let context = this.context;
+    if (!context || context.state === "closed") {
+      context = new AudioContext({ sampleRate: 16000 });
+      this.context = context;
+      this.gain = context.createGain();
+      this.gain.connect(context.destination);
+    }
     await context.resume();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: {
       channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true,
@@ -21,7 +26,7 @@ export class GeminiAudio {
     if (epoch !== this.epoch) { stream.getTracks().forEach(t => t.stop()); return; }
     this.stream = stream;
     await context.audioWorklet.addModule("/voice/gemini-capture.js");
-    if (epoch !== this.epoch) return;
+    if (epoch !== this.epoch) { stream.getTracks().forEach(t => t.stop()); return; }
     const capture = new AudioWorkletNode(context, "gemini-capture", { numberOfInputs: 2, numberOfOutputs: 1 });
     this.capture = capture;
     const aec = stream.getAudioTracks()[0].getSettings?.().echoCancellation === true;
@@ -32,19 +37,28 @@ export class GeminiAudio {
       const { pcm, echoFrames } = event.data;
       if (echoFrames > lastEchoFrames) { lastEchoFrames = echoFrames; this.onEchoEvidence(echoFrames, aec); }
       const view = new DataView(pcm), bytes = new Uint8Array(pcm);
-      // Explicit little-endian on the wire (including non-little-endian hosts).
       const samples = new Int16Array(pcm);
       for (let i = 0; i < samples.length; i++) view.setInt16(i * 2, samples[i], true);
       onPCM(btoa(String.fromCharCode(...bytes)));
     };
     context.createMediaStreamSource(stream).connect(capture);
-    // A silent destination keeps capture processing; no microphone monitoring.
     const silence = context.createGain(); silence.gain.value = 0;
     capture.connect(silence).connect(context.destination);
-    this.gain = context.createGain(); this.gain.connect(context.destination);
-    // Post-volume reference, resampled by the same AudioContext as the microphone.
-    this.gain.connect(capture, 0, 1);
-    stream.getAudioTracks()[0].onended = () => { this.close(); this.onMicrophoneEnded(); };
+    // Playback remains connected while capture is paused.
+    if (this.gain) this.gain.connect(capture, 0, 1);
+    stream.getAudioTracks()[0].onended = () => {
+      if (epoch !== this.epoch) return;
+      this.pauseCapture();
+      this.onMicrophoneEnded();
+    };
+  }
+  /** Stop only microphone capture; keep AudioContext and output playback alive. */
+  pauseCapture() {
+    this.epoch++;
+    this.capture?.port && (this.capture.port.onmessage = null);
+    this.capture?.disconnect(); this.capture = null;
+    this.stream?.getTracks().forEach(t => { t.onended = null; t.stop(); });
+    this.stream = null;
   }
   volume(value: number) { if (this.gain) this.gain.gain.value = Math.max(0, Math.min(1, value)); }
   play(data: string) {
@@ -67,9 +81,7 @@ export class GeminiAudio {
     this.sources.clear(); this.next = 0;
   }
   close() {
-    this.epoch++; this.interrupt();
-    this.capture?.disconnect(); this.capture = null;
-    this.stream?.getTracks().forEach(t => { t.onended = null; t.stop(); }); this.stream = null;
+    this.pauseCapture(); this.interrupt();
     void this.context?.close().catch(() => {}); this.context = null; this.gain = null;
   }
 }
