@@ -11,7 +11,10 @@ test("Desktop dock is hidden until pointer moves to bottom or focus is inside",(
  assert.match(css,/:focus-within/);
 });
 test("Status stays accessible to assistive tech but not shown as persistent text",()=>{
- assert.match(ui,/className="state-indicator" role="status" aria-live="polite"/);
- assert.match(css,/jarvis-desktop-focus \.state-indicator/);
- assert.match(css,/clip: rect\(0,0,0,0\)/);
+ assert.match(ui,/role="status" aria-live="polite" aria-atomic="true"/);
+ assert.match(ui,/EM ESPERA/);
+ assert.match(ui,/OUVINDO/);
+ assert.match(ui,/PENSANDO/);
+ assert.match(ui,/RESPONDENDO/);
+ assert.match(ui,/className="state-indicator sr-only"/);
 });
