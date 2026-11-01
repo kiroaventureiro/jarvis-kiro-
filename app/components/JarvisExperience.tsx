@@ -1282,7 +1282,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
           onVisualMode={setAudioVisual}
         />
         <div className="state-indicator sr-only" aria-hidden="true">
-          <span className={"signal " + (connected ? "online" : "")} />
+          <span className={"signal " + (connected || voiceSnapshot.connected ? "online" : "")} />
           {workspace.phase === "error"
             ? "Análise não concluída"
             : workspace.recording
@@ -1293,7 +1293,13 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
                   : voiceSnapshot.phase === "command"
                     ? "Ouvindo comando"
                     : labels[state]
-                : labels[state]}
+                : voiceSnapshot.connected && state === "responding"
+                  ? "Respondendo"
+                  : voiceSnapshot.connected && state === "processing"
+                    ? "Pensando"
+                    : voiceSnapshot.connected
+                      ? "Em espera"
+                      : labels[state]}
           <span className="connection-label">
             {workspace.busy
               ? "Arquivos em análise"
@@ -1303,16 +1309,18 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
                   ? voiceSnapshot.microphoneActive
                     ? "Microfone ativo"
                     : "Reconhecimento pausado"
-                  : connected
-                    ? mic
-                      ? "Microfone ativo"
-                      : "Microfone desligado"
-                    : ""}
+                  : voiceSnapshot.connected
+                    ? "Gemini conectado · escuta infinita desligada"
+                    : connected
+                      ? mic
+                        ? "Microfone ativo"
+                        : "Microfone desligado"
+                      : ""}
           </span>
         </div>
       </section>
       <HoloResponseHUD
-        externalAudioActive={(connected || (geminiRequested && voiceSnapshot.enabled)) && state === "responding"}
+        externalAudioActive={(connected || voiceSnapshot.connected) && state === "responding"}
         showNarration={
           !!last && (!desktopVoice || muted || last.speechAvailable === false)
         }

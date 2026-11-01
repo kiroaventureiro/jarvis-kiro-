@@ -112,18 +112,12 @@ export default function WakeListener(props: Props) {
     const preferences = () => { if (controller instanceof GeminiLiveVoiceAdapter) controller.updateVolume(); };
     window.addEventListener(VOICE_PREF_EVENT, preferences);
     props.registerStop(() => controller.stop());
-    const visibility = () => {
-      if (document.hidden) {
-        bargeIn.current?.stop();
-        controller.stop("Escuta desligada porque a página ficou oculta.");
-      }
-    };
-    document.addEventListener("visibilitychange", visibility);
+    // Hiding a preferences panel or switching document visibility must not
+    // own the lifetime of the user's explicitly enabled Gemini session.
     return () => {
       mounted = false;
       callback.current.registerLiveText?.(null);
       window.removeEventListener(VOICE_PREF_EVENT, preferences);
-      document.removeEventListener("visibilitychange", visibility);
       bargeIn.current?.stop();
       bargeIn.current = null;
       controller.stop();
@@ -141,7 +135,10 @@ export default function WakeListener(props: Props) {
   }, [snapshot.phase, snapshot.enabled, props.blocked]);
   useEffect(() => {
     if (props.blocked) {
-      engine.current?.stop("Escuta desligada durante outra operação.");
+      // File/preference surfaces may disable the control, but only the user
+      // may turn off the explicitly enabled Gemini infinite-listening session.
+      if (engine.current instanceof VoiceController)
+        engine.current.stop("Escuta desligada durante outra operação.");
       setConsent(false);
     }
   }, [props.blocked]);

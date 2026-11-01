@@ -1,0 +1,38 @@
+name: Gemini Live persistence regression
+on:
+  push:
+    branches:
+      - fix/gemini-live-persistent-audio-toggle-20261101
+    paths:
+      - 'app/components/JarvisExperience.tsx'
+      - 'app/components/WakeListener.tsx'
+      - 'lib/voice/gemini-audio.ts'
+      - 'lib/voice/gemini-live-adapter.ts'
+      - 'lib/voice/voice-controller.ts'
+      - 'tests/gemini-live.test.mjs'
+      - '.github/workflows/gemini-live-persistent-audio.yml'
+  pull_request:
+    branches:
+      - integration/gemini-live-on-approved-kiro-20261101
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Gemini Live lifecycle regression
+        run: node --test tests/gemini-live.test.mjs tests/wake-listener.test.mjs
+      - name: Full regression suite (baseline diagnostic)
+        run: npm test
+        continue-on-error: true
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Next.js production build
+        run: npm run build
