@@ -5,7 +5,6 @@ import { emitSpeechProgress } from "../holo/speech-progress";
 import type { SpeechOutput, VoicePreferences } from "./voice-types";
 import { readVoicePreferences, selectVoice } from "./voice-preferences";
 import { NeuralSpeechOutput } from "./neural-speech-output";
-import { WorkerSpeechOutput } from "./worker-speech-output";
 export interface SpeechAdapter {
   getVoices(): SpeechSynthesisVoice[];
   speak(utterance: SpeechSynthesisUtterance): void;
@@ -255,14 +254,16 @@ export class BrowserSpeechOutput implements SpeechOutput {
     });
   }
 }
-let manager: WorkerSpeechOutput | null = null;
 let browserManager: BrowserSpeechOutput | null = null;
 let neuralManager: NeuralSpeechOutput | null = null;
 
-/** The paired Windows VoiceStudio is the approved primary Jarvis voice. */
-export function getVoiceManager(): WorkerSpeechOutput {
-  if (!manager) manager = new WorkerSpeechOutput();
-  return manager;
+/**
+ * Use the voice explicitly selected in this browser (for example Microsoft
+ * Daniel pt-BR). The VoiceStudio worker remains an optional separate feature;
+ * normal Jarvis replies must not depend on a Windows worker being online.
+ */
+export function getVoiceManager(): BrowserSpeechOutput {
+  return getBrowserVoiceManager();
 }
 
 function getBrowserVoiceManager(): BrowserSpeechOutput {
