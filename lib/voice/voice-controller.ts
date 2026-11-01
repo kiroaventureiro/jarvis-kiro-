@@ -14,6 +14,7 @@ export type VoiceSnapshot = {
   phase: VoicePhase;
   enabled: boolean;
   microphoneActive: boolean;
+  connected?: boolean;
   message: string;
 };
 type Options = {
