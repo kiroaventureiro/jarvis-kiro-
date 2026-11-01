@@ -159,7 +159,8 @@ export class GeminiLiveVoiceAdapter {
           catch { this.reconnect(); }
         }).catch(() => { throw new Error("Gemini Live · microfone/AudioWorklet indisponível. Verifique permissões e use Chrome/Edge no computador."); });
         if (!this.sessionActive || connection !== this.connection) { this.audio.pauseCapture(); return; }
-        this.audioStarted = true;
+        this.audioStarted = this.enabled;
+        if (!this.enabled) this.audio.pauseCapture();
       }
       const ai = new GoogleGenAI({ apiKey: token.token, httpOptions: { apiVersion: "v1beta" } });
       const session = await ai.live.connect({
