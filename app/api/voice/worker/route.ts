@@ -89,6 +89,10 @@ export async function POST(request: Request) {
       return json({ ok: true });
     }
     if (action === "claim") {
+      // Every successful poll is proof the local worker is alive, even if idle.
+      // Compatible with already-running older worker scripts.
+      await db("jarvis_voice_worker_devices?id=eq." + encodeURIComponent(deviceId),
+        "PATCH", { last_seen_at: new Date().toISOString() });
       // A stopped worker must not cause expired requests to block new speech.
       // Older jobs are marked failed and are never sent for synthesis.
       // Also retire abandoned processing jobs after the local synthesis
