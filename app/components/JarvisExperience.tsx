@@ -1033,15 +1033,11 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
       if (success) setDraft("");
       return;
     }
-    if (geminiRequested && !workspace.files.length) {
-      if (!liveText.current?.(text)) setError("Gemini Live não está pronto. Ative a sessão de voz; nenhuma síntese alternativa será usada.");
-      else setDraft("");
-      return;
-    }
-    if (!workspace.files.length && liveText.current?.(text)) {
+    if (geminiRequested && !workspace.files.length && liveText.current?.(text)) {
       setDraft("");
       return;
     }
+    // Live unavailable: preserve the Jarvis TEXT path, never select another audio engine.
     if (connected || peer.current) stop();
     fileSpeech.current?.abort();
     fileSpeech.current = null;
@@ -1054,13 +1050,13 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
     const assistantId = crypto.randomUUID();
     setMessages((items) => [...items, { id: userId, role: "user", text }]);
     setDraft("");
-    setError("");
+    setError(geminiRequested ? "Gemini Live não conectado · resposta somente por texto · TTS alternativo bloqueado." : "");
     setState("processing");
     lastUserText.current = text;
     holoSession.close();
     try {
       const voiceFirst =
-        desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
+        desktopVoice && !geminiRequested && !muteRef.current && readVoicePreferences().volume > 0;
       const local = await conversationalCodexApproval(text) || localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexStatus(text) || conversationalAppHandoff(text) || await conversationalCodexDraft(text);
       let generatedForThisResponse=false;
       const result =
@@ -1111,6 +1107,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
       if (visual) holoSession.present(visual);
       if (
         desktopVoice &&
+        !geminiRequested &&
         !muteRef.current &&
         readVoicePreferences().volume > 0
       ) {

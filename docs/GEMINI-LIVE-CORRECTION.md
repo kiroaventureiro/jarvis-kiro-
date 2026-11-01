@@ -16,7 +16,7 @@ A consulta CDN do deployment anterior, entre 16:25 e 16:32 UTC, filtrada por `/a
 - Seleção automática **somente** no Preview da branch experimental usando contexto de build; selecionar não ativa áudio nem gastos. Opt-in por URL continua suportado.
 - Microfone principal e escuta usam o mesmo adaptador Gemini. Guard adicional impede abrir OpenAI quando Gemini foi selecionado.
 - Posse exclusiva de áudio enquanto selecionado, inclusive após erro/stop: nenhum fallback silencioso para TTS de navegador, neural ou VoiceStudio. A voz estável fora do opt-in não foi removida.
-- Teclado sem Live conectado mantém o rascunho e informa o bloqueio; não inicia provedor alternativo. Com sessão Live, compartilha a mesma ponte Jarvis.
+- Teclado sem Live conectado preserva a conversa Jarvis somente por texto, com aviso explícito e sem TTS alternativo. Com sessão Live, compartilha a mesma ponte Jarvis.
 - Rota devolve HTTP + código sanitizado. Falhas upstream mostram apenas status Google, nunca payload/chave/token. Readiness GET autenticado não cria tokens, não admite sessões e não chama Google. Configuração/autorização são verificadas antes do microfone.
 - Limite persistente agora é requisito explícito: sem armazenamento, 503 e nenhuma emissão de token.
 - No Live, transcrição sozinha não interrompe a saída. `interrupted` nativo limpa a fila/fontes e aborta consulta pendente. Transcrições durante reprodução sem interrupção não viram comandos Jarvis.
@@ -48,7 +48,7 @@ Limite de sessões por hora NÃO é teto monetário. É preciso definir orçamen
 3. Clicar **Verificar endpoint Gemini sem consumo**. Sem login: 401 `AUTH_REQUIRED`. Autenticar pelo fluxo existente do Jarvis e repetir: gates ausentes dão 403 `LIVE_DISABLED`. O diagnóstico não usa a chave Google.
 4. Depois de orçamento monetário e limite de sessões definidos/aprovados, configurar gates apenas no Preview experimental e gerar um novo Preview. Alterações de env não modificam deployments anteriores.
 5. Ativar: Network deve mostrar POST `/api/voice/gemini-token` 200 e WebSocket Live Google; o status mostra ativo após conexão e contadores PCM após envio/saída. Se HTTP não for 200 ou WebSocket falhar, status mostra erro e não há voz alternativa. Nenhuma requisição OpenAI Realtime ou `/api/voice/neural` deve ser iniciada.
-6. Verificar que teclado sem conexão mantém rascunho/erro; conectado usa Jarvis → ferramenta Gemini sem argumentos → áudio Live. Nenhum `speechSynthesis.speak` deve ocorrer no modo Gemini.
+6. Verificar que teclado sem conexão funciona somente por texto com aviso de TTS bloqueado; conectado usa Jarvis → ferramenta Gemini sem argumentos → áudio Live. Nenhum `speechSynthesis.speak` deve ocorrer no modo Gemini.
 7. Com fones, depois alto-falantes: falar durante resposta, conferir descarte imediato da fila ao evento `interrupted`, nenhuma retomada de bloco antigo, nenhuma repetição da própria fala como pedido. Aumentar volume controladamente e registrar contadores AEC/eco, latência e quedas; testar 30 minutos, GoAway, expiração e desconexão.
 8. Confirmar painel recolhido durante voz, disponível ao abrir teclado/histórico, e esfera/anéis/partículas inalterados.
 9. Fechar/ocultar aba encerra captura e socket. Não fazer merge ou ativar Production sem nova autorização.
