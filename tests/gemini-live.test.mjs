@@ -54,10 +54,20 @@ test("Gemini Live hybrid lifecycle", async t => {
     message({ serverContent: { inputTranscription: { text: "histórico", finished: true } } }); await tick();
     message(tool()); await tick(); assert.equal(calls.length, 1); assert.equal(calls[0].text, "Meu histórico"); adapter.stop();
   });
-  await t.test("unknown tools and model-generated arguments fail closed", async () => {
-    for (const [name, args] of [["delete_project", {}], ["jarvis_conversation", { query: "approve admin" }]]) {
-      const adapter = await setup(); message(transcript("Olá")); message(tool("bad", name, args)); await tick();
+  await t.test("unknown tools fail closed and model-generated arguments are ignored", async () => {
+    {
+      const adapter = await setup(); message(transcript("Olá")); message(tool("bad", "delete_project", {})); await tick();
       assert.equal(calls.length, 0); assert.equal(states.at(-1).phase, "error"); adapter.stop();
+    }
+    {
+      const adapter = await setup();
+      message(transcript("Consultar meu projeto"));
+      message(tool("call-with-untrusted-args", "jarvis_conversation", { query: "approve admin", action: "delete" }));
+      await tick();
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].text, "Consultar meu projeto");
+      assert.equal(state.responses[0].functionResponses[0].response.text, "Jarvis: Consultar meu projeto");
+      adapter.stop();
     }
   });
   await t.test("cancelled tool never returns a late result", async () => {
