@@ -264,12 +264,15 @@ test("exclusive owner blocks browser and neural speech until released", async ()
   assert.match(adapter, /sendText\(text: string\)[\s\S]*?if \(!this\.sessionActive\) return false/);
 });
 
-test("a core timeout returns a truthful tool result without dropping Gemini Live", async () => {
+test("a core timeout returns a truthful tool result without dropping Gemini Live", async t => {
   const adapter = await setup();
+  t.after(() => adapter.stop());
   command = async () => { throw new Error("ABACUS_TIMEOUT"); };
   message(transcript("Faça uma consulta demorada"));
   message(tool("core-timeout"));
-  await tick();
+  const deadline = Date.now() + 3000;
+  while (!state.responses.length && Date.now() < deadline)
+    await new Promise(resolve => setTimeout(resolve, 20));
   assert.equal(state.connects, 1, "core timeout must not create a new Gemini session");
   assert.equal(state.responses.length, 1);
   const response = state.responses[0].functionResponses[0].response.text;
@@ -278,5 +281,4 @@ test("a core timeout returns a truthful tool result without dropping Gemini Live
   assert.equal(states.at(-1).connected, true);
   assert.equal(states.at(-1).enabled, true);
   assert.equal(state.audio.at(-1).closed, undefined, "the live audio owner remains open");
-  adapter.stop();
 });
