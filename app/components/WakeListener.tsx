@@ -112,18 +112,12 @@ export default function WakeListener(props: Props) {
     const preferences = () => { if (controller instanceof GeminiLiveVoiceAdapter) controller.updateVolume(); };
     window.addEventListener(VOICE_PREF_EVENT, preferences);
     props.registerStop(() => controller.stop());
-    const visibility = () => {
-      if (document.hidden) {
-        bargeIn.current?.stop();
-        controller.stop("Escuta desligada porque a página ficou oculta.");
-      }
-    };
-    document.addEventListener("visibilitychange", visibility);
+    // Hiding a preferences panel or switching document visibility must not
+    // own the lifetime of the user's explicitly enabled Gemini session.
     return () => {
       mounted = false;
       callback.current.registerLiveText?.(null);
       window.removeEventListener(VOICE_PREF_EVENT, preferences);
-      document.removeEventListener("visibilitychange", visibility);
       bargeIn.current?.stop();
       bargeIn.current = null;
       controller.stop();
