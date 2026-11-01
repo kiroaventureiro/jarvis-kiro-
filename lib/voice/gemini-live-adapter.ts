@@ -175,7 +175,9 @@ export class GeminiLiveVoiceAdapter {
       }).catch(() => { throw new Error("Gemini Live · falha no WebSocket Google. Verifique modelo, quota e token; TTS alternativo bloqueado."); });
       if (!this.sessionActive || connection !== this.connection) { session.close(); return; }
       this.session = session; this.ready = true;
-      this.updateVolume(); this.emit("waiting", "Gemini Live ativo · entrada PCM16 / saída PCM24 · TTS bloqueado");
+      this.updateVolume();
+      if (this.enabled && !this.audioStarted) void this.startCapture();
+      else this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · entrada PCM16 / saída PCM24 · TTS bloqueado" : "Gemini conectado · escuta infinita desligada");
       this.later(() => { this.attempts = 0; }, 30000);
       this.later(() => this.reconnect(), Math.max(1000, Date.parse(token.expiresAt) - Date.now() - 30000));
     } catch (error) {
