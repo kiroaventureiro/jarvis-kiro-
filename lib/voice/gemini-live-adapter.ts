@@ -193,8 +193,11 @@ export class GeminiLiveVoiceAdapter {
       }
       for (const call of message.toolCall?.functionCalls || []) {
         if (!call.id || this.seen.has(call.id)) continue;
-        if (call.name !== GEMINI_JARVIS_TOOL || Object.keys(call.args || {}).length || this.pending || this.usedTurn)
-          throw new Error("Chamada Gemini bloqueada: ferramenta ou argumentos não autorizados.");
+        // Gemini may emit optional model-generated arguments even for an empty schema.
+        // They are deliberately ignored: only the original user transcript is sent
+        // to the Jarvis core, so generated arguments can never authorize an action.
+        if (call.name !== GEMINI_JARVIS_TOOL || this.pending || this.usedTurn)
+          throw new Error("Chamada Gemini bloqueada: ferramenta não autorizada ou turno duplicado.");
         this.seen.add(call.id);
         if (this.seen.size > 1000) throw new Error("Limite da sessão experimental atingido.");
         this.pending = call;
