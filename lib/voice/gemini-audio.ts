@@ -7,6 +7,7 @@ export class GeminiAudio {
   private sources = new Set<AudioBufferSourceNode>();
   private playbackQueue: string[] = [];
   private scheduling = false;
+  private drainTimer: ReturnType<typeof setTimeout> | null = null;
   private epoch = 0;
   onDrained = () => {};
   onEchoEvidence = (_frames: number, _aec: boolean) => {};
@@ -19,6 +20,9 @@ export class GeminiAudio {
       this.context = context;
       this.gain = context.createGain();
       this.gain.connect(context.destination);
+      context.addEventListener?.("statechange", () => {
+        if (context.state === "running") this.scheduleNext();
+      });
     }
     await context.resume();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: {
@@ -72,6 +76,8 @@ export class GeminiAudio {
    */
   play(data: string) {
     if (!this.context || !this.gain || this.context.state === "closed") return;
+    if (this.drainTimer) clearTimeout(this.drainTimer);
+    this.drainTimer = null;
     this.playbackQueue.push(data);
     this.scheduleNext();
   }
@@ -105,7 +111,13 @@ export class GeminiAudio {
       source.onended = () => {
         this.sources.delete(source);
         if (this.playbackQueue.length) this.scheduleNext();
-        else if (!this.sources.size) this.onDrained();
+        else if (!this.sources.size) {
+          if (this.drainTimer) clearTimeout(this.drainTimer);
+          this.drainTimer = setTimeout(() => {
+            this.drainTimer = null;
+            if (!this.sources.size && !this.playbackQueue.length) this.onDrained();
+          }, 300);
+        }
       };
       source.start(context.currentTime + 0.01);
     } catch (error) {
@@ -116,6 +128,8 @@ export class GeminiAudio {
     }
   }
   interrupt() {
+    if (this.drainTimer) clearTimeout(this.drainTimer);
+    this.drainTimer = null;
     this.playbackQueue = [];
     for (const source of this.sources) { source.onended = null; source.stop(); source.disconnect(); }
     this.sources.clear();
