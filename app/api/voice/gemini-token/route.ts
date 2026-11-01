@@ -40,7 +40,6 @@ function failure(code: string, error: string, status: number) {
 }
 async function checkAccess(request: Request, requireOrigin = true) {
   if (!requestOriginAllowed(request, undefined, requireOrigin)) return failure("ORIGIN_DENIED", "Origem não autorizada.", 403);
-  if (process.env.VERCEL_ENV === "production") return failure("PRODUCTION_BLOCKED", "Experimento indisponível em produção.", 403);
   if (!(await authorized())) return failure("AUTH_REQUIRED", "Entre na área privada para usar Gemini Live.", 401);
   if (process.env.JARVIS_GEMINI_LIVE_ENABLED !== "true") return failure("LIVE_DISABLED", "JARVIS_GEMINI_LIVE_ENABLED não está habilitado no servidor.", 403);
   if (!process.env.GEMINI_API_KEY) return failure("KEY_MISSING", "GEMINI_API_KEY indisponível neste deployment.", 503);
