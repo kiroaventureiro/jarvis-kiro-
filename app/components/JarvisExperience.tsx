@@ -1201,9 +1201,9 @@ export default function JarvisExperience() {
           stop();
         }
       }}
-      aria-label="Jarvis: solte arquivos em qualquer parte da tela"
+      aria-label="Jarvis Kiro: solte arquivos em qualquer parte da tela"
     >
-      <h1 className="sr-only">Jarvis</h1>
+      <h1 className="sr-only">Jarvis Kiro</h1>
       <HologramBackdrop />
       {dragging ? (
         <div className="drop-hologram" role="status">
@@ -1229,7 +1229,7 @@ export default function JarvisExperience() {
         <Link
           href="/"
           className="refined-script-wordmark"
-          aria-label="Jarvis"
+          aria-label="Jarvis Kiro"
           style={{
             fontFamily: 'Georgia, "Times New Roman", serif',
             fontSize: "clamp(1.65rem, 2.8vw, 2.1rem)",
@@ -1246,7 +1246,7 @@ export default function JarvisExperience() {
             textShadow: "0 0 12px rgba(218,232,255,0.22)",
           }}
         >
-          Jarvis
+          Jarvis Kiro
         </Link>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginInlineStart: 0, whiteSpace: "nowrap", flexShrink: 0 }}>
           <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: state === "error" || workspace.phase === "error" ? "#f28f8f" : state === "processing" || workspace.busy ? "#c4b5fd" : state === "listening" || workspace.recording || voiceSnapshot.phase === "command" ? "#59ddf6" : state === "responding" || voiceSnapshot.phase === "speaking" ? "#78ead8" : "#96adbf", boxShadow: "0 0 9px currentColor", color: "#8cdbf2" }} />
