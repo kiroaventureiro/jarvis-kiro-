@@ -16,12 +16,13 @@ export class GeminiAudio {
     const epoch = ++this.epoch;
     let context = this.context;
     if (!context || context.state === "closed") {
-      context = new AudioContext({ sampleRate: 16000 });
-      this.context = context;
-      this.gain = context.createGain();
-      this.gain.connect(context.destination);
-      context.addEventListener?.("statechange", () => {
-        if (context.state === "running") this.scheduleNext();
+      const createdContext = new AudioContext({ sampleRate: 16000 });
+      context = createdContext;
+      this.context = createdContext;
+      this.gain = createdContext.createGain();
+      this.gain.connect(createdContext.destination);
+      createdContext.addEventListener("statechange", () => {
+        if (createdContext.state === "running") this.scheduleNext();
       });
     }
     await context.resume();
