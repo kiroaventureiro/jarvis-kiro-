@@ -54,6 +54,7 @@ test("token endpoint enforces security before contacting Google", async t => {
     assert.ok(Date.parse(c.expireTime) - now <= 1801000);
     assert.equal(c.liveConnectConstraints.config.sessionResumption.handle, "resume-opaque");
     assert.deepEqual(c.liveConnectConstraints.config.responseModalities, ["AUDIO"]);
+    assert.equal(c.liveConnectConstraints.config.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, "Charon");
     assert.equal(c.liveConnectConstraints.config.tools[0].functionDeclarations[0].name, "jarvis_conversation");
     assert.deepEqual(c.liveConnectConstraints.config.tools[0].functionDeclarations[0].parameters.properties, {});
   });
