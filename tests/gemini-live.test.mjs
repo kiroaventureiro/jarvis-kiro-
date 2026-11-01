@@ -8,7 +8,7 @@ const compile = (file, replacements = {}) => {
   for (const [name, value] of Object.entries(replacements)) code = code.replace(new RegExp(`import[^;]+from "${name}";`, "g"), value);
   return import(`data:text/javascript;base64,${Buffer.from(code).toString("base64")}`);
 };
-const tick = async () => { for (let i = 0; i < 15; i++) await Promise.resolve(); };
+const tick = async () => { for (let i = 0; i < 15; i++) await Promise.resolve(); await new Promise(resolve => setTimeout(resolve, 130)); };
 const state = { audio: [], callbacks: null, responses: [], inputs: [], connects: 0 };
 globalThis.__geminiTest = state;
 const { GeminiLiveVoiceAdapter } = await compile("lib/voice/gemini-live-adapter.ts", {
@@ -223,10 +223,10 @@ test("exclusive owner blocks browser and neural speech until released", async ()
   assert.match(parent, /shown.length && !holoSession.current && \(typing \|\| history\)/);
   const wake = fs.readFileSync("app/components/WakeListener.tsx", "utf8");
   assert.ok(!wake.includes('const experimental = new URLSearchParams'));
-  assert.doesNotMatch(wake, /document\.hidden[\\s\\S]{0,180}controller\.stop/);
+  assert.doesNotMatch(wake, /document\.hidden[\s\S]{0,180}controller\.stop/);
   assert.match(wake, /engine\.current\?\.disableListening\(\)/);
   const adapter = fs.readFileSync("lib/voice/gemini-live-adapter.ts", "utf8");
   assert.match(adapter, /sessionActive/);
   assert.match(adapter, /connected: this\.sessionActive && this\.ready/);
-  assert.match(adapter, /sendText\(text: string\)[\\s\\S]*?if \(!this\.sessionActive\) return false/);
+  assert.match(adapter, /sendText\(text: string\)[\s\S]*?if \(!this\.sessionActive\) return false/);
 });
