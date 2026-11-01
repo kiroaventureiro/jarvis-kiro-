@@ -85,12 +85,16 @@ export class WorkerSpeechOutput implements SpeechOutput {
         if (controller.signal.aborted || generation !== this.generation)
           throw new DOMException("Cancelado", "AbortError");
         await new Promise<void>((resolve, reject) => {
-          const timer = window.setTimeout(resolve, 2000);
-          const onAbort = () => {
+          const finish = (error?: Error) => {
             window.clearTimeout(timer);
-            reject(new DOMException("Cancelado", "AbortError"));
+            controller.signal.removeEventListener("abort", onAbort);
+            error ? reject(error) : resolve();
           };
-          controller.signal.addEventListener("abort", onAbort, { once: true });
+          const timer = window.setTimeout(() => finish(), 2000);
+          const onAbort = () =>
+            finish(new DOMException("Cancelado", "AbortError"));
+          if (controller.signal.aborted) onAbort();
+          else controller.signal.addEventListener("abort", onAbort, { once: true });
         });
         const response = await fetch("/api/voice/worker?id=" + encodeURIComponent(job.id), {
           credentials: "same-origin", cache: "no-store", signal: controller.signal,
