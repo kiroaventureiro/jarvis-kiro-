@@ -11,6 +11,8 @@ test("Abacus key remains server-only and requests are capped", () => {
   assert.match(transport, /routellm\.abacus\.ai\/v1\/chat\/completions/);
   assert.match(protocol, /max_tokens:\s*350/);
   assert.match(transport, /AbortController/);
+  assert.match(transport, /timeoutMs \?\? 55000/);
+  assert.match(api, /export const maxDuration = 60/);
   assert.doesNotMatch(client, /NEXT_PUBLIC_ABACUS/);
 });
 test("Abacus endpoint retains authentication and gateway rejects missing keys and oversized text", () => {
