@@ -9,6 +9,7 @@ import {
   parseWake,
   CommandDeduplicator,
   localVoiceReply,
+  normalizeSpeech,
 } from "./wake-word-policy";
 export type VoiceSnapshot = {
   phase: VoicePhase;
@@ -94,6 +95,41 @@ export class VoiceController {
         rec.abort ? rec.abort() : rec.stop();
       } catch {}
     }
+  }
+  /** Recognize only explicit interruption phrases while speech synthesis is playing. */
+  private listenForInterruption() {
+    if (!this.enabled || !this.speechPending || !this.options.recognition) return;
+    let rec: RecognitionDriver;
+    try { rec = new this.options.recognition(); } catch { return; }
+    this.rec = rec;
+    rec.lang = "pt-BR";
+    rec.continuous = true;
+    rec.interimResults = true;
+    const interrupt = (spoken: string) => {
+      const phrase = normalizeSpeech(spoken);
+      if (!/^(?:(?:jarvis|jarvis kiro) )?(?:pare|para|parar|silencio|cala a boca|pare de falar|para de falar|chega|cancele|cancelar)(?: agora| por favor)?$/.test(phrase)) return;
+      this.skipSpeech = true;
+      this.options.speech.cancel();
+      this.pause();
+      this.emit("resuming", "Fala interrompida. Retomando a escuta…");
+    };
+    rec.onresult = (event) => {
+      if (this.rec !== rec || !this.speechPending) return;
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0]?.transcript?.trim();
+        if (transcript) interrupt(transcript);
+      }
+    };
+    rec.onerror = () => { if (this.rec === rec) this.pause(); };
+    rec.onend = () => { if (this.rec === rec) this.pause(); };
+    try { rec.start(); } catch { this.pause(); }
+  }
+  interruptSpeech() {
+    if (!this.speechPending) return;
+    this.skipSpeech = true;
+    this.options.speech.cancel();
+    this.pause();
+    this.emit("resuming", "Fala interrompida. Retomando a escuta…");
   }
   audioMuted() {
     if (this.phase === "speaking") {
@@ -217,14 +253,13 @@ export class VoiceController {
         const text = result[0]?.transcript?.trim() || "";
         if (!text) continue;
         this.retries = 0;
-        const parsed = parseWake(text, this.now() < this.armedUntil);
-        if (!parsed.accepted) {
-          this.emit("waiting", "Microfone ativo · aguardando Jarvis.");
-          continue;
-        }
-        if (!this.dedupe.accept(parsed.command, this.now())) continue;
+        // With listening explicitly enabled by the user, every final utterance
+        // is a potential request. The assistant name is optional.
+        const parsed = parseWake(text, true);
+        const command = parsed.command.trim();
+        if (!command || !this.dedupe.accept(command, this.now())) continue;
         this.armedUntil = this.now() + 60000;
-        void this.run(parsed.command);
+        void this.run(command);
         break;
       }
     };
@@ -298,6 +333,7 @@ export class VoiceController {
         this.emit("speaking", "Jarvis respondendo · reconhecimento pausado.");
         this.skipSpeech = false;
         this.speechPending = true;
+        this.listenForInterruption();
         try {
           await this.options.speech.speak(prepared.text, abort.signal, {
             scene: prepared.visual,
@@ -309,6 +345,7 @@ export class VoiceController {
             this.options.onSpeechUnavailable?.();
           if (!this.skipSpeech && !stopped) throw error;
         } finally {
+          this.pause();
           if (epoch === this.epoch) this.speechPending = false;
         }
       } else {

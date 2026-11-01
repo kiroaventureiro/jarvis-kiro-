@@ -23,7 +23,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { connectorResultLink } from "../../lib/connectors/result";
 import JarvisNavigation from "./JarvisNavigation";
-import HolographicCore, { CosmicSystems } from "./CosmicScene";
+
+import RefinedJarvisCore from "./RefinedJarvisCore";
 import ArrivalBriefing from "./ArrivalBriefing";
 import { arrivalBriefingIntent } from "../../lib/voice/arrival-intent";
 import HologramBackdrop from "./HologramBackdrop";
@@ -801,6 +802,7 @@ export default function JarvisExperience() {
     }
   }
   async function microphone() {
+    window.dispatchEvent(new Event("jk-arrival-stop"));
     wakeStop.current();
     if (fileSpeech.current) {
       fileSpeech.current.abort();
@@ -847,6 +849,7 @@ export default function JarvisExperience() {
       setTyping(true);
       reply="Preparei a opção de anexar arquivos. Para selecionar um arquivo local, o navegador pode exigir um clique.";
     } else {
+      window.dispatchEvent(new Event("jk-arrival-stop"));
       getVoiceManager().cancel();
       reply="Interrompi a fala atual.";
     }
@@ -1216,14 +1219,41 @@ export default function JarvisExperience() {
         onRemove={workspace.remove}
         onCancel={workspace.cancel}
       />
-      <header className="stage-header">
-        <Link href="/" className="wordmark" aria-label="Jarvis Kiro">
-          JARVIS <span>KIRO</span>
+      <header className="stage-header" style={{ borderBottom: "none", boxShadow: "none" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "flex-start", gap: 10, flex: "0 0 auto", minWidth: 0, maxWidth: "calc(100% - 48px)" }}>
+        <Link
+          href="/"
+          className="refined-script-wordmark"
+          aria-label="Jarvis Kiro"
+          style={{
+            fontFamily: 'Georgia, "Times New Roman", serif',
+            fontSize: "clamp(1.65rem, 2.8vw, 2.1rem)",
+            display: "inline-block",
+            lineHeight: 1.1,
+            flexShrink: 0,
+            fontStyle: "italic",
+            textDecoration: "none",
+            borderBottom: "none",
+            fontWeight: 500,
+            letterSpacing: "-0.035em",
+            textTransform: "none",
+            color: "#f7f8fc",
+            textShadow: "0 0 12px rgba(218,232,255,0.22)",
+          }}
+        >
+          Jarvis Kiro
         </Link>
+        <div role="status" aria-live="polite" aria-atomic="true" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginInlineStart: 0, whiteSpace: "nowrap", flexShrink: 0 }}>
+          <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: state === "error" || workspace.phase === "error" ? "#f28f8f" : state === "processing" || workspace.busy ? "#c4b5fd" : state === "listening" || workspace.recording || voiceSnapshot.phase === "command" ? "#59ddf6" : state === "responding" || voiceSnapshot.phase === "speaking" ? "#78ead8" : "#96adbf", boxShadow: "0 0 9px currentColor", color: "#8cdbf2" }} />
+          <span style={{ color: "#b9d3e4", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.09em" }}>
+            {workspace.phase === "error" || state === "error" ? "CONEXÃO INDISPONÍVEL" : workspace.busy || state === "processing" || voiceSnapshot.phase === "processing" ? "PENSANDO" : workspace.recording || state === "listening" || voiceSnapshot.phase === "command" ? "OUVINDO" : state === "responding" || voiceSnapshot.phase === "speaking" ? "RESPONDENDO" : state === "connecting" ? "CONECTANDO" : "EM ESPERA"}
+          </span>
+        </div>
+        </div>
         <JarvisNavigation />
       </header>
       <section id="cosmic-home" className="presence" aria-label="Presença do Jarvis">
-        <HolographicCore
+        <RefinedJarvisCore
           phase={corePhase(
             workspace.phase === "error" ? "error" : state,
             voiceSnapshot.phase,
@@ -1236,7 +1266,7 @@ export default function JarvisExperience() {
           muted={muted}
           onVisualMode={setAudioVisual}
         />
-        <div className="state-indicator" role="status" aria-live="polite">
+        <div className="state-indicator sr-only" aria-hidden="true">
           <span className={"signal " + (connected ? "online" : "")} />
           {workspace.phase === "error"
             ? "Análise não concluída"
@@ -1281,13 +1311,13 @@ export default function JarvisExperience() {
           }))}
       />
       {state === "processing" || workspace.busy ? (
-        <div className="holo-task-state" role="status">
+        <div className="holo-task-state sr-only" role="status">
           <span />{" "}
           {workspace.busy ? "Analisando arquivos" : "Organizando resposta"} ·
           aguarde o resultado
         </div>
       ) : null}
-      {shown.length && !holoSession.current ? (
+      {shown.length && !holoSession.current && (typing || history) ? (
         <section
           className={"response-hud glass " + (expanded ? "expanded" : "")}
           aria-label="Respostas do Jarvis"
@@ -1648,7 +1678,7 @@ export default function JarvisExperience() {
           ) : null}
         </div>
       </div>
-      <CosmicSystems />
+
     </main>
   );
 }

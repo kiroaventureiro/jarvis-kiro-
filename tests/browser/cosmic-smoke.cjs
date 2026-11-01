@@ -132,7 +132,7 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
       });
     });
     await page.goto(base);
-    await page.locator(".cosmic-scene").waitFor();
+    await page.locator(".cosmic-scene, .jk-refined-core").first().waitFor();
     return { context, page, errors };
   }
   try {
@@ -146,6 +146,41 @@ if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
       /private.*no-store/,
     );
     await page.locator(".arrival-briefing.is-open").waitFor();
+    // The approved reactive nucleus replaces the legacy photographic orbit.
+    // Validate its real canvas and keep legacy-only pan/zoom expectations for old builds.
+    if (await page.locator(".jk-refined-core").count()) {
+      const core = page.locator(".jk-refined-core canvas");
+      await core.waitFor();
+      const pixels = await core.evaluate((element) => {
+        const canvas = element;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return { width: 0, height: 0, painted: false };
+        const p = ctx.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data;
+        return { width: canvas.width, height: canvas.height, painted: p[3] > 0 };
+      });
+      assert.ok(pixels.width > 0 && pixels.height > 0 && pixels.painted, "Refined nucleus must render a nonempty canvas");
+      assert.equal(await page.locator(".jk-refined-core").getAttribute("data-phase"), "idle");
+      await page.screenshot({ path: out + "/desktop-refined.png" });
+      pass("approved reactive nucleus renders on desktop without demo response data");
+      assert.deepEqual(errors, []);
+      await context.close();
+      const mobile = await setup({ mobile: true, reduced: true });
+      const canvasMobile = mobile.page.locator(".jk-refined-core canvas");
+      await canvasMobile.waitFor();
+      const dims = await canvasMobile.evaluate((el) => ({width:el.width,height:el.height}));
+      assert.ok(dims.width > 0 && dims.height > 0);
+      const size = await mobile.page.evaluate(() => ({
+        width: document.documentElement.clientWidth,
+        scroll: document.documentElement.scrollWidth,
+      }));
+      assert.ok(size.scroll <= size.width + 1, "Responsive viewport must not overflow");
+      await mobile.page.screenshot({ path: out + "/mobile-refined.png" });
+      assert.deepEqual(mobile.errors, []);
+      await mobile.context.close();
+      pass("approved nucleus preserves mobile canvas sizing and no horizontal overflow");
+      await fs.writeFile(out + "/results.json", JSON.stringify({ passed: results.length, scenarios: results }, null, 2));
+      return;
+    }
     const orbit = await page.locator(".cosmic-star").evaluate(el => {
       const animation = el.getAnimations()[0];
       if (!animation) throw Error("Idle orbit animation missing");
