@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
 import vm from "node:vm";
 import ts from "typescript";
 const source = (p) => readFileSync(new URL("../" + p, import.meta.url), "utf8");
@@ -27,22 +26,15 @@ test("bulletin replay recognizes explicit requests and does not intercept ordina
   ])
     assert.equal(exports.arrivalBriefingIntent(text), false, text);
 });
-test("official cosmic image is the exact owner-supplied asset", () => {
-  const data = readFileSync(
-    new URL("../public/cosmic/star-orbiting-black-hole.jpg", import.meta.url),
-  );
-  assert.equal(
-    createHash("sha256").update(data).digest("hex"),
-    "e3a37da394870d8072782e15f8042943729cd199ad69b152427b0a564a42b7b8",
-  );
-  assert.match(
-    source("app/components/JarvisExperience.tsx"),
-    /from "\.\/CosmicScene"/,
-  );
-  assert.doesNotMatch(
-    source("app/components/JarvisExperience.tsx"),
-    /from "\.\/HolographicCore"/,
-  );
+test("approved immersive nucleus is the live home renderer, not the legacy raster scene", () => {
+  const ui = source("app/components/JarvisExperience.tsx");
+  const core = source("app/components/RefinedJarvisCore.tsx");
+  assert.match(ui, /import RefinedJarvisCore from "\.\/RefinedJarvisCore"/);
+  assert.match(ui, /<RefinedJarvisCore/);
+  assert.doesNotMatch(ui, /from "\.\/CosmicScene"/);
+  assert.match(core, /jk-refined-core/);
+  assert.match(core, /requestAnimationFrame/);
+  assert.match(core, /observeAudio/);
 });
 test("arrival uses the authenticated existing endpoint, no chat persistence or new audio service", () => {
   const s = source("app/components/ArrivalBriefing.tsx");
