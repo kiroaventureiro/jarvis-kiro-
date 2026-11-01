@@ -82,6 +82,12 @@ export async function POST(request: Request) {
     }
     const deviceId = await device(request);
     if (!deviceId) return json({ error: "Dispositivo não autorizado" }, 401);
+    if (action === "heartbeat") {
+      // Idle workers must report presence too; a claim is not a heartbeat.
+      await db("jarvis_voice_worker_devices?id=eq." + encodeURIComponent(deviceId),
+        "PATCH", { last_seen_at: new Date().toISOString() });
+      return json({ ok: true });
+    }
     if (action === "claim") {
       // A stopped worker must not cause expired requests to block new speech.
       // Older jobs are marked failed and are never sent for synthesis.
@@ -127,6 +133,13 @@ export async function POST(request: Request) {
       if (!/^voice_[A-Za-z0-9_-]{12,80}$/.test(id) ||
           (status !== "completed" && status !== "failed"))
         return json({ error: "Resultado inválido" }, 400);
+      // Verify ownership before storing any audio: an expired, reclaimed, or
+      // foreign job must not create orphaned WAV data.
+      const owned = await db("jarvis_voice_jobs?id=eq." + encodeURIComponent(id) +
+        "&device_id=eq." + encodeURIComponent(deviceId) +
+        "&status=eq.processing&select=id&limit=1");
+      if (!Array.isArray(owned) || !owned.length)
+        return json({ error: "Tarefa não encontrada" }, 404);
       if (status === "completed") {
         const audio = typeof body.audioBase64 === "string" ? body.audioBase64 : "";
         if (!audio || audio.length > 4000000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(audio))
