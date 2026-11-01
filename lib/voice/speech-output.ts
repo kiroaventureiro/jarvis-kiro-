@@ -1,3 +1,4 @@
+import { assertLegacyAudioAllowed } from "./audio-owner";
 import { spokenExplanation } from "../cognitive/narration";
 import { narrationCoordinator } from "../holo/narration";
 import type { HoloScene } from "../holo/types";
@@ -84,6 +85,7 @@ export class BrowserSpeechOutput implements SpeechOutput {
     signal: AbortSignal,
     options?: { scene?: HoloScene },
   ) {
+    assertLegacyAudioAllowed();
     this.cancel();
     const lease = this.lease;
     this.active = true;
@@ -302,4 +304,12 @@ export function getVoiceStudioCandidate(): NeuralSpeechOutput {
       getBrowserVoiceManager(),
     );
   return voiceStudioCandidate;
+}
+
+/** Cancel every legacy output before Gemini claims the page audio channel. */
+export function cancelLegacyAudio() {
+  officialVoiceManager?.cancel();
+  browserManager?.cancel();
+  neuralManager?.cancel();
+  voiceStudioCandidate?.cancel();
 }
