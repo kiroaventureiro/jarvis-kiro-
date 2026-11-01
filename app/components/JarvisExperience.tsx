@@ -479,22 +479,34 @@ export default function JarvisExperience() {
       peer.current = pc;
       const el = document.createElement("audio");
       el.autoplay = true;
+      el.playsInline = true;
       el.muted = muteRef.current;
+      el.volume = readVoicePreferences().volume;
+      el.style.display = "none";
+      document.body.appendChild(el);
       audio.current = el;
+      const resumePlayback = () => {
+        if (attempt !== generation.current || !el.srcObject || el.muted) return;
+        void el.play().catch(() => {
+          if (attempt === generation.current) {
+            unavailableRealtime();
+            setError(
+              "A reprodução de voz foi bloqueada pelo navegador. Ative o áudio novamente.",
+            );
+          }
+        });
+      };
       el.onerror = () => {
         if (attempt === generation.current) unavailableRealtime();
       };
       pc.ontrack = (e) => {
-        el.srcObject = e.streams[0];
-        setRemoteAudio(e.streams[0] || null);
-        el.play().catch(() => {
-          if (attempt === generation.current) {
-            unavailableRealtime();
-            setError(
-              "O navegador bloqueou o áudio. Use o controle de áudio para reproduzir.",
-            );
-          }
-        });
+        if (e.track.kind !== "audio") return;
+        // Some WebRTC implementations deliver a track without a stream.
+        const stream = e.streams[0] || new MediaStream([e.track]);
+        el.srcObject = stream;
+        setRemoteAudio(stream);
+        e.track.addEventListener("unmute", resumePlayback);
+        resumePlayback();
       };
       if (withMicrophone) {
         const stream = await navigator.mediaDevices.getUserMedia({
