@@ -42,6 +42,7 @@ function setup({
 } = {}) {
   let now = 0,
     id = 0;
+  let cancellations = 0;
   const timers = new Map(),
     instances = [],
     states = [],
@@ -49,8 +50,7 @@ function setup({
     replies = [],
     speeches = [],
     calls = [],
-    unavailable = [],
-    cancellations = 0;
+    unavailable = [];
   let resolveSpeech = null;
   class Rec {
     start() {
@@ -172,10 +172,10 @@ test("greeting is local, spoken and recognition pauses until speech ends", async
   assert.equal(t.instances.length, 2);
   assert.equal(t.instances[1].started, true);
   // During TTS, the secondary recognizer accepts only explicit stop phrases.
-  t.instances[1].emit("Jarvis responda a você mesmo");
-  assert.equal(t.users.length, 0);
+  t.instances[1].emit("está tudo bem?");
+  assert.equal(t.calls.length, 0);
   await t.advance(2000);
-  assert.equal(t.instances.length, 1);
+  assert.equal(t.instances.length, 2);
   await t.finish();
   await t.advance(450);
   assert.equal(t.instances.length, 3);
