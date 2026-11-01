@@ -18,7 +18,8 @@ type Options = {
 export class GeminiLiveVoiceAdapter {
   private session: Session | null = null;
   private audio = new GeminiAudio();
-  private enabled = false;
+  private enabled = false; // User-controlled infinite listening toggle.
+  private sessionActive = false; // Conversation transport survives when listening is paused.
   private epoch = 0;
   private connection = 0;
   private handle: string | undefined;
@@ -46,10 +47,10 @@ export class GeminiLiveVoiceAdapter {
   constructor(private options: Options) {
     this.audio.onEchoEvidence = (frames, aec) => { this.echoFrames = frames; this.aec = aec; };
     this.audio.onMicrophoneEnded = () => this.fail("O microfone foi desconectado. Reative a sessão.");
-    this.audio.onDrained = () => { this.playing = false; if (this.enabled) this.emit("waiting", "Gemini Live ativo · entrada PCM16 / saída PCM24 · TTS bloqueado"); };
+    this.audio.onDrained = () => { this.playing = false; if (this.sessionActive) this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Escuta infinita desligada · Gemini continua conectado"); };
   }
   private emit(phase: VoiceSnapshot["phase"], message: string) {
-    this.options.onState({ phase, message, enabled: this.enabled, microphoneActive: this.enabled && this.ready });
+    this.options.onState({ phase, message, enabled: this.enabled, microphoneActive: this.enabled && this.ready, connected: this.sessionActive && this.ready });
   }
   private later(fn: () => void, ms: number) {
     const timer = setTimeout(() => { this.timers.delete(timer); fn(); }, ms);
@@ -89,18 +90,42 @@ export class GeminiLiveVoiceAdapter {
   }
   start() {
     if (this.enabled) return;
-    if (!this.options.desktopAudioAllowed()) { this.fail("Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
-    this.enabled = true; this.attempts = 0;
+    if (!this.options.desktopAudioAllowed()) { this.emit("off", "Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
+    this.enabled = true;
+    this.attempts = 0;
     ++this.epoch;
+    if (this.sessionActive && this.ready) { void this.startCapture(); return; }
+    this.sessionActive = true;
     this.emit("resuming", "Gemini Live selecionado · verificando endpoint…");
     void this.connect();
+  }
+  private async startCapture() {
+    if (!this.enabled || !this.sessionActive || !this.ready || this.audioStarted) return;
+    const connection = this.connection;
+    try {
+      await this.audio.start(data => {
+        if (!this.enabled || !this.sessionActive || !this.ready || connection !== this.connection) return;
+        try { this.session?.sendRealtimeInput({ audio: { data, mimeType: "audio/pcm;rate=16000" } }); this.inputChunks++; }
+        catch { this.reconnect(); }
+      });
+      if (!this.enabled || !this.sessionActive || connection !== this.connection) { this.audio.pauseCapture(); return; }
+      this.audioStarted = true;
+      this.emit("waiting", "Gemini Live conectado · escuta infinita ativa");
+    } catch {
+      if (this.sessionActive && connection === this.connection) {
+        this.enabled = false;
+        this.audio.pauseCapture();
+        this.audioStarted = false;
+        this.emit("off", "Gemini continua conectado; microfone não foi ativado. Use o teclado ou tente ligar a escuta novamente.");
+      }
+    }
   }
   private async connect() {
     const connection = ++this.connection;
     this.ready = false;
     this.provisioning = new AbortController();
     this.later(() => {
-      if (this.enabled && connection === this.connection && !this.ready)
+      if (this.sessionActive && connection === this.connection && !this.ready)
         this.fail("Tempo de conexão esgotado. Reative a sessão.");
     }, 20000);
     try {
@@ -121,15 +146,15 @@ export class GeminiLiveVoiceAdapter {
         };
         throw new Error(`Gemini Live · HTTP ${response.status} · ${code} · ${known[code] || "Falha ao preparar sessão; consulte o diagnóstico do servidor."} TTS alternativo bloqueado.`);
       }
-      if (!this.enabled || connection !== this.connection) return;
+      if (!this.sessionActive || connection !== this.connection) return;
       if (!token.token || Date.parse(token.newSessionExpiresAt) <= Date.now()) throw new Error("Credencial temporária expirada. Reative a sessão.");
-      if (!this.audioStarted) {
+      if (this.enabled && !this.audioStarted) {
         await this.audio.start(data => {
-          if (!this.enabled || !this.ready) return;
+          if (!this.enabled || !this.sessionActive || !this.ready) return;
           try { this.session?.sendRealtimeInput({ audio: { data, mimeType: "audio/pcm;rate=16000" } }); this.inputChunks++; }
           catch { this.reconnect(); }
         }).catch(() => { throw new Error("Gemini Live · microfone/AudioWorklet indisponível. Verifique permissões e use Chrome/Edge no computador."); });
-        if (!this.enabled || connection !== this.connection) { this.audio.close(); return; }
+        if (!this.sessionActive || connection !== this.connection) { this.audio.pauseCapture(); return; }
         this.audioStarted = true;
       }
       const ai = new GoogleGenAI({ apiKey: token.token, httpOptions: { apiVersion: "v1beta" } });
@@ -137,23 +162,23 @@ export class GeminiLiveVoiceAdapter {
         model: token.model,
         config: { sessionResumption: this.handle ? { handle: this.handle } : {} },
         callbacks: {
-          onmessage: message => { if (this.enabled && connection === this.connection) this.message(message); },
+          onmessage: message => { if (this.sessionActive && connection === this.connection) this.message(message); },
           onerror: () => { if (connection === this.connection) this.reconnect(); },
-          onclose: () => { if (this.enabled && connection === this.connection) this.reconnect(); },
+          onclose: () => { if (this.sessionActive && connection === this.connection) this.reconnect(); },
         },
       }).catch(() => { throw new Error("Gemini Live · falha no WebSocket Google. Verifique modelo, quota e token; TTS alternativo bloqueado."); });
-      if (!this.enabled || connection !== this.connection) { session.close(); return; }
+      if (!this.sessionActive || connection !== this.connection) { session.close(); return; }
       this.session = session; this.ready = true;
       this.updateVolume(); this.emit("waiting", "Gemini Live ativo · entrada PCM16 / saída PCM24 · TTS bloqueado");
       this.later(() => { this.attempts = 0; }, 30000);
       this.later(() => this.reconnect(), Math.max(1000, Date.parse(token.expiresAt) - Date.now() - 30000));
     } catch (error) {
-      if (this.enabled && connection === this.connection)
+      if (this.sessionActive && connection === this.connection)
         this.fail(error instanceof Error ? error.message : "Não foi possível conectar Gemini Live.");
     }
   }
   private reconnect() {
-    if (!this.enabled) return;
+    if (!this.sessionActive) return;
     this.connection++; this.ready = false; this.clearTimers(); this.abort?.abort();
     this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false;
     this.audio.interrupt(); this.session?.close(); this.session = null;
@@ -222,7 +247,7 @@ export class GeminiLiveVoiceAdapter {
     const call = this.pending; this.pending = null;
     this.clearTranscriptTimers();
     const text = this.transcript.trim(); this.transcript = ""; this.transcriptReady = false;
-    if (!call || !text) return;
+    if (!call || !text || !this.sessionActive) return;
     this.usedTurn = true;
     this.abort?.abort(); const abort = new AbortController(); this.abort = abort;
     const connection = this.connection;
@@ -230,19 +255,19 @@ export class GeminiLiveVoiceAdapter {
     this.options.onUser(text); this.emit("processing", "Consultando o núcleo Jarvis…");
     try {
       const reply = await this.options.command(text, abort.signal);
-      if (abort.signal.aborted || connection !== this.connection || !this.enabled) return;
+      if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) return;
       this.options.onReply({ ...reply, speechPending: true });
       this.outputAllowed = true;
       this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
       if (reply.navigate) { this.stop(); this.options.navigate(reply.navigate); }
     } catch {
-      if (!abort.signal.aborted && connection === this.connection) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
+      if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
     }
   }
   /** Keyboard shares this session and the same Jarvis callback, not a second TTS. */
   sendText(text: string) {
-    if (!this.enabled) return false;
-    if (!this.ready) { this.emit("error", "Gemini Live não conectado. Reative a sessão; TTS alternativo bloqueado."); return false; }
+    if (!this.sessionActive) return false;
+    if (!this.ready) { this.emit("resuming", "Gemini Live está reconectando. Aguarde a sessão ficar disponível."); return false; }
     if (!text.trim()) return true;
     if (text.length > 1500) { this.fail("Use mensagens de até 1.500 caracteres."); return false; }
     this.abort?.abort(); this.audio.interrupt(); this.outputAllowed = false; this.playing = false;
@@ -253,10 +278,16 @@ export class GeminiLiveVoiceAdapter {
   }
   updateVolume() { this.audio.volume(this.options.volume()); }
   audioMuted() { this.updateVolume(); }
-  suspendForExternal() { this.stop("Sessão Gemini encerrada durante outra operação."); }
-  disableListening() { this.stop(); }
-  stop(message = "Escuta Gemini desligada.") {
-    this.enabled = false; this.epoch++; this.connection++; this.ready = false;
+  suspendForExternal() { this.disableListening(); }
+  disableListening() {
+    if (!this.enabled) return;
+    this.enabled = false;
+    this.audio.pauseCapture();
+    this.audioStarted = false;
+    this.emit("off", this.sessionActive && this.ready ? "Escuta infinita desligada · Gemini continua conectado e responde por texto" : "Escuta infinita desligada · mantendo a conexão Gemini");
+  }
+  stop(message = "Sessão Gemini encerrada.") {
+    this.enabled = false; this.sessionActive = false; this.epoch++; this.connection++; this.ready = false;
     this.clearTimers(); this.clearTranscriptTimers(); this.provisioning?.abort(); this.abort?.abort();
     try { this.session?.sendRealtimeInput({ audioStreamEnd: true }); } catch {}
     this.session?.close(); this.session = null; this.audio.close(); this.audioStarted = false; this.handle = undefined;
