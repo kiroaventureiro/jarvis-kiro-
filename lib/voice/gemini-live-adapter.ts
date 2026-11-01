@@ -295,7 +295,7 @@ export class GeminiLiveVoiceAdapter {
     this.enabled = false;
     this.audio.pauseCapture();
     this.audioStarted = false;
-    this.emit(this.playing ? "speaking" : this.processing ? "processing" : "off", this.sessionActive && this.ready ? "Escuta infinita desligada · Gemini continua conectado e responde por texto" : "Escuta infinita desligada · mantendo a conexão Gemini");
+    this.emit(this.playing || this.outputAllowed ? "speaking" : this.processing ? "processing" : "off", this.sessionActive && this.ready ? "Escuta infinita desligada · Gemini continua conectado e responde por texto" : "Escuta infinita desligada · mantendo a conexão Gemini");
   }
   stop(message = "Sessão Gemini encerrada.") {
     this.enabled = false; this.sessionActive = false; this.epoch++; this.connection++; this.ready = false;
