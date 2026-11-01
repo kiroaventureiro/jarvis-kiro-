@@ -39,6 +39,7 @@ export class GeminiLiveVoiceAdapter {
   private ready = false;
   private audioStarted = false;
   private playing = false;
+  private processing = false;
   private inputChunks = 0;
   private outputChunks = 0;
   private aec = false;
@@ -202,7 +203,7 @@ export class GeminiLiveVoiceAdapter {
       if (message.goAway) { this.reconnect(); return; }
       const content = message.serverContent;
       if (content?.interrupted) {
-        this.playing = false;
+        this.playing = false; this.processing = false;
         this.audio.interrupt(); this.outputAllowed = false; this.abort?.abort(); this.pending = null;
         this.emit("command", "Interrupção detectada · ouvindo…");
       }
@@ -259,16 +260,18 @@ export class GeminiLiveVoiceAdapter {
     this.usedTurn = true;
     this.abort?.abort(); const abort = new AbortController(); this.abort = abort;
     const connection = this.connection;
-    this.outputAllowed = false; this.audio.interrupt();
+    this.outputAllowed = false; this.audio.interrupt(); this.processing = true;
     this.options.onUser(text); this.emit("processing", "Consultando o núcleo Jarvis…");
     try {
       const reply = await this.options.command(text, abort.signal);
-      if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) return;
+      if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) { this.processing = false; return; }
+      this.processing = false;
       this.options.onReply({ ...reply, speechPending: true });
       this.outputAllowed = true;
       this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
       if (reply.navigate) { this.stop(); this.options.navigate(reply.navigate); }
     } catch {
+      this.processing = false;
       if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
     }
   }
@@ -278,7 +281,7 @@ export class GeminiLiveVoiceAdapter {
     if (!this.ready) { this.emit("resuming", "Gemini Live está reconectando. Aguarde a sessão ficar disponível."); return false; }
     if (!text.trim()) return true;
     if (text.length > 1500) { this.fail("Use mensagens de até 1.500 caracteres."); return false; }
-    this.abort?.abort(); this.audio.interrupt(); this.outputAllowed = false; this.playing = false;
+    this.abort?.abort(); this.audio.interrupt(); this.outputAllowed = false; this.playing = false; this.processing = false;
     this.usedTurn = false; this.pending = null;
     this.transcript = text; this.transcriptReady = true;
     this.session?.sendClientContent({ turns: [{ role: "user", parts: [{ text }] }], turnComplete: true });
@@ -292,14 +295,14 @@ export class GeminiLiveVoiceAdapter {
     this.enabled = false;
     this.audio.pauseCapture();
     this.audioStarted = false;
-    this.emit("off", this.sessionActive && this.ready ? "Escuta infinita desligada · Gemini continua conectado e responde por texto" : "Escuta infinita desligada · mantendo a conexão Gemini");
+    this.emit(this.playing ? "speaking" : this.processing ? "processing" : "off", this.sessionActive && this.ready ? "Escuta infinita desligada · Gemini continua conectado e responde por texto" : "Escuta infinita desligada · mantendo a conexão Gemini");
   }
   stop(message = "Sessão Gemini encerrada.") {
     this.enabled = false; this.sessionActive = false; this.epoch++; this.connection++; this.ready = false;
     this.clearTimers(); this.clearTranscriptTimers(); this.provisioning?.abort(); this.abort?.abort();
     try { this.session?.sendRealtimeInput({ audioStreamEnd: true }); } catch {}
     this.session?.close(); this.session = null; this.audio.close(); this.audioStarted = false; this.handle = undefined;
-    this.transcript = ""; this.transcriptReady = false; this.pending = null; this.outputAllowed = false; this.playing = false; this.inputChunks = 0; this.outputChunks = 0; this.usedTurn = false; this.seen.clear();
+    this.transcript = ""; this.transcriptReady = false; this.pending = null; this.outputAllowed = false; this.playing = false; this.processing = false; this.inputChunks = 0; this.outputChunks = 0; this.usedTurn = false; this.seen.clear();
     this.emit("off", message);
   }
   private fail(message: string) { this.options.onSpeechUnavailable(); this.stop(message); this.emit("error", message); }
