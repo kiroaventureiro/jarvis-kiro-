@@ -295,6 +295,9 @@ test("Persistent session admission survives new instances, deduplicates usage an
   };
   const id = "00000000-0000-4000-8000-000000000001";
   await admitVoiceSession(store, id, 1, 1000);
+  const resumed = await admitVoiceSession(store, id, 1, 1050);
+  assert.equal(resumed.sessionId, id);
+  assert.equal(voiceUsageStats((await store.read()).voiceUsage, 1050).sessions, 1);
   await assert.rejects(
     () => admitVoiceSession(store, "new", 1, 1100),
     /VOICE_SESSION_LIMIT/,
