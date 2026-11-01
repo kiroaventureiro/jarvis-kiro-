@@ -167,13 +167,17 @@ test("greeting is local, spoken and recognition pauses until speech ends", async
   assert.match(t.speeches[0], /Bom dia! Estou à disposição/);
   assert.equal(t.states.at(-1).phase, "speaking");
   assert.equal(t.instances[0].started, false);
-  t.instances[0].emit("Jarvis responda a você mesmo");
-  assert.equal(t.users.length, 1);
+  assert.equal(t.instances.length, 2);
+  assert.equal(t.instances[1].started, true);
+  // During TTS, the secondary recognizer accepts only explicit stop phrases.
+  t.instances[1].emit("Jarvis responda a você mesmo");
+  assert.equal(t.users.length, 0);
   await t.advance(2000);
   assert.equal(t.instances.length, 1);
   await t.finish();
   await t.advance(450);
-  assert.equal(t.instances.length, 2);
+  assert.equal(t.instances.length, 3);
+  assert.equal(t.instances.at(-1).started, true);
   assert.equal(t.states.at(-1).phase, "command");
   t.engine.stop();
 });
@@ -185,7 +189,7 @@ test("bare wake asks for next command and no repeated mic clicks are needed", as
   assert.match(t.speeches[0], /O que você precisa/);
   await t.finish();
   await t.advance(450);
-  t.instances[1].emit("Preciso de ideias para o canal");
+  t.instances.at(-1).emit("Preciso de ideias para o canal");
   await flush();
   assert.deepEqual(t.calls, ["Preciso de ideias para o canal"]);
   await t.finish();
@@ -276,7 +280,8 @@ test("manual mode answers once and returns fully off", async () => {
   await flush();
   await t.finish();
   await t.advance(5000);
-  assert.equal(t.instances.length, 1);
+  assert.equal(t.instances.length, 2);
+  assert.equal(t.instances[1].started, false);
   assert.equal(t.states.at(-1).phase, "off");
 });
 test("voice selection never guesses gender from a name and preferences are bounded", () => {
