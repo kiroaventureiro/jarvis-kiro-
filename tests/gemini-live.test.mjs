@@ -163,6 +163,15 @@ test("playback reference rejects delayed echo and preserves near-end/double-talk
   const mixed = Float32Array.from(previous.at(-2), (v, i) => v * 0.5 + human[i]);
   assert.equal(guard.process(mixed, Float32Array.from({ length: 320 }, noise)), false);
 });
+test("Gemini Live is the default engine only on explicitly approved Preview deployments", () => {
+  const page = fs.readFileSync("app/page.tsx", "utf8");
+  assert.match(page, /process\.env\.VERCEL_ENV === "preview"/);
+  assert.match(page, /JARVIS_GEMINI_LIVE_ENABLED === "true"/);
+  assert.match(page, /JARVIS_GEMINI_LIVE_PAID_ALLOWED === "true"/);
+  assert.match(page, /JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR/);
+  assert.match(page, /experimentalGemini=\{experimentalGemini\}/);
+  assert.doesNotMatch(page, /process\.env\.VERCEL_ENV === "production"\s*\|\|/);
+});
 test("exclusive owner blocks browser and neural speech until released", async () => {
   const { claimGeminiAudio, assertLegacyAudioAllowed } = await compile("lib/voice/audio-owner.ts");
   assert.doesNotThrow(assertLegacyAudioAllowed); const release = claimGeminiAudio();
