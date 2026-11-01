@@ -479,7 +479,6 @@ export default function JarvisExperience() {
       peer.current = pc;
       const el = document.createElement("audio");
       el.autoplay = true;
-      el.playsInline = true;
       el.muted = muteRef.current;
       el.volume = readVoicePreferences().volume;
       el.style.display = "none";
