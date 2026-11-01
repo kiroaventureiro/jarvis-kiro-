@@ -52,6 +52,9 @@ test("Gemini Live hybrid lifecycle", async t => {
     const adapter = await setup();
     const connects = state.connects;
     const audio = state.audio.at(-1);
+    adapter.suspendForExternal();
+    assert.equal(states.at(-1).enabled, true, "external UI activity must not turn off the user's infinite-listening toggle");
+    assert.equal(states.at(-1).connected, true);
     message(transcript("Pergunta antes de pausar"));
     message(tool("spoken-before-pause"));
     await tick();
