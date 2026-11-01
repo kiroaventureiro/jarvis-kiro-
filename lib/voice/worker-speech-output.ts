@@ -78,7 +78,9 @@ export class WorkerSpeechOutput implements SpeechOutput {
       if (!queued.ok || typeof job.id !== "string")
         throw new Error(job.error || "Não foi possível enviar a fala ao VoiceStudio.");
       let audioBytes: ArrayBuffer | null = null;
-      const deadline = Date.now() + 8 * 60 * 1000;
+      // Local VoiceStudio may synthesize for up to 650 seconds; leave time
+      // for worker upload, status polling, and WAV delivery.
+      const deadline = Date.now() + 12 * 60 * 1000;
       while (Date.now() < deadline) {
         if (controller.signal.aborted || generation !== this.generation)
           throw new DOMException("Cancelado", "AbortError");
