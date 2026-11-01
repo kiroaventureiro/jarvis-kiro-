@@ -1219,7 +1219,7 @@ export default function JarvisExperience() {
       />
       <header className="stage-header">
         <Link href="/" className="wordmark" aria-label="Jarvis Kiro">
-          JARVIS <span>KIRO</span>
+          Jarvis
         </Link>
         <JarvisNavigation />
       </header>
