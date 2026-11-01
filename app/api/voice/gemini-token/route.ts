@@ -1,7 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { geminiLiveConfig, GEMINI_LIVE_MODEL } from "../../../../lib/voice/gemini-config";
 import { requestOriginAllowed } from "../../../../lib/request-origin";
-import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
 import { connectorStore } from "../../../../lib/connectors/server";
@@ -64,12 +63,14 @@ export async function POST(request: Request) {
   const key = process.env.GEMINI_API_KEY!;
   const callsPerHour = Number(process.env.JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR);
   const body = await request.json().catch(() => ({}));
-  if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some(k => k !== "handle") ||
-      (body.handle !== undefined && (typeof body.handle !== "string" || body.handle.length > 4096))) {
+  if (!body || typeof body !== "object" || Array.isArray(body) ||
+      Object.keys(body).some(k => !["handle", "clientSessionId"].includes(k)) ||
+      (body.handle !== undefined && (typeof body.handle !== "string" || body.handle.length > 4096)) ||
+      typeof body.clientSessionId !== "string" || !/^[a-f0-9-]{36}$/i.test(body.clientSessionId)) {
     return NextResponse.json({ error: "Sessão inválida." }, { status: 400 });
   }
   try {
-    const usage = await admitVoiceSession(connectorStore, randomUUID(), callsPerHour);
+    const usage = await admitVoiceSession(connectorStore, body.clientSessionId, callsPerHour);
     const now = Date.now();
     const expires = new Date(now + 30 * 60 * 1000).toISOString();
     const newSessionExpires = new Date(now + 60 * 1000).toISOString();
