@@ -96,16 +96,15 @@ h3 {
   border-radius: 18px;
 }
 .wordmark {
-  font-size: 12px;
-  letter-spacing: 0.3em;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-style: italic;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1;
   text-decoration: none;
-  font-weight: 700;
-  color: #c1dce7;
-}
-.wordmark span {
-  color: #75c8d7;
-  font-weight: 400;
-  margin-left: 8px;
+  color: #f7f8fb;
+  text-shadow: 0 0 12px rgba(225, 239, 255, 0.24);
 }
 .stage-header,
 .internal-header {
