@@ -66,7 +66,7 @@ async function run() {
         await call("complete", { id: job.id, status: "completed", audioBase64 }, credentials.token);
         process.stdout.write("Áudio gerado e entregue ao Jarvis: " + audio.output + "\\n");
       } catch (error) {
-        const code = String(error?.message || "VOICE_JOB_FAILED").replace(/[^A-Z0-9_]/g, "_").toUpperCase().slice(0,80);
+        const code = String(error?.message || "VOICE_JOB_FAILED").toUpperCase().replace(/[^A-Z0-9_]/g, "_").slice(0,80);
         await call("complete", { id: job.id, status: "failed", errorCode: code }, credentials.token).catch(() => {});
         process.stderr.write("Falha na tarefa " + job.id + ": " + code + "\n");
       }
