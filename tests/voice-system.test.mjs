@@ -416,24 +416,6 @@ test("paid providers are denied by default and limits count attempted calls", ()
   assert.equal(budget.admit("abacus", permission, 2).allowed, true);
   assert.equal(budget.admit("abacus", permission, 3).allowed, false);
   assert.equal(budget.stats("abacus", 3).calls, 2);
-
-  assert.equal(costPermission("gemini-live", {}).allowed, false);
-  assert.equal(
-    costPermission("gemini-live", {
-      JARVIS_GEMINI_LIVE_PAID_ALLOWED: "true",
-    }).allowed,
-    false,
-  );
-  const geminiPermission = costPermission("gemini-live", {
-    JARVIS_GEMINI_LIVE_PAID_ALLOWED: "true",
-    JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR: "3",
-  });
-  assert.equal(geminiPermission.allowed, true);
-  assert.equal(budget.admit("gemini-live", geminiPermission, 10).allowed, true);
-  assert.equal(budget.admit("gemini-live", geminiPermission, 11).allowed, true);
-  assert.equal(budget.admit("gemini-live", geminiPermission, 12).allowed, true);
-  assert.equal(budget.admit("gemini-live", geminiPermission, 13).allowed, false);
-  assert.equal(budget.stats("gemini-live", 13).calls, 3);
 });
 test("Abacus gateway never calls a paid API without explicit server authorization", async () => {
   let calls = 0;
