@@ -151,7 +151,8 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
     const t = track(); return { getTracks: () => [t], getAudioTracks: () => [t] };
   } } } });
   const { GeminiAudio } = await compile("lib/voice/gemini-audio.ts");
-  const audio = new GeminiAudio(); let pcm;
+  const audio = new GeminiAudio(); let pcm, drained = 0;
+  audio.onDrained = () => { drained++; };
   await audio.start(data => { pcm = data; });
   assert.equal(contexts[0].config.sampleRate, 16000);
   globalThis.__capture.port.onmessage({ data: { pcm: new Int16Array([32767, -32768]).buffer, echoFrames: 0 } });
@@ -171,6 +172,8 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
   for (let i = 2; i < 201; i++) nodes[i].onended();
   assert.equal(nodes.length, 202, "all queued audio chunks are played in order");
   nodes[201].onended();
+  await new Promise(resolve => setTimeout(resolve, 350));
+  assert.equal(drained, 1, "drain notification waits for the final chunk instead of firing between chunks");
   await audio.start(() => {});
   assert.equal(contexts.length, 1, "re-enabling the microphone must reuse the live audio context");
   assert.equal(tracks.length, 2);
