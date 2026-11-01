@@ -347,7 +347,6 @@ export default function JarvisExperience() {
         : rawVisual;
       holoSession.present(visual);
       if (
-        desktopVoice &&
         !muteRef.current &&
         readVoicePreferences().volume > 0
       ) {
@@ -1037,7 +1036,7 @@ export default function JarvisExperience() {
     holoSession.close();
     try {
       const voiceFirst =
-        desktopVoice && !muteRef.current && readVoicePreferences().volume > 0;
+        !muteRef.current && readVoicePreferences().volume > 0;
       const local = await conversationalCodexApproval(text) || localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexStatus(text) || conversationalAppHandoff(text) || await conversationalCodexDraft(text);
       let generatedForThisResponse=false;
       const result =
@@ -1087,7 +1086,6 @@ export default function JarvisExperience() {
         : rawVisual;
       if (visual) holoSession.present(visual);
       if (
-        desktopVoice &&
         !muteRef.current &&
         readVoicePreferences().volume > 0
       ) {
