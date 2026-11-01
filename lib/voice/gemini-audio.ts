@@ -56,6 +56,7 @@ export class GeminiAudio {
   pauseCapture() {
     this.epoch++;
     this.capture?.port && (this.capture.port.onmessage = null);
+    if (this.capture) this.gain?.disconnect(this.capture);
     this.capture?.disconnect(); this.capture = null;
     this.stream?.getTracks().forEach(t => { t.onended = null; t.stop(); });
     this.stream = null;
