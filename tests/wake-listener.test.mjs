@@ -8,7 +8,8 @@ test("wake listener delegates lifecycle to a controller and requires initial con
   assert.match(wake, /setConsent\(true\)/);
   assert.match(wake, /Ativar escuta/);
   assert.match(wake, /controller\.stop\(/);
-  assert.match(wake, /visibilitychange/);
+  assert.doesNotMatch(wake, /document\.addEventListener\(["']visibilitychange/);
+  assert.doesNotMatch(wake, /document\.hidden/);
 });
 test("spoken requests retain authenticated same-origin routing", () => {
   assert.match(hud, /<WakeListener/);
