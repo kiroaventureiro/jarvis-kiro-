@@ -23,6 +23,24 @@ export class GeminiAudio {
   onEchoEvidence = (_frames: number, _aec: boolean) => {};
   onMicrophoneEnded = () => {};
 
+  /** Unlock speaker AudioContext during the user's direct click, before token fetch. */
+  unlockPlayback() {
+    let output = this.context;
+    if (!output || output.state === "closed") {
+      output = new AudioContext();
+      this.context = output;
+      this.gain = output.createGain();
+      this.gain.connect(output.destination);
+      this.referenceDestination = output.createMediaStreamDestination();
+      this.gain.connect(this.referenceDestination);
+      output.addEventListener("statechange", () => {
+        if (output?.state === "running") this.scheduleNext();
+      });
+      this.nextPlayTime = 0;
+    }
+    void output.resume().catch(() => {});
+  }
+
   async start(onPCM: (data: string) => void) {
     const epoch = ++this.epoch;
     let output = this.context;
