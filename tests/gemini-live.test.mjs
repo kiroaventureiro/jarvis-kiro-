@@ -138,6 +138,7 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
     state = "running"; currentTime = 1; destination = {}; audioWorklet = { addModule: async () => {} };
     constructor(config) { this.config = config; contexts.push(this); }
     async resume() { this.state = "running"; }
+    addEventListener() {}
     createGain() { return { gain: { value: 1 }, connect() { return this; }, disconnect() {} }; }
     createMediaStreamSource() { return { connect() {} }; }
     createBuffer(_channels, length, rate) { const floats = new Float32Array(length); this.decoded = floats; return { getChannelData: () => floats, duration: length / rate }; }
