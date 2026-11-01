@@ -33,7 +33,7 @@ export async function executeLocalJob(job, output, fetcher = fetch) {
   const response = await fetcher(BASE + "/v1/audio/speech", {
     method: "POST", redirect: "error", cache: "no-store",
     headers: { "Content-Type": "application/json", Accept: "audio/wav" },
-    body: JSON.stringify({ model: "omnivoice", input: job.text.trim(), voice: PROFILE,
+    body: JSON.stringify({ model: "tts-1", input: job.text.trim(), voice: PROFILE,
       response_format: "wav", language: "pt", speed: 1 }),
     signal: AbortSignal.timeout(650_000),
   });
