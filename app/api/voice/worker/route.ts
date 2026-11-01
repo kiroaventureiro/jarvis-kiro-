@@ -83,9 +83,27 @@ export async function POST(request: Request) {
     const deviceId = await device(request);
     if (!deviceId) return json({ error: "Dispositivo não autorizado" }, 401);
     if (action === "claim") {
-      const jobs = await db("jarvis_voice_jobs?status=eq.queued&select=id,payload,created_at&order=created_at.asc&limit=1");
+      // A stopped worker must not cause expired requests to block new speech.
+      // Older jobs are marked failed and are never sent for synthesis.
+      const cutoff = new Date(Date.now() - 600000).toISOString();
+      await db("jarvis_voice_jobs?status=eq.queued&created_at=lt." +
+        encodeURIComponent(cutoff), "PATCH", {
+          status: "failed", error_code: "VOICE_JOB_EXPIRED",
+          completed_at: new Date().toISOString(),
+        });
+      const jobs = await db("jarvis_voice_jobs?status=eq.queued&created_at=gte." +
+        encodeURIComponent(cutoff) +
+        "&select=id,payload,created_at&order=created_at.desc&limit=1");
       if (!Array.isArray(jobs) || !jobs.length) return json({ job: null });
       const job = jobs[0];
+      if (Number(job.payload?.expiresAt) <= Date.now()) {
+        await db("jarvis_voice_jobs?id=eq." + encodeURIComponent(job.id) +
+          "&status=eq.queued", "PATCH", {
+            status: "failed", error_code: "VOICE_JOB_EXPIRED",
+            completed_at: new Date().toISOString(),
+          });
+        return json({ job: null });
+      }
       const claimed = await db("jarvis_voice_jobs?id=eq." + encodeURIComponent(job.id) +
         "&status=eq.queued", "PATCH", {
           status: "processing", device_id: deviceId, claimed_at: new Date().toISOString(),
