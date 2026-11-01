@@ -30,6 +30,8 @@ export class GeminiLiveVoiceAdapter {
   private provisioning: AbortController | null = null;
   private transcript = "";
   private transcriptReady = false;
+  private transcriptTimer: ReturnType<typeof setTimeout> | null = null;
+  private transcriptDeadline: ReturnType<typeof setTimeout> | null = null;
   private pending: FunctionCall | null = null;
   private seen = new Set<string>();
   private outputAllowed = false;
@@ -54,6 +56,37 @@ export class GeminiLiveVoiceAdapter {
     this.timers.add(timer);
   }
   private clearTimers() { for (const timer of this.timers) clearTimeout(timer); this.timers.clear(); }
+  private clearTranscriptTimers() {
+    if (this.transcriptTimer) clearTimeout(this.transcriptTimer);
+    if (this.transcriptDeadline) clearTimeout(this.transcriptDeadline);
+    this.transcriptTimer = null;
+    this.transcriptDeadline = null;
+  }
+  /**
+   * Gemini Live transcription fragments do not reliably carry a finished flag.
+   * A model tool call marks the end of the user turn; debounce late fragments
+   * instead of waiting indefinitely for a flag the service may omit.
+   */
+  private schedulePendingRun(delay = 450) {
+    if (!this.pending) return;
+    if (this.transcriptTimer) clearTimeout(this.transcriptTimer);
+    this.transcriptTimer = setTimeout(() => {
+      this.transcriptTimer = null;
+      if (!this.pending) return;
+      if (this.transcript.trim()) {
+        this.clearTranscriptTimers();
+        void this.run();
+        return;
+      }
+      if (!this.transcriptDeadline) {
+        this.transcriptDeadline = setTimeout(() => {
+          this.transcriptDeadline = null;
+          if (this.pending && !this.transcript.trim())
+            this.fail("O Gemini não entregou a transcrição desta fala. Reative a sessão ou use o teclado.");
+        }, 2500);
+      }
+    }, delay);
+  }
   start() {
     if (this.enabled) return;
     if (!this.options.desktopAudioAllowed()) { this.fail("Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
@@ -124,6 +157,7 @@ export class GeminiLiveVoiceAdapter {
     this.connection++; this.ready = false; this.clearTimers(); this.abort?.abort();
     this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false;
     this.audio.interrupt(); this.session?.close(); this.session = null;
+    this.clearTranscriptTimers();
     this.transcript = ""; this.transcriptReady = false;
     if (++this.attempts > 3) { this.fail("A sessão caiu repetidamente. Reative a escuta para tentar novamente."); return; }
     this.emit("resuming", "Reconectando Gemini Live…");
@@ -153,6 +187,9 @@ export class GeminiLiveVoiceAdapter {
         this.transcript += content.inputTranscription.text || "";
         this.transcriptReady = content.inputTranscription.finished === true;
         if (this.transcript.length > 1500) throw new Error("Fala muito longa. Use mensagens de até 1.500 caracteres.");
+        // If the tool call arrived before the final transcription fragment,
+        // restart the short debounce whenever another fragment arrives.
+        if (this.pending) this.schedulePendingRun(this.transcriptReady ? 120 : 450);
       }
       for (const call of message.toolCall?.functionCalls || []) {
         if (!call.id || this.seen.has(call.id)) continue;
@@ -161,11 +198,12 @@ export class GeminiLiveVoiceAdapter {
         this.seen.add(call.id);
         if (this.seen.size > 1000) throw new Error("Limite da sessão experimental atingido.");
         this.pending = call;
-        this.later(() => {
-          if (this.pending?.id === call.id) this.fail("Transcrição incompleta. Reative a sessão ou use o teclado.");
-        }, 10000);
+        // The tool call confirms Gemini has interpreted the user's turn.
+        // Transcription events can arrive out of order, so allow a short grace
+        // period for the final text fragment before calling the Jarvis core.
+        this.schedulePendingRun(this.transcriptReady ? 120 : 800);
       }
-      if (this.pending && this.transcriptReady) void this.run();
+      if (this.pending && this.transcriptReady) this.schedulePendingRun(120);
       if (this.outputAllowed && !content?.interrupted) {
         for (const part of content?.modelTurn?.parts || []) {
           if (part.inlineData?.data && part.inlineData.mimeType?.startsWith("audio/pcm")) {
@@ -179,6 +217,7 @@ export class GeminiLiveVoiceAdapter {
   }
   private async run() {
     const call = this.pending; this.pending = null;
+    this.clearTranscriptTimers();
     const text = this.transcript.trim(); this.transcript = ""; this.transcriptReady = false;
     if (!call || !text) return;
     this.usedTurn = true;
@@ -215,7 +254,7 @@ export class GeminiLiveVoiceAdapter {
   disableListening() { this.stop(); }
   stop(message = "Escuta Gemini desligada.") {
     this.enabled = false; this.epoch++; this.connection++; this.ready = false;
-    this.clearTimers(); this.provisioning?.abort(); this.abort?.abort();
+    this.clearTimers(); this.clearTranscriptTimers(); this.provisioning?.abort(); this.abort?.abort();
     try { this.session?.sendRealtimeInput({ audioStreamEnd: true }); } catch {}
     this.session?.close(); this.session = null; this.audio.close(); this.audioStarted = false; this.handle = undefined;
     this.transcript = ""; this.transcriptReady = false; this.pending = null; this.outputAllowed = false; this.playing = false; this.inputChunks = 0; this.outputChunks = 0; this.usedTurn = false; this.seen.clear();
