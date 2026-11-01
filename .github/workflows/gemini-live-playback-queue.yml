@@ -1,0 +1,34 @@
+name: Gemini Live playback queue recovery
+on:
+  push:
+    branches:
+      - fix/gemini-live-playback-queue-20261101
+    paths:
+      - 'lib/voice/gemini-audio.ts'
+      - 'lib/voice/gemini-live-adapter.ts'
+      - 'tests/gemini-live.test.mjs'
+      - '.github/workflows/gemini-live-playback-queue.yml'
+  pull_request:
+    branches:
+      - integration/gemini-live-on-approved-kiro-20261101
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Gemini Live audio and lifecycle regression
+        run: node --test tests/gemini-live.test.mjs tests/wake-listener.test.mjs
+      - name: Full regression suite
+        run: npm test
+      - name: TypeScript check
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build
