@@ -135,7 +135,10 @@ export default function WakeListener(props: Props) {
   }, [snapshot.phase, snapshot.enabled, props.blocked]);
   useEffect(() => {
     if (props.blocked) {
-      engine.current?.stop("Escuta desligada durante outra operação.");
+      // File/preference surfaces may disable the control, but only the user
+      // may turn off the explicitly enabled Gemini infinite-listening session.
+      if (engine.current instanceof VoiceController)
+        engine.current.stop("Escuta desligada durante outra operação.");
       setConsent(false);
     }
   }, [props.blocked]);
