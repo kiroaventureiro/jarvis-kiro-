@@ -289,7 +289,7 @@ export class GeminiLiveVoiceAdapter {
       } catch {
         if (!abort.signal.aborted && connection === this.connection && this.sessionActive) {
           this.options.onSpeechUnavailable();
-          this.emit("error", "A voz oficial do VoiceStudio não está disponível; a resposta permanece no texto.");
+          this.emit(this.enabled ? "waiting" : "off", "Voz oficial do VoiceStudio indisponível; a resposta permanece no texto.");
         }
       } finally {
         if (!abort.signal.aborted && connection === this.connection && this.sessionActive) {
