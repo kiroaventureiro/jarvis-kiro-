@@ -58,7 +58,7 @@ export class WorkerSpeechOutput implements SpeechOutput {
   }
 
   async speak(text: string, signal: AbortSignal, _options?: { scene?: HoloScene }) {
-    assertLegacyAudioAllowed();
+    assertLegacyAudioAllowed(true);
     this.cancel();
     if (signal.aborted) throw new DOMException("Cancelado", "AbortError");
     const generation = this.generation;
