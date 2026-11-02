@@ -44,7 +44,7 @@ export async function testN8n(signal?:AbortSignal) {
   if (!state.n8n) throw Error("N8N_NOT_CONNECTED");
   await verifyN8n(state.n8n.baseUrl,state.n8n.apiKey,signal);
   const verifiedAt=new Date().toISOString();
-  await connectorStore.update(s=>{if(s.n8n?.baseUrl===state.n8n?.baseUrl)s.n8n.verifiedAt=verifiedAt;});
+  await connectorStore.update(s=>{const current=s.n8n;if(current && current.baseUrl===state.n8n?.baseUrl && current.apiKey===state.n8n?.apiKey)current.verifiedAt=verifiedAt;});
   return {connected:true,verified:true,baseUrl:state.n8n.baseUrl,verifiedAt};
 }
 export async function disconnectN8n(){
