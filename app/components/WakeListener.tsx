@@ -148,9 +148,9 @@ export default function WakeListener(props: Props) {
       // may turn off the explicitly enabled Gemini infinite-listening session.
       if (engine.current instanceof VoiceController)
         engine.current.stop("Escuta desligada durante outra operação.");
-      setConsent(false);
+      if (!props.geminiRequested) setConsent(false);
     }
-  }, [props.blocked]);
+  }, [props.blocked, props.geminiRequested]);
   useEffect(() => {
     if (props.muted || engine.current instanceof GeminiLiveVoiceAdapter) engine.current?.audioMuted();
   }, [props.muted]);
@@ -215,7 +215,7 @@ export default function WakeListener(props: Props) {
           {snapshot.microphoneActive ? " · microfone ativo" : ""}
         </span>
       ) : null}
-      {consent ? (
+      {(consent || (props.geminiRequested && !authorized)) ? (
         <section
           className="voice-consent glass"
           role="dialog"
