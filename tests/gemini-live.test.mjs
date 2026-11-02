@@ -148,6 +148,33 @@ test("Gemini Live hybrid lifecycle", async t => {
     message(tool()); await tick(); assert.equal(calls[0].text, "Texto"); assert.equal(users[0], "Texto");
     adapter.stop(); assert.equal(adapter.sendText("Normal text"), false);
   });
+  await t.test("reconnect cancels an old Jarvis request without demoting a newer pending reply", async () => {
+    const adapter = await setup();
+    let finishOld, finishNew;
+    command = text => new Promise(resolve => {
+      if (text === "Pergunta antiga") finishOld = resolve;
+      else if (text === "Pergunta nova") finishNew = resolve;
+      else throw new Error("unexpected test command");
+    });
+    message(transcript("Pergunta antiga")); message(tool("old-turn")); await tick();
+    assert.equal(states.at(-1).phase, "processing");
+    message({ goAway: { timeLeft: "5s" } });
+    assert.equal(calls[0].signal.aborted, true, "reconnect aborts the old request");
+    assert.equal(states.at(-1).phase, "resuming");
+    await new Promise(resolve => setTimeout(resolve, 550)); await tick();
+    assert.equal(states.at(-1).connected, true, "new Gemini session is ready");
+    message(transcript("Pergunta nova")); message(tool("new-turn")); await tick();
+    assert.equal(states.at(-1).phase, "processing");
+    adapter.disableListening();
+    assert.equal(states.at(-1).connected, true);
+    finishOld({ text: "Resposta antiga atrasada" }); await tick();
+    assert.equal(state.responses.length, 0, "stale command cannot answer on the new connection");
+    assert.equal(states.at(-1).phase, "processing", "stale completion must not erase the new command state");
+    finishNew({ text: "Resposta nova completa" }); await tick();
+    assert.equal(state.responses.length, 1);
+    assert.equal(state.responses[0].functionResponses[0].response.text, "Resposta nova completa");
+    adapter.stop();
+  });
   await t.test("GoAway resumes with an in-memory handle; stop cancels retries", async () => {
     const adapter = await setup();
     message({ sessionResumptionUpdate: { resumable: true, newHandle: "resume-test" } });
