@@ -134,6 +134,12 @@ export class VoiceController {
       );
       return;
     }
+    // Re-enable capture without invalidating an in-flight reply or its epoch.
+    if (this.busy) {
+      this.enabled = true;
+      this.emit(this.speechPending ? "speaking" : "processing", "Microfone reativado. A resposta continua.");
+      return;
+    }
     this.epoch++;
     this.enabled = true;
     this.busy = false;
@@ -353,6 +359,10 @@ export class VoiceController {
       }
       if (!this.options.continuous()) {
         this.stop("Interação concluída. Toque para ouvir novamente.");
+        return;
+      }
+      if (!this.enabled) {
+        this.emit("off", "Resposta concluída. Microfone desligado.");
         return;
       }
       this.armedUntil = this.now() + 60000;
