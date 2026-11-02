@@ -72,6 +72,12 @@ export function jarvisSettingsCommand(text: string): Result | null {
     if (/\b(desativar|desative|desligar|desligue)\b/.test(raw)) { saveVoicePreferences({...readVoicePreferences(),continuous:false}); return answer("Preferência de retomada da escuta desativada. O botão de áudio infinito continua sob seu controle."); }
     if (/\b(ativar|ative|ligar|ligue)\b/.test(raw)) { saveVoicePreferences({...readVoicePreferences(),continuous:true}); return answer("Preferência de retomada da escuta ativada, quando o navegador permitir."); }
   }
+  // Administrative operations remain behind their respective authenticated
+  // connectors and explicit approval flows, never a client-side preference write.
+  if (/\b(api|chave|token|senha|credencial|deploy|deployment|producao|publicar|permissao|pagamento|custo|limite|integracao|conector|supabase|vercel|github|abacus)\b/.test(raw) &&
+      /(configur|ajust|alter|mudar|ativ|desativ|aument|diminu|liber|control)/.test(raw)) {
+    return answer("Essa configuração exige um serviço autenticado e autorização específica. Não alterei credenciais, custos, integrações ou deployments. Consulte a Central de Conexões ou a seção de segurança correspondente.");
+  }
   if (/\b(configuracoes|configuracao|preferencias)\b/.test(raw) && /\b(todas|todos|quais|lista|mostrar|controle)\b/.test(raw))
     return answer("Posso configurar as vozes Gemini, volume, tom e velocidade da voz do navegador, modo econômico ou automático do holograma, retomada de escuta e histórico local. Outras opções só ficam disponíveis após serem integradas ao registro seguro de configurações. Credenciais, gastos, publicação e segurança exigem aprovação específica.");
   return null;
