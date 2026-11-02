@@ -414,3 +414,17 @@ test("Jarvis settings inventory reflects persisted values without granting unsaf
   assert.match(controller, /Credenciais|credenciais/);
   assert.match(controller, /VOICES\.find/);
 });
+
+test("Jarvis hologram setting stays synchronized with spoken preference changes", () => {
+  const panel = fs.readFileSync("app/components/HologramSettings.tsx", "utf8");
+  const control = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  assert.match(panel, /window\.addEventListener\("jarvis-graphics", changed\)/);
+  assert.match(panel, /window\.removeEventListener\("jarvis-graphics", changed\)/);
+  assert.match(control, /setGraphicsPreference\("eco"\)/);
+  assert.match(control, /setGraphicsPreference\("auto"\)/);
+});
+test("Jarvis administrative configuration requests do not mutate secrets or paid service controls", () => {
+  const control = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  assert.match(control, /serviço autenticado e autorização específica/);
+  assert.doesNotMatch(control, /process\.env\.[A-Z_]+\s*=/);
+});
