@@ -375,3 +375,11 @@ test("Gemini PCM playback schedules chunks without a fixed inter-chunk pause", (
   assert.doesNotMatch(audio, /source\.start\(context\.currentTime \+ 0\.01\)/);
   assert.match(audio, /this\.playbackCursor = 0/);
 });
+
+test("PCM boundary smoothing preserves contiguous scheduling and avoids abrupt tails", () => {
+  const audio = fs.readFileSync("lib/voice/gemini-audio.ts", "utf8");
+  assert.match(audio, /const edge = Math\.min\(32, Math\.floor\(floats\.length \/ 4\)\)/);
+  assert.match(audio, /floats\[i\] \*= envelope/);
+  assert.match(audio, /floats\[floats\.length - 1 - i\] \*= envelope/);
+  assert.match(audio, /source\.start\(startsAt\)/);
+});
