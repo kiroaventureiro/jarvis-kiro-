@@ -885,7 +885,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
       ? normalized.match(/\b(orus|charon|algenib|gacrux|puck|kore)\b/)?.[1] : undefined);
     if (select) {
       const name = select[0].toUpperCase() + select.slice(1);
-      try { localStorage.setItem("jarvis.gemini.voice.v1", name); } catch {
+      try { localStorage.setItem("jarvis.gemini.voice.v1", name); window.dispatchEvent(new CustomEvent("jarvis:gemini-voice", { detail: name })); } catch {
         return {text:"Não consegui salvar a voz neste navegador.",model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
       }
       return {text:"Voz Gemini " + name + " selecionada. A mudança será aplicada na próxima sessão Gemini Live, sem interromper a conversa atual.",model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
