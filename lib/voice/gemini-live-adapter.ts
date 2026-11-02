@@ -48,7 +48,17 @@ export class GeminiLiveVoiceAdapter {
   constructor(private options: Options) {
     this.audio.onEchoEvidence = (frames, aec) => { this.echoFrames = frames; this.aec = aec; };
     this.audio.onMicrophoneEnded = () => this.fail("O microfone foi desconectado. Reative a sessão.");
-    this.audio.onDrained = () => { this.playing = false; if (this.sessionActive) this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Escuta infinita desligada · Gemini continua conectado"); };
+    this.audio.onDrained = () => {
+      this.playing = false;
+      if (!this.sessionActive) return;
+      // A delayed drain from the previous reply must not replace the status
+      // of a newer Jarvis command that is still being processed.
+      if (this.processing) {
+        this.emit("processing", "Consultando o núcleo Jarvis…");
+        return;
+      }
+      this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Escuta infinita desligada · Gemini continua conectado");
+    };
   }
   private emit(phase: VoiceSnapshot["phase"], message: string) {
     this.options.onState({ phase, message, enabled: this.enabled, microphoneActive: this.enabled && this.ready, connected: this.sessionActive && this.ready });
@@ -190,7 +200,7 @@ export class GeminiLiveVoiceAdapter {
   private reconnect() {
     if (!this.sessionActive) return;
     this.connection++; this.ready = false; this.clearTimers(); this.abort?.abort();
-    this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false;
+    this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false; this.processing = false;
     this.audio.interrupt();
     this.audio.pauseCapture();
     this.audioStarted = false;
@@ -268,6 +278,8 @@ export class GeminiLiveVoiceAdapter {
     this.options.onUser(text); this.emit("processing", "Consultando o núcleo Jarvis…");
     try {
       const reply = await this.options.command(text, abort.signal);
+      // An older, aborted request must not clear the processing state of a newer turn.
+      if (this.abort !== abort) return;
       if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) { this.processing = false; return; }
       this.processing = false;
       this.options.onReply({ ...reply, speechPending: true });
@@ -275,6 +287,7 @@ export class GeminiLiveVoiceAdapter {
       this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
       if (reply.navigate) { this.stop(); this.options.navigate(reply.navigate); }
     } catch {
+      if (this.abort !== abort) return;
       this.processing = false;
       if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
     }

@@ -77,6 +77,29 @@ test("Gemini Live hybrid lifecycle", async t => {
     assert.equal(states.at(-1).enabled, true);
     adapter.stop();
   });
+  await t.test("late playback drain cannot demote a newer Jarvis command while microphone is active or paused", async () => {
+    const adapter = await setup();
+    let finishCommand;
+    command = () => new Promise(resolve => { finishCommand = resolve; });
+    message(transcript("Explique o relatório inteiro"));
+    message(tool("slow-command"));
+    await tick();
+    const audio = state.audio.at(-1);
+    assert.equal(states.at(-1).phase, "processing");
+    audio.onDrained();
+    assert.equal(states.at(-1).phase, "processing", "previous reply drain must not report idle while Jarvis is working");
+    adapter.disableListening();
+    assert.equal(states.at(-1).connected, true);
+    audio.onDrained();
+    assert.equal(states.at(-1).phase, "processing", "pausing the mic must not let a late drain erase processing");
+    finishCommand({ text: "Resposta completa do Jarvis" });
+    await tick();
+    assert.equal(state.responses.at(-1).functionResponses[0].response.text, "Resposta completa do Jarvis");
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "response-audio" } }] } } });
+    assert.deepEqual(audio.played, ["response-audio"]);
+    assert.equal(states.at(-1).phase, "speaking");
+    adapter.stop();
+  });
   await t.test("turn is finalized when the user disables infinite listening mid-utterance without closing Gemini", async () => {
     const adapter = await setup();
     const connects = state.connects;
@@ -124,6 +147,54 @@ test("Gemini Live hybrid lifecycle", async t => {
     const adapter = await setup(); assert.equal(adapter.sendText("Texto"), true);
     message(tool()); await tick(); assert.equal(calls[0].text, "Texto"); assert.equal(users[0], "Texto");
     adapter.stop(); assert.equal(adapter.sendText("Normal text"), false);
+  });
+  await t.test("reconnect cancels an old Jarvis request without demoting a newer pending reply", async () => {
+    const adapter = await setup();
+    let finishOld, finishNew;
+    command = text => new Promise(resolve => {
+      if (text === "Pergunta antiga") finishOld = resolve;
+      else if (text === "Pergunta nova") finishNew = resolve;
+      else throw new Error("unexpected test command");
+    });
+    message(transcript("Pergunta antiga")); message(tool("old-turn")); await tick();
+    assert.equal(states.at(-1).phase, "processing");
+    message({ goAway: { timeLeft: "5s" } });
+    assert.equal(calls[0].signal.aborted, true, "reconnect aborts the old request");
+    assert.equal(states.at(-1).phase, "resuming");
+    await new Promise(resolve => setTimeout(resolve, 550)); await tick();
+    assert.equal(states.at(-1).connected, true, "new Gemini session is ready");
+    message(transcript("Pergunta nova")); message(tool("new-turn")); await tick();
+    assert.equal(states.at(-1).phase, "processing");
+    adapter.disableListening();
+    assert.equal(states.at(-1).connected, true);
+    finishOld({ text: "Resposta antiga atrasada" }); await tick();
+    assert.equal(state.responses.length, 0, "stale command cannot answer on the new connection");
+    assert.equal(states.at(-1).phase, "processing", "stale completion must not erase the new command state");
+    finishNew({ text: "Resposta nova completa" }); await tick();
+    assert.equal(state.responses.length, 1);
+    assert.equal(state.responses[0].functionResponses[0].response.text, "Resposta nova completa");
+    adapter.stop();
+  });
+  await t.test("late rejection from a previous connection cannot fail a newer Jarvis command", async () => {
+    const adapter = await setup();
+    let rejectOld, finishNew;
+    command = text => new Promise((resolve, reject) => {
+      if (text === "Consulta antiga") rejectOld = reject;
+      else if (text === "Consulta atual") finishNew = resolve;
+      else reject(new Error("unexpected test command"));
+    });
+    message(transcript("Consulta antiga")); message(tool("old-rejection")); await tick();
+    message({ goAway: { timeLeft: "5s" } });
+    await new Promise(resolve => setTimeout(resolve, 550)); await tick();
+    message(transcript("Consulta atual")); message(tool("new-after-reconnect")); await tick();
+    assert.equal(states.at(-1).phase, "processing");
+    rejectOld(new Error("old request failed after reconnect")); await tick();
+    assert.equal(states.at(-1).phase, "processing", "old failure must not fail or demote the new command");
+    assert.equal(states.at(-1).connected, true);
+    finishNew({ text: "Consulta atual respondida" }); await tick();
+    assert.equal(state.responses.length, 1);
+    assert.equal(state.responses[0].functionResponses[0].response.text, "Consulta atual respondida");
+    adapter.stop();
   });
   await t.test("GoAway resumes with an in-memory handle; stop cancels retries", async () => {
     const adapter = await setup();

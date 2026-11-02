@@ -320,7 +320,7 @@ test("Persistent session admission survives new instances, deduplicates usage an
   await admitVoiceSession(store, "next", 1, 3601001);
   assert.equal(voiceUsageStats(state.voiceUsage, 3601100).sessions, 1);
 });
-test("Voice migration is explicit and server VAD interrupts speech while input is active", () => {
+test("Voice migration is explicit and server VAD prevents unintended self-interruption", () => {
   assert.equal(voiceSessionPolicy({}).model, "gpt-realtime");
   assert.equal(
     voiceSessionPolicy({ JARVIS_OPENAI_VOICE_MODEL: "gpt-realtime-2.1" }).model,
@@ -328,7 +328,7 @@ test("Voice migration is explicit and server VAD interrupts speech while input i
   );
   assert.equal(
     voiceSessionPolicy({}).audio.input.turn_detection.interrupt_response,
-    true,
+    false,
   );
   assert.throws(() =>
     voiceSessionPolicy({ JARVIS_OPENAI_VOICE_MODEL: "unapproved-model" }),
