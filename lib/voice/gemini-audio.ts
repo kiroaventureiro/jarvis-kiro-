@@ -27,6 +27,7 @@ export class GeminiAudio {
     }
     await context.resume();
   }
+  unlockPlayback() { void this.prepareOutput().catch(() => {}); }
   async start(onPCM: (data: string) => void) {
     const epoch = ++this.epoch;
     await this.prepareOutput();
