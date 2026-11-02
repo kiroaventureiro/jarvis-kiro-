@@ -26,7 +26,7 @@ const replacements = {
 };
 for (const [name, value] of Object.entries(replacements)) code = code.replace(new RegExp(`import[^;]+from "${name}";`, "g"), value);
 const { POST, GET } = await import(url(code));
-const request = (origin = "https://preview.example", body = {}) => new Request("https://preview.example/api/voice/gemini-token", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const request = (origin = "https://preview.example", body = {}) => new Request("https://preview.example/api/voice/gemini-token", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ clientSessionId: "00000000-0000-4000-8000-000000000001", ...body }) });
 function reset() {
   Object.assign(state, { authorized: true, requests: [], admitted: 0, fail: false, limited: false });
   Object.assign(process.env, { VERCEL_ENV: "preview", GEMINI_API_KEY: "test-server-only-not-a-real-key", JARVIS_GEMINI_LIVE_ENABLED: "true", JARVIS_GEMINI_LIVE_PAID_ALLOWED: "true", JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR: "3" });
@@ -54,6 +54,7 @@ test("token endpoint enforces security before contacting Google", async t => {
     assert.ok(Date.parse(c.expireTime) - now <= 1801000);
     assert.equal(c.liveConnectConstraints.config.sessionResumption.handle, "resume-opaque");
     assert.deepEqual(c.liveConnectConstraints.config.responseModalities, ["AUDIO"]);
+    assert.equal(c.liveConnectConstraints.config.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, "Charon");
     assert.equal(c.liveConnectConstraints.config.tools[0].functionDeclarations[0].name, "jarvis_conversation");
     assert.deepEqual(c.liveConnectConstraints.config.tools[0].functionDeclarations[0].parameters.properties, {});
   });

@@ -246,6 +246,9 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
   }, []);
   const [wakeHandoff, setWakeHandoff] = useState(false);
   const wakeWasActive = useRef(false);
+  // Latch an utterance independently of React's render timing: the mic toggle
+  // may emit "off" before the listening-state render has committed.
+  const geminiUtteranceActive = useRef(false);
   const liveActivate = useRef<(() => void) | null>(null);
   const liveText = useRef<((text: string) => boolean) | null>(null);
   const wakeStop = useRef<() => void>(() => {});
@@ -1261,7 +1264,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
         <div role="status" aria-live="polite" aria-atomic="true" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginInlineStart: 0, whiteSpace: "nowrap", flexShrink: 0 }}>
           <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: state === "error" || workspace.phase === "error" ? "#f28f8f" : state === "processing" || workspace.busy ? "#c4b5fd" : state === "listening" || workspace.recording || voiceSnapshot.phase === "command" ? "#59ddf6" : state === "responding" || voiceSnapshot.phase === "speaking" ? "#78ead8" : "#96adbf", boxShadow: "0 0 9px currentColor", color: "#8cdbf2" }} />
           <span style={{ color: "#b9d3e4", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.09em" }}>
-            {workspace.phase === "error" || state === "error" ? "CONEXÃO INDISPONÍVEL" : workspace.busy || state === "processing" || voiceSnapshot.phase === "processing" ? "PENSANDO" : workspace.recording || state === "listening" || voiceSnapshot.phase === "command" ? "OUVINDO" : state === "responding" || voiceSnapshot.phase === "speaking" ? "RESPONDENDO" : state === "connecting" ? "CONECTANDO" : "EM ESPERA"}
+            {workspace.phase === "error" || state === "error" ? "CONEXÃO INDISPONÍVEL" : workspace.busy || state === "processing" || voiceSnapshot.phase === "processing" ? "PENSANDO" : state === "responding" || voiceSnapshot.phase === "speaking" ? "RESPONDENDO" : workspace.recording || voiceSnapshot.phase === "command" || state === "listening" ? "OUVINDO" : state === "connecting" || voiceSnapshot.phase === "resuming" ? "CONECTANDO" : "EM ESPERA"}
           </span>
         </div>
         </div>
@@ -1501,7 +1504,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
             externalBusy={typingRequest || connected}
             registerStop={registerWakeStop}
             beforeStart={() => {
-              if (geminiRequested) { stop(); getVoiceManager().cancel(); }
+              if (geminiRequested) { if (connected) stop(); getVoiceManager().cancel(); }
               else if (connected) setWakeHandoff(true);
               setError("");
             }}
@@ -1553,6 +1556,16 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
               if (!snapshot.enabled) setWakeHandoff(false);
               if (typingAbort.current || fileSpeech.current || connected)
                 return;
+              // Track the utterance at the event source, not through a possibly stale
+              // React state closure. Turning off capture must not erase OUVINDO.
+              if (geminiRequested && snapshot.phase === "command") geminiUtteranceActive.current = true;
+              if (geminiRequested && (snapshot.phase === "processing" || snapshot.phase === "speaking" || snapshot.phase === "error" || snapshot.message.startsWith("Resposta concluída"))) geminiUtteranceActive.current = false;
+              if (geminiRequested && snapshot.phase === "off" && snapshot.message.startsWith("Microfone pausado") && geminiUtteranceActive.current) {
+                setState("listening");
+                return;
+              }
+              if (geminiRequested && snapshot.phase === "off" && !snapshot.message.startsWith("Microfone pausado")) geminiUtteranceActive.current = false;
+              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding") && !snapshot.message.startsWith("Resposta concluída")) return;
               if (snapshot.phase === "off" && !wasActive) return;
               setState(
                 snapshot.phase === "processing"
