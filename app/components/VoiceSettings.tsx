@@ -6,6 +6,7 @@ import {
   readVoicePreferences,
   saveVoicePreferences,
   selectVoice,
+  VOICE_PREF_EVENT,
 } from "../../lib/voice/voice-preferences";
 import type { VoicePreferences } from "../../lib/voice/voice-types";
 import VoiceComparison from "./VoiceComparison";
@@ -24,6 +25,8 @@ export default function VoiceSettings() {
   const [geminiVoice, setGeminiVoice] = useState("Orus");
   useEffect(() => {
     setPrefs(readVoicePreferences());
+    const prefsChanged = () => setPrefs(readVoicePreferences());
+    window.addEventListener(VOICE_PREF_EVENT, prefsChanged);
     const voiceChanged = (event: Event) => {
       const name = (event as CustomEvent<string>).detail;
       if (["Orus", "Charon", "Algenib", "Gacrux", "Puck", "Kore"].includes(name)) setGeminiVoice(name);
@@ -32,7 +35,7 @@ export default function VoiceSettings() {
     try { setGeminiVoice(localStorage.getItem("jarvis.gemini.voice.v1") || "Orus"); } catch {}
     if (!("speechSynthesis" in window)) {
       setStatus("Síntese de fala indisponível neste navegador.");
-      return;
+      return () => { window.removeEventListener("jarvis:gemini-voice", voiceChanged); window.removeEventListener(VOICE_PREF_EVENT, prefsChanged); };
     }
     const update = () =>
       setVoices(brazilianVoices(window.speechSynthesis.getVoices()));
@@ -41,6 +44,7 @@ export default function VoiceSettings() {
     return () => {
       window.speechSynthesis.removeEventListener("voiceschanged", update);
       window.removeEventListener("jarvis:gemini-voice", voiceChanged);
+      window.removeEventListener(VOICE_PREF_EVENT, prefsChanged);
       preview.current?.abort();
     };
   }, []);
