@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { geminiLiveConfig, GEMINI_LIVE_MODEL } from "../../../../lib/voice/gemini-config";
+import { geminiLiveConfig, GEMINI_LIVE_MODEL, GEMINI_VOICE_CHOICES } from "../../../../lib/voice/gemini-config";
 import { requestOriginAllowed } from "../../../../lib/request-origin";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
@@ -64,8 +64,9 @@ export async function POST(request: Request) {
   const callsPerHour = Number(process.env.JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR);
   const body = await request.json().catch(() => ({}));
   if (!body || typeof body !== "object" || Array.isArray(body) ||
-      Object.keys(body).some(k => !["handle", "clientSessionId"].includes(k)) ||
+      Object.keys(body).some(k => !["handle", "clientSessionId", "voiceName"].includes(k)) ||
       (body.handle !== undefined && (typeof body.handle !== "string" || body.handle.length > 4096)) ||
+      (body.voiceName !== undefined && !GEMINI_VOICE_CHOICES.some(v => v === body.voiceName)) ||
       typeof body.clientSessionId !== "string" || !/^[a-f0-9-]{36}$/i.test(body.clientSessionId)) {
     return NextResponse.json({ error: "Sessão inválida." }, { status: 400 });
   }
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     const client = new GoogleGenAI({ apiKey: key, httpOptions: { apiVersion: "v1beta", timeout: 15000 } });
     const data = await client.authTokens.create({ config: {
       uses: 1, expireTime: expires, newSessionExpireTime: newSessionExpires,
-      liveConnectConstraints: { model: MODEL, config: geminiLiveConfig(await buildInstructions(), body.handle) },
+      liveConnectConstraints: { model: MODEL, config: geminiLiveConfig(await buildInstructions(), body.handle, body.voiceName || "Orus") },
     } });
     if (!data.name) return failure("TOKEN_UNAVAILABLE", "Google não retornou uma credencial temporária.", 502);
 
