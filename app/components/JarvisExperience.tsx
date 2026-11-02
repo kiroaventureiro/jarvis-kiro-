@@ -69,7 +69,11 @@ const labels: Record<AssistantState, string> = {
   responding: "Respondendo",
   error: "Conexão indisponível",
 };
-export default function JarvisExperience() {
+export default function JarvisExperience({ experimentalGemini = false }: { experimentalGemini?: boolean }) {
+  const [geminiRequested, setGeminiRequested] = useState(experimentalGemini);
+  useEffect(() => {
+    setGeminiRequested(experimentalGemini || new URLSearchParams(window.location.search).get("voice") === "gemini-live");
+  }, [experimentalGemini]);
   // Install the browser audio-unlock listener before the first user interaction.
   // The VoiceStudio response arrives asynchronously after the chat request.
   useEffect(() => { getVoiceManager(); }, []);
@@ -242,6 +246,9 @@ export default function JarvisExperience() {
   }, []);
   const [wakeHandoff, setWakeHandoff] = useState(false);
   const wakeWasActive = useRef(false);
+  const geminiUtteranceActive = useRef(false);
+  const liveActivate = useRef<(() => void) | null>(null);
+  const liveText = useRef<((text: string) => boolean) | null>(null);
   const wakeStop = useRef<() => void>(() => {});
   const typingAbort = useRef<AbortController | null>(null);
   const fileSpeech = useRef<AbortController | null>(null);
@@ -350,6 +357,7 @@ export default function JarvisExperience() {
         : rawVisual;
       holoSession.present(visual);
       if (
+        desktopVoice && !geminiRequested &&
         !muteRef.current &&
         readVoicePreferences().volume > 0
       ) {
@@ -460,6 +468,7 @@ export default function JarvisExperience() {
     if (output.current) output.current.scrollTop = output.current.scrollHeight;
   }, [messages]);
   async function start(withMicrophone: boolean) {
+    if (geminiRequested) { setError("Gemini Live selecionado: sessão de voz alternativa bloqueada."); return false; }
     if (pending.current) return false;
     pending.current = true;
     setError("");
@@ -808,6 +817,7 @@ export default function JarvisExperience() {
     }
   }
   async function microphone() {
+    if (geminiRequested && !workspace.files.length) { liveActivate.current?.(); return; }
     window.dispatchEvent(new Event("jk-arrival-stop"));
     wakeStop.current();
     if (fileSpeech.current) {
@@ -1021,6 +1031,7 @@ export default function JarvisExperience() {
       if (success) setDraft("");
       return;
     }
+    if (geminiRequested && !workspace.files.length && liveText.current?.(text)) { setDraft(""); return; }
     if (connected || peer.current) stop();
     fileSpeech.current?.abort();
     fileSpeech.current = null;
@@ -1033,13 +1044,13 @@ export default function JarvisExperience() {
     const assistantId = crypto.randomUUID();
     setMessages((items) => [...items, { id: userId, role: "user", text }]);
     setDraft("");
-    setError("");
+    setError(geminiRequested ? "Gemini Live não conectado · resposta somente por texto · voz alternativa bloqueada." : "");
     setState("processing");
     lastUserText.current = text;
     holoSession.close();
     try {
       const voiceFirst =
-        !muteRef.current && readVoicePreferences().volume > 0;
+        desktopVoice && !geminiRequested && !muteRef.current && readVoicePreferences().volume > 0;
       const local = await conversationalCodexApproval(text) || localConversationReply(text) || await conversationalCapabilityReply(text) || await conversationalCodexStatus(text) || conversationalAppHandoff(text) || await conversationalCodexDraft(text);
       let generatedForThisResponse=false;
       const result =
@@ -1272,7 +1283,7 @@ export default function JarvisExperience() {
           onVisualMode={setAudioVisual}
         />
         <div className="state-indicator sr-only" aria-hidden="true">
-          <span className={"signal " + (connected ? "online" : "")} />
+          <span className={"signal " + (connected || voiceSnapshot.connected ? "online" : "")} />
           {workspace.phase === "error"
             ? "Análise não concluída"
             : workspace.recording
@@ -1283,7 +1294,13 @@ export default function JarvisExperience() {
                   : voiceSnapshot.phase === "command"
                     ? "Ouvindo comando"
                     : labels[state]
-                : labels[state]}
+                : voiceSnapshot.connected && state === "responding"
+                  ? "Respondendo"
+                  : voiceSnapshot.connected && state === "processing"
+                    ? "Pensando"
+                    : voiceSnapshot.connected
+                      ? "Em espera"
+                      : labels[state]}
           <span className="connection-label">
             {workspace.busy
               ? "Arquivos em análise"
@@ -1293,16 +1310,18 @@ export default function JarvisExperience() {
                   ? voiceSnapshot.microphoneActive
                     ? "Microfone ativo"
                     : "Reconhecimento pausado"
-                  : connected
-                    ? mic
-                      ? "Microfone ativo"
-                      : "Microfone desligado"
-                    : ""}
+                  : voiceSnapshot.connected
+                    ? "Gemini conectado · escuta infinita desligada"
+                    : connected
+                      ? mic
+                        ? "Microfone ativo"
+                        : "Microfone desligado"
+                      : ""}
           </span>
         </div>
       </section>
       <HoloResponseHUD
-        externalAudioActive={connected && state === "responding"}
+        externalAudioActive={(connected || voiceSnapshot.connected) && state === "responding"}
         showNarration={
           !!last && (!desktopVoice || muted || last.speechAvailable === false)
         }
@@ -1474,12 +1493,17 @@ export default function JarvisExperience() {
         <div className="dock-controls glass">
           <button type="button" className="subtle-button" aria-expanded={appsOpen} onClick={()=>setAppsOpen(open=>!open)}>Aplicativos</button>
           <WakeListener
+            geminiRequested={geminiRequested}
+            registerActivate={(activate) => { liveActivate.current = activate; }}
+            desktopAudio={desktopVoice}
+            registerLiveText={(send) => { liveText.current = send; }}
             muted={muted}
             blocked={workspace.files.length > 0 || state === "connecting"}
             externalBusy={typingRequest || connected}
             registerStop={registerWakeStop}
             beforeStart={() => {
-              if (connected) setWakeHandoff(true);
+              if (geminiRequested) { if (connected) stop(); getVoiceManager().cancel(); }
+              else if (connected) setWakeHandoff(true);
               setError("");
             }}
             onUser={(spoken) => {
@@ -1509,10 +1533,14 @@ export default function JarvisExperience() {
                   id,
                   reply.text,
                   true,
-                  !muteRef.current,
+                  !muteRef.current && reply.speechPending !== true,
                 ),
               );
               return prepared;
+            }}
+            onSpeechAvailable={() => {
+              const id = browserReplyId.current;
+              if (id) setMessages(items => items.map(item => item.id === id ? { ...item, speechAvailable: !muteRef.current } : item));
             }}
             onSpeechUnavailable={() => {
               const id = browserReplyId.current;
@@ -1526,6 +1554,16 @@ export default function JarvisExperience() {
               if (!snapshot.enabled) setWakeHandoff(false);
               if (typingAbort.current || fileSpeech.current || connected)
                 return;
+              // Keep the visible conversation state while capture is paused;
+              // disabling the microphone must not erase an in-flight utterance.
+              if (geminiRequested && snapshot.phase === "command") geminiUtteranceActive.current = true;
+              if (geminiRequested && (snapshot.phase === "processing" || snapshot.phase === "speaking" || snapshot.phase === "error" || snapshot.message.startsWith("Resposta concluída"))) geminiUtteranceActive.current = false;
+              if (geminiRequested && snapshot.phase === "off" && snapshot.message.startsWith("Microfone pausado") && geminiUtteranceActive.current) {
+                setState("listening");
+                return;
+              }
+              if (geminiRequested && snapshot.phase === "off" && !snapshot.message.startsWith("Microfone pausado")) geminiUtteranceActive.current = false;
+              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding") && !snapshot.message.startsWith("Resposta concluída")) return;
               if (snapshot.phase === "off" && !wasActive) return;
               setState(
                 snapshot.phase === "processing"
@@ -1565,7 +1603,7 @@ export default function JarvisExperience() {
           <button
             className={
               "icon-button microphone " +
-              (mic || workspace.recording ? "active" : "")
+              ((geminiRequested ? voiceSnapshot.enabled : mic) || workspace.recording ? "active" : "")
             }
             disabled={state === "connecting" || workspace.busy}
             onClick={microphone}
@@ -1574,16 +1612,16 @@ export default function JarvisExperience() {
                 ? "Concluir orientação por voz"
                 : workspace.files.length
                   ? "Gravar orientação sobre os arquivos"
-                  : mic
+                  : (geminiRequested ? voiceSnapshot.enabled : mic)
                     ? "Desativar microfone"
                     : "Ativar microfone"
             }
             title={
               workspace.files.length
                 ? "Orientação por voz sobre os arquivos"
-                : "Conversa neural · requer autorização de custo"
+                : geminiRequested ? "Gemini Live · entrada e saída · autorização e orçamento obrigatórios" : "Conversa neural · requer autorização de custo"
             }
-            aria-pressed={mic || workspace.recording}
+            aria-pressed={(geminiRequested ? voiceSnapshot.enabled : mic) || workspace.recording}
           >
             <svg
               viewBox="0 0 24 24"
