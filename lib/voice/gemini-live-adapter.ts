@@ -28,6 +28,8 @@ export class GeminiLiveVoiceAdapter {
   private attempts = 0;
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private abort: AbortController | null = null;
+  // Cancellation IDs belong to individual Gemini tool calls, not the entire session.
+  private activeToolCallId: string | null = null;
   private provisioning: AbortController | null = null;
   private transcript = "";
   private transcriptReady = false;
@@ -200,7 +202,7 @@ export class GeminiLiveVoiceAdapter {
   private reconnect() {
     if (!this.sessionActive) return;
     this.connection++; this.ready = false; this.clearTimers(); this.abort?.abort();
-    this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false; this.processing = false;
+    this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false; this.processing = false; this.activeToolCallId = null;
     this.audio.interrupt();
     this.audio.pauseCapture();
     this.audioStarted = false;
@@ -218,12 +220,25 @@ export class GeminiLiveVoiceAdapter {
       const content = message.serverContent;
       if (content?.interrupted) {
         this.playing = false; this.processing = false;
-        this.audio.interrupt(); this.outputAllowed = false; this.abort?.abort(); this.pending = null;
+        this.audio.interrupt(); this.outputAllowed = false; this.abort?.abort(); this.pending = null; this.activeToolCallId = null;
         this.emit("command", "Interrupção detectada · ouvindo…");
       }
       if (message.toolCallCancellation?.ids?.length) {
-        if (this.pending?.id && message.toolCallCancellation.ids.includes(this.pending.id)) this.pending = null;
-        this.abort?.abort(); this.outputAllowed = false;
+        const ids = message.toolCallCancellation.ids;
+        // A cancellation for an old/unrelated call must not abort a newer
+        // Jarvis command or silence its response after a reconnect.
+        if (this.pending?.id && ids.includes(this.pending.id)) {
+          this.pending = null;
+          this.transcript = ""; this.transcriptReady = false;
+          this.clearTranscriptTimers();
+        }
+        if (this.activeToolCallId && ids.includes(this.activeToolCallId)) {
+          this.abort?.abort();
+          this.activeToolCallId = null;
+          this.processing = false;
+          this.outputAllowed = false;
+          this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Comando cancelado · aguardando nova fala" : "Comando cancelado · sessão Gemini preservada");
+        }
       }
       // Transcription alone must never interrupt playback; native Live VAD controls barge-in.
       if (content?.inputTranscription && !this.playing) {
@@ -273,6 +288,7 @@ export class GeminiLiveVoiceAdapter {
     if (!call || !text || !this.sessionActive) return;
     this.usedTurn = true;
     this.abort?.abort(); const abort = new AbortController(); this.abort = abort;
+    this.activeToolCallId = call.id ?? null;
     const connection = this.connection;
     this.outputAllowed = false; this.audio.interrupt(); this.processing = true;
     this.options.onUser(text); this.emit("processing", "Consultando o núcleo Jarvis…");
@@ -282,6 +298,7 @@ export class GeminiLiveVoiceAdapter {
       if (this.abort !== abort) return;
       if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) { this.processing = false; return; }
       this.processing = false;
+      this.activeToolCallId = null;
       this.options.onReply({ ...reply, speechPending: true });
       this.outputAllowed = true;
       this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
@@ -289,6 +306,7 @@ export class GeminiLiveVoiceAdapter {
     } catch {
       if (this.abort !== abort) return;
       this.processing = false;
+      this.activeToolCallId = null;
       if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
     }
   }
@@ -298,7 +316,7 @@ export class GeminiLiveVoiceAdapter {
     if (!this.ready) { this.emit("resuming", "Gemini Live está reconectando. Aguarde a sessão ficar disponível."); return false; }
     if (!text.trim()) return true;
     if (text.length > 1500) { this.fail("Use mensagens de até 1.500 caracteres."); return false; }
-    this.abort?.abort(); this.audio.interrupt(); this.outputAllowed = false; this.playing = false; this.processing = false;
+    this.abort?.abort(); this.audio.interrupt(); this.outputAllowed = false; this.playing = false; this.processing = false; this.activeToolCallId = null;
     this.usedTurn = false; this.pending = null;
     this.transcript = text; this.transcriptReady = true;
     this.session?.sendClientContent({ turns: [{ role: "user", parts: [{ text }] }], turnComplete: true });
@@ -335,7 +353,7 @@ export class GeminiLiveVoiceAdapter {
     this.clearTimers(); this.clearTranscriptTimers(); this.provisioning?.abort(); this.abort?.abort();
     try { this.session?.sendRealtimeInput({ audioStreamEnd: true }); } catch {}
     this.session?.close(); this.session = null; this.audio.close(); this.audioStarted = false; this.handle = undefined;
-    this.transcript = ""; this.transcriptReady = false; this.pending = null; this.outputAllowed = false; this.playing = false; this.processing = false; this.inputChunks = 0; this.outputChunks = 0; this.usedTurn = false; this.seen.clear();
+    this.transcript = ""; this.transcriptReady = false; this.pending = null; this.activeToolCallId = null; this.outputAllowed = false; this.playing = false; this.processing = false; this.inputChunks = 0; this.outputChunks = 0; this.usedTurn = false; this.seen.clear();
     this.emit("off", message);
   }
   private fail(message: string) { this.options.onSpeechUnavailable(); this.stop(message); this.emit("error", message); }
