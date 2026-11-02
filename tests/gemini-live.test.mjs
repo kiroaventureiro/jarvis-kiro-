@@ -291,3 +291,10 @@ test("infinite-audio entry selects Gemini before trying to activate the micropho
   assert.match(listener, /if \(props\.geminiRequested && !authorized\) setConsent\(true\)/);
   assert.match(listener, /engine\.current\?\.start\(\)/);
 });
+
+test("handshake timeout reconnects instead of permanently disabling the Live session", () => {
+  const source = fs.readFileSync("lib/voice/gemini-live-adapter.ts", "utf8");
+  assert.match(source, /if \(this\.sessionActive && connection === this\.connection && !this\.ready\)\s*this\.reconnect\(\)/);
+  assert.match(source, /if \(this\.enabled\) \{\s*if \(this\.sessionActive && this\.ready && !this\.audioStarted\) void this\.startCapture\(\)/);
+  assert.ok(!source.includes('this.enabled = false;\n        this.audio.pauseCapture();'), "microphone error does not clear user-selected infinite listening");
+});
