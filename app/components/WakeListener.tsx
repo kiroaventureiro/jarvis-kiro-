@@ -17,6 +17,7 @@ import type {
 } from "../../lib/voice/voice-types";
 type Props = {
   geminiRequested?: boolean;
+  requestGemini?: () => void;
   registerActivate?: (activate: (() => void) | null) => void;
   registerLiveText?: (send: ((text: string) => boolean) | null) => void;
   onMessage: (text: string, signal: AbortSignal) => Promise<VoiceReply>;
@@ -158,6 +159,7 @@ export default function WakeListener(props: Props) {
     return () => props.registerActivate?.(null);
   });
   function activate() {
+    if (!props.geminiRequested) { props.requestGemini?.(); return; }
     if (snapshot.enabled) {
       engine.current?.disableListening();
       return;
