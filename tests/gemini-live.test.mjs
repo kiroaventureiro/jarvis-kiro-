@@ -265,3 +265,16 @@ test("exclusive owner blocks browser and neural speech until released", async ()
   assert.match(adapter, /connected: this\.sessionActive && this\.ready/);
   assert.match(adapter, /sendText\(text: string\)[\s\S]*?if \(!this\.sessionActive\) return false/);
 });
+
+test("stale tool cancellation must not suppress a newer audible answer", async () => {
+  const adapter = await setup();
+  message(transcript("Pergunta atual"));
+  message(tool("current-call"));
+  await tick();
+  assert.equal(state.responses.length, 1);
+  const before = state.audio.at(-1).played?.length || 0;
+  message({ toolCallCancellation: { ids: ["outdated-call"] } });
+  message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "current-voice" } }] } } });
+  assert.equal(state.audio.at(-1).played?.length, before + 1, "unrelated cancellation cannot mute current PCM");
+  adapter.stop();
+});
