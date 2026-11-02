@@ -267,6 +267,7 @@ test("exclusive owner blocks browser and neural speech until released", async ()
     assert.match(fs.readFileSync(`lib/voice/${file}`, "utf8"), /assertLegacyAudioAllowed\(\)/);
   const parent = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
   assert.match(parent, /if \(geminiRequested && !workspace.files.length\) \{ liveActivate.current\?\.\(\); return; \}/);
+  assert.match(parent, /workspace\.recording \|\| voiceSnapshot\.phase === "command" \|\| \(!geminiRequested && state === "listening"\)/, "Gemini waiting must remain EM ESPERA, but command must remain OUVINDO even after mic-off");
   assert.match(parent, /desktopVoice && !geminiRequested && !muteRef.current/);
   assert.match(parent, /resposta somente por texto/);
   assert.match(parent, /shown.length && !holoSession.current && \(typing \|\| history\)/);
