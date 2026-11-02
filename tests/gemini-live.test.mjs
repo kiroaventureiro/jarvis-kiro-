@@ -278,3 +278,16 @@ test("stale tool cancellation must not suppress a newer audible answer", async (
   assert.equal(state.audio.at(-1).played?.length, before + 1, "unrelated cancellation cannot mute current PCM");
   adapter.stop();
 });
+
+test("infinite-audio entry selects Gemini before trying to activate the microphone", () => {
+  const component = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  const start = component.indexOf("async function microphone()");
+  const end = component.indexOf("\\n  }", start);
+  const handler = component.slice(start, start + 900);
+  assert.ok(handler.includes("setGeminiRequested(true)"), "infinite audio selects Gemini Live");
+  assert.ok(handler.includes("liveActivate.current?.()"), "subsequent use activates Gemini and browser microphone together");
+  assert.ok(!component.includes('>Ativar Gemini Live</button>'), "no separate Gemini toggle to inadvertently reset microphone");
+  const listener = fs.readFileSync("app/components/WakeListener.tsx", "utf8");
+  assert.match(listener, /if \(props\.geminiRequested && !authorized\) setConsent\(true\)/);
+  assert.match(listener, /engine\.current\?\.start\(\)/);
+});
