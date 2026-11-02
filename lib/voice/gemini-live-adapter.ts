@@ -326,7 +326,14 @@ export class GeminiLiveVoiceAdapter {
     this.enabled = false;
     this.audio.pauseCapture();
     this.audioStarted = false;
-    this.emit(this.processing ? "processing" : this.playing || this.outputAllowed ? "speaking" : this.sessionActive && this.ready ? "waiting" : "off", this.sessionActive && this.ready ? "Microfone pausado · resposta por voz continua, Gemini conectado" : "Microfone pausado · mantendo a conexão Gemini");
+    // Finish the current utterance without closing the Gemini session or aborting the Jarvis core.
+    if (this.transcript.trim() || this.pending) {
+      try { this.session?.sendRealtimeInput({ audioStreamEnd: true }); } catch { this.trace("capture:end signal failed"); }
+      if (this.pending) this.schedulePendingRun(120);
+      this.emit(this.processing ? "processing" : "command", "Finalizando a fala recebida…");
+      return;
+    }
+    this.emit(this.processing ? "processing" : this.playing || this.outputAllowed ? "speaking" : "off", "Microfone pausado · sessão Gemini preservada");
   }
   stop(message = "Sessão Gemini encerrada.") {
     this.enabled = false; this.sessionActive = false; this.epoch++; this.connection++; this.ready = false;
