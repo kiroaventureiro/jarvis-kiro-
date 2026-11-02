@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - fix/gemini-live-persistent-audio-toggle-20261101
+      - integration/gemini-live-on-approved-kiro-20261101
     paths:
       - 'app/components/JarvisExperience.tsx'
       - 'app/components/WakeListener.tsx'
