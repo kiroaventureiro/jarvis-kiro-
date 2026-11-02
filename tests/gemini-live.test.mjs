@@ -404,3 +404,13 @@ test("central preferences controller handles numeric voice settings and UI recei
   assert.match(panel, /VOICE_PREF_EVENT/);
   assert.match(panel, /window\.addEventListener\(VOICE_PREF_EVENT, prefsChanged\)/);
 });
+
+test("Jarvis settings inventory reflects persisted values without granting unsafe control", () => {
+  const controller = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  assert.match(controller, /Read-only inventory/);
+  assert.match(controller, /readVoicePreferences\(\)/);
+  assert.match(controller, /readGraphicsPreference\(\)/);
+  assert.match(controller, /historyConsent\(\)/);
+  assert.match(controller, /Credenciais|credenciais/);
+  assert.match(controller, /VOICES\.find/);
+});
