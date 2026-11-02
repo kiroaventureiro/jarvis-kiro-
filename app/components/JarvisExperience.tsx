@@ -906,6 +906,17 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
       saveVoicePreferences(next);
       return {text:(isVolume ? "Volume" : isRate ? "Velocidade" : "Tom") + " configurado em " + percentage + " por cento. " + (isVolume ? "O volume também controla a saída do Gemini." : "Este ajuste se aplica à síntese do navegador, não à voz Gemini Live."),model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
     }
+    if (!amount && (isVolume || isRate || isPitch) && /\\b(aumentar|aumente|aumenta|diminuir|diminua|diminui|reduzir|reduza)\\b/.test(normalized)) {
+      const upward = /\\b(aumentar|aumente|aumenta)\\b/.test(normalized);
+      const direction = upward ? 1 : -1;
+      const next = {...prefs};
+      if (isVolume) next.volume = Math.max(0, Math.min(1, prefs.volume + direction * 0.1));
+      else if (isRate) next.rate = Math.max(0.7, Math.min(1.3, prefs.rate + direction * 0.05));
+      else next.pitch = Math.max(0.6, Math.min(1.2, prefs.pitch + direction * 0.05));
+      saveVoicePreferences(next);
+      const label = isVolume ? "Volume" : isRate ? "Velocidade" : "Tom";
+      return {text:label + " ajustado. " + (isVolume ? "Alteração também aplicada à saída do Gemini." : "Este controle afeta a voz do navegador, não a voz Gemini Live."),model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
     if (/\b(?:opcoes|disponiveis|escolher|configuracoes)\b/.test(normalized) && /\b(?:voz|vozes|vocal)\b/.test(normalized))
       return {text:"Na Identidade vocal do Jarvis você pode escolher Orus, Charon, Algenib, Gacrux, Puck ou Kore para o Gemini Live. Posso selecionar uma dessas vozes por comando. O tom e a velocidade ajustam apenas a voz do navegador; o volume é compartilhado.",model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
     return null;
