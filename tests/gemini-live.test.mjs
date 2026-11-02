@@ -13,11 +13,12 @@ const state = { audio: [], callbacks: null, responses: [], inputs: [], connects:
 globalThis.__geminiTest = state;
 const { GeminiLiveVoiceAdapter } = await compile("lib/voice/gemini-live-adapter.ts", {
   "@google/genai": `const GoogleGenAI = class { constructor(options) { globalThis.__geminiTest.credentials = options; } live = { connect: async ({callbacks, config}) => { const s = globalThis.__geminiTest; s.callbacks = callbacks; s.config = config; s.connects++; return { close() {}, sendRealtimeInput(v) { s.inputs.push(v); }, sendClientContent(v) { s.typed = v; }, sendToolResponse(v) { s.responses.push(v); } }; } }; };`,
-  "./gemini-audio": `const GeminiAudio = class { async start(fn) { this.capture = fn; this.starts = (this.starts || 0) + 1; globalThis.__geminiTest.audio.push(this); } pauseCapture() { this.paused = (this.paused || 0) + 1; } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
+  "./gemini-audio": `const GeminiAudio = class { async prepareOutput() { globalThis.__geminiTest.unlocked = true; } async start(fn) { this.capture = fn; this.starts = (this.starts || 0) + 1; globalThis.__geminiTest.audio.push(this); } pauseCapture() { this.paused = (this.paused || 0) + 1; } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
   "./gemini-config": `const GEMINI_JARVIS_TOOL = "jarvis_conversation";`,
 });
 let calls = [], states = [], users = [], replies = [], volume = 0.4, command;
 async function setup() {
+  volume = 0.4;
   state.responses = []; calls = []; states = []; users = []; replies = [];
   command = async text => ({ text: `Jarvis: ${text}` });
   globalThis.fetch = async () => ({ ok: true, json: async () => ({ token: "ephemeral-test", model: "gemini-3.8-live", newSessionExpiresAt: new Date(Date.now() + 60000).toISOString(), expiresAt: new Date(Date.now() + 1800000).toISOString() }) });
@@ -34,6 +35,7 @@ const transcript = text => ({ serverContent: { inputTranscription: { text, finis
 test("Gemini Live hybrid lifecycle", async t => {
   await t.test("PCM continuous input; Jarvis owns the answer; volume and immediate interruption", async () => {
     const adapter = await setup();
+    assert.equal(state.unlocked, true, "playback is unlocked during activation");
     const audio = state.audio.at(-1); audio.capture("pcm-input");
     assert.equal(state.inputs.at(-1).audio.mimeType, "audio/pcm;rate=16000");
     message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm", data: "premature" } }] } } });
@@ -154,6 +156,8 @@ test("audio capture, PCM decode, cancellable playback and late permission cleanu
   const { GeminiAudio } = await compile("lib/voice/gemini-audio.ts");
   const audio = new GeminiAudio(); let pcm, drained = 0;
   audio.onDrained = () => { drained++; };
+  await audio.prepareOutput();
+  assert.equal(tracks.length, 0, "unlocking output must not open the microphone");
   await audio.start(data => { pcm = data; });
   assert.equal(contexts[0].config.sampleRate, 16000);
   globalThis.__capture.port.onmessage({ data: { pcm: new Int16Array([32767, -32768]).buffer, echoFrames: 0 } });

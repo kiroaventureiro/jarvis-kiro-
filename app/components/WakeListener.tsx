@@ -54,7 +54,7 @@ export default function WakeListener(props: Props) {
       const data = await response.json();
       const code = typeof data.code === "string" && /^[A-Z0-9_]{1,60}$/.test(data.code) ? data.code : "ENDPOINT_ERROR";
       setDiagnostic(`Gemini Live · HTTP ${response.status} · ${code} · teste sem custo, sem token, sem microfone`);
-    } catch { setDiagnostic("Gemini Live · falha de rede no diagnóstico; TTS bloqueado."); }
+    } catch { setDiagnostic("Gemini Live · falha de rede no diagnóstico."); }
   }
   useEffect(() => {
     let mounted = true;
@@ -108,7 +108,11 @@ export default function WakeListener(props: Props) {
     engine.current = controller;
     if (controller instanceof VoiceController)
       bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
-    else callback.current.registerLiveText?.(text => controller.sendText(text));
+    else {
+      // Gemini already receives continuous, echo-filtered PCM and owns VAD.
+      // An energy-only second microphone can mistake speaker output for barge-in.
+      callback.current.registerLiveText?.(text => controller.sendText(text));
+    }
     const preferences = () => { if (controller instanceof GeminiLiveVoiceAdapter) controller.updateVolume(); };
     window.addEventListener(VOICE_PREF_EVENT, preferences);
     props.registerStop(() => controller.stop());
@@ -182,7 +186,7 @@ export default function WakeListener(props: Props) {
             : "Ativar escuta de voz"
         }
         aria-pressed={snapshot.enabled}
-        title={props.geminiRequested ? "Gemini Live · entrada e saída · sem TTS alternativo" : "Escuta de voz"}
+        title={props.geminiRequested ? "Gemini Live · escuta e voz nativa" : "Escuta de voz"}
         className={"icon-button " + (snapshot.enabled ? "active" : "")}
         data-voice-phase={snapshot.phase}
       >

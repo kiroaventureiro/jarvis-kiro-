@@ -12,8 +12,8 @@ export class GeminiAudio {
   onDrained = () => {};
   onEchoEvidence = (_frames: number, _aec: boolean) => {};
   onMicrophoneEnded = () => {};
-  async start(onPCM: (data: string) => void) {
-    const epoch = ++this.epoch;
+  /** Call directly from the activation click, before network awaits consume user activation. */
+  async prepareOutput() {
     let context = this.context;
     if (!context || context.state === "closed") {
       const createdContext = new AudioContext({ sampleRate: 16000 });
@@ -26,6 +26,12 @@ export class GeminiAudio {
       });
     }
     await context.resume();
+  }
+  async start(onPCM: (data: string) => void) {
+    const epoch = ++this.epoch;
+    await this.prepareOutput();
+    const context = this.context;
+    if (epoch !== this.epoch || !context) return;
     const stream = await navigator.mediaDevices.getUserMedia({ audio: {
       channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true,
     } });

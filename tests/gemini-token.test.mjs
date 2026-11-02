@@ -26,7 +26,7 @@ const replacements = {
 };
 for (const [name, value] of Object.entries(replacements)) code = code.replace(new RegExp(`import[^;]+from "${name}";`, "g"), value);
 const { POST, GET } = await import(url(code));
-const request = (origin = "https://preview.example", body = {}) => new Request("https://preview.example/api/voice/gemini-token", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const request = (origin = "https://preview.example", body = {}) => new Request("https://preview.example/api/voice/gemini-token", { method: "POST", headers: { Origin: origin, "Content-Type": "application/json" }, body: JSON.stringify({ clientSessionId: "12345678-1234-1234-1234-123456789abc", ...body }) });
 function reset() {
   Object.assign(state, { authorized: true, requests: [], admitted: 0, fail: false, limited: false });
   Object.assign(process.env, { VERCEL_ENV: "preview", GEMINI_API_KEY: "test-server-only-not-a-real-key", JARVIS_GEMINI_LIVE_ENABLED: "true", JARVIS_GEMINI_LIVE_PAID_ALLOWED: "true", JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR: "3" });
