@@ -2,19 +2,21 @@
 import {useCallback,useEffect,useState} from "react";
 type Status={vaultConfigured?:boolean;connected?:boolean;verified?:boolean;baseUrl?:string|null;verifiedAt?:string|null};
 export default function N8nConnectionSettings(){
+  const [workflows,setWorkflows]=useState<Array<{id:string;name:string;active:boolean}>|null>(null);
   const [status,setStatus]=useState<Status|null>(null),[url,setUrl]=useState(""),[apiKey,setApiKey]=useState(""),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   const refresh=useCallback(async()=>{
     try{const r=await fetch("/api/director/n8n",{credentials:"same-origin",cache:"no-store"});const data=await r.json();if(!r.ok)throw Error(data.error||"Consulta indisponível");setStatus(data);}catch(e){setMessage(e instanceof Error?e.message:"Consulta indisponível");}
   },[]);
   useEffect(()=>{void refresh();},[refresh]);
-  async function action(name:"connect"|"test"|"disconnect"){
+  async function action(name:"connect"|"test"|"disconnect"|"list"){
     if(name==="disconnect"&&!window.confirm("Desconectar o n8n do Jarvis? As credenciais salvas serão eliminadas."))return;
     setBusy(true);setMessage("");
     try{
       const r=await fetch("/api/director/n8n",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(name==="connect"?{action:name,url,apiKey}:name==="disconnect"?{action:name,confirmation:"DESCONECTAR N8N"}:{action:name})});
       const data=await r.json();
       if(!r.ok)throw Error(data.error||"Falha de conexão");
-      setApiKey("");setStatus(data);setMessage(name==="connect"?"n8n conectado e credencial verificada. Workflows ainda precisam de autorização individual.":name==="test"?"Conexão verificada.":"n8n desconectado.");
+      if(name==="list"){setWorkflows(data.workflows||[]);setMessage("Workflows consultados somente para leitura. Nenhuma execução foi iniciada.");return;}
+      setApiKey("");setStatus(data);if(name==="disconnect")setWorkflows(null);setMessage(name==="connect"?"n8n conectado e credencial verificada. Workflows ainda precisam de autorização individual.":name==="test"?"Conexão verificada.":"n8n desconectado.");
     }catch(e){setMessage(e instanceof Error?e.message:"Falha de conexão");}
     finally{setBusy(false);}
   }
@@ -30,9 +32,11 @@ export default function N8nConnectionSettings(){
     <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
       <button type="button" className="subtle-button" disabled={busy||!url||!apiKey} onClick={()=>void action("connect")}>Conectar n8n</button>
       <button type="button" className="subtle-button" disabled={busy||!status?.connected} onClick={()=>void action("test")}>Testar conexão</button>
+      <button type="button" className="subtle-button" disabled={busy||!status?.connected} onClick={()=>void action("list")}>Ver workflows</button>
       <button type="button" className="subtle-button" disabled={busy||!status?.connected} onClick={()=>void action("disconnect")}>Desconectar</button>
     </div>
     {message?<p role="status">{message}</p>:null}
+    {workflows?<div><h3>Workflows identificados ({workflows.length})</h3><ul>{workflows.map(w=><li key={w.id}>{w.name} — {w.active?"ativo no n8n":"inativo no n8n"}</li>)}</ul><p>Lista apenas para consulta; o Jarvis não executa esses workflows automaticamente.</p></div>:null}
     <p><small>Instâncias n8n Cloud são aceitas. Para uma instância própria, o administrador deve configurar o domínio permitido no servidor. Nenhum workflow é executado por este painel.</small></p>
   </section>;
 }
