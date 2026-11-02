@@ -143,7 +143,7 @@ export class VoiceController {
   /** Turn off the user's microphone without cancelling a reply already being spoken. */
   disableListening() {
     if (!this.enabled) return;
-    if (!this.speechPending) {
+    if (!this.speechPending && !this.busy) {
       this.stop("Microfone desligado.");
       return;
     }
@@ -308,7 +308,7 @@ export class VoiceController {
       const reply: VoiceReply = local
         ? { ...local, provider: "local" }
         : await this.options.command(command, abort.signal);
-      if (epoch !== this.epoch || !this.enabled) return;
+      if (epoch !== this.epoch) return;
       const candidate = this.options.onReply(reply);
       const prepared =
         candidate &&
@@ -336,7 +336,7 @@ export class VoiceController {
       } else {
         this.options.onSpeechUnavailable?.();
       }
-      if (epoch !== this.epoch || !this.enabled) return;
+      if (epoch !== this.epoch) return;
       this.busy = false;
       this.abort = null;
       if (reply.navigate) {
