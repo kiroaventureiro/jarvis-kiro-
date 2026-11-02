@@ -4,8 +4,9 @@ export const GEMINI_JARVIS_TOOL = "jarvis_conversation";
 /** No operation/approval arguments: the bridge uses the user's transcript, not a model plan. */
 export function geminiLiveConfig(instructions: string, handle?: string): LiveConnectConfig {
   return {
-    responseModalities: [Modality.TEXT],
+    responseModalities: [Modality.AUDIO],
     inputAudioTranscription: {},
+    outputAudioTranscription: {},
     sessionResumption: handle ? { handle } : {},
     contextWindowCompression: { slidingWindow: {} },
     realtimeInputConfig: { automaticActivityDetection: {} },
