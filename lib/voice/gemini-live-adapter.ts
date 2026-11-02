@@ -90,7 +90,10 @@ export class GeminiLiveVoiceAdapter {
     }, delay);
   }
   start() {
-    if (this.enabled) return;
+    if (this.enabled) {
+      if (this.sessionActive && this.ready && !this.audioStarted) void this.startCapture();
+      return;
+    }
     if (!this.options.desktopAudioAllowed()) { this.emit("off", "Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
     // Browser autoplay policy requires the speaker context to be resumed from this user gesture.
     this.audio.unlockPlayback();
