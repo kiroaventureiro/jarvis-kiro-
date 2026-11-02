@@ -298,3 +298,27 @@ test("handshake timeout reconnects instead of permanently disabling the Live ses
   assert.match(source, /if \(this\.enabled\) \{\s*if \(this\.sessionActive && this\.ready && !this\.audioStarted\) void this\.startCapture\(\)/);
   assert.ok(!source.includes('this.enabled = false;\n        this.audio.pauseCapture();'), "microphone error does not clear user-selected infinite listening");
 });
+
+test("Gemini Live stays connected when browser microphone track ends", async () => {
+  const adapter = await setup();
+  const audio = state.audio.at(-1);
+  const previousConnects = state.connects;
+  audio.onMicrophoneEnded();
+  assert.equal(states.at(-1).connected, true, "mic loss cannot close Gemini transport");
+  assert.equal(state.connects, previousConnects, "mic loss should not reconnect the socket");
+  adapter.stop();
+});
+
+test("completed PCM playback returns status to waiting without disconnecting", async () => {
+  const adapter = await setup();
+  message(transcript("Diga olá")); message(tool("drain-call"));
+  await tick();
+  message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "response-audio" } }] } } });
+  assert.equal(states.at(-1).phase, "speaking");
+  state.audio.at(-1).onDrained();
+  assert.equal(states.at(-1).phase, "waiting");
+  assert.equal(states.at(-1).connected, true);
+  adapter.disableListening();
+  assert.equal(states.at(-1).connected, true, "turning off infinite microphone preserves transport");
+  adapter.stop();
+});
