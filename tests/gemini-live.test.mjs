@@ -338,3 +338,19 @@ test("Gemini waiting drives hologram and label even with stale legacy responding
   assert.match(ui, /visualState === "responding" \|\| voiceSnapshot\.phase === "speaking" \? "RESPONDENDO"/);
   assert.match(ui, /\(!geminiRequested && connected\)/);
 });
+
+test("integrated Jarvis vocal identity uses one settings panel and server voice allowlist", () => {
+  const ui = fs.readFileSync("app/components/VoiceSettings.tsx", "utf8");
+  const live = fs.readFileSync("lib/voice/gemini-live-adapter.ts", "utf8");
+  const api = fs.readFileSync("app/api/voice/gemini-token/route.ts", "utf8");
+  const config = fs.readFileSync("lib/voice/gemini-config.ts", "utf8");
+  const jarvis = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.match(ui, /Voz do Gemini Live/);
+  assert.match(ui, /jarvis\.gemini\.voice\.v1/);
+  assert.match(live, /voiceName:/);
+  assert.match(api, /GEMINI_VOICE_CHOICES\.some/);
+  assert.match(config, /speechConfig:/);
+  assert.match(jarvis, /function vocalSettingsReply\(text: string\)/);
+  assert.match(jarvis, /const vocal = vocalSettingsReply\(text\)/);
+  assert.match(jarvis, /normalized\.match\(\//);
+});
