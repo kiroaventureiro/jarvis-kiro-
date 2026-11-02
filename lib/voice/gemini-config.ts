@@ -1,12 +1,13 @@
 import { Modality, Type, type LiveConnectConfig } from "@google/genai";
 export const GEMINI_LIVE_MODEL = "gemini-3.8-live";
 export const GEMINI_JARVIS_TOOL = "jarvis_conversation";
+export const GEMINI_VOICE_CHOICES = ["Orus", "Charon", "Algenib", "Gacrux", "Puck", "Kore"] as const;
 /** No operation/approval arguments: the bridge uses the user's transcript, not a model plan. */
-export function geminiLiveConfig(instructions: string, handle?: string): LiveConnectConfig {
+export function geminiLiveConfig(instructions: string, handle?: string, voiceName = "Orus"): LiveConnectConfig {
   return {
     responseModalities: [Modality.AUDIO],
     // Experimental prebuilt voice only; never change the functional backup branch.
-    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Orus" } } },
+    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } },
     inputAudioTranscription: {},
     outputAudioTranscription: {},
     sessionResumption: handle ? { handle } : {},
