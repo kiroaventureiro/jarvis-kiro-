@@ -92,6 +92,8 @@ export class GeminiLiveVoiceAdapter {
   start() {
     if (this.enabled) return;
     if (!this.options.desktopAudioAllowed()) { this.emit("off", "Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
+    // Browser autoplay policy requires the speaker context to be resumed from this user gesture.
+    this.audio.unlockPlayback();
     this.enabled = true;
     this.attempts = 0;
     ++this.epoch;
@@ -195,7 +197,7 @@ export class GeminiLiveVoiceAdapter {
     this.session?.close(); this.session = null;
     this.clearTranscriptTimers();
     this.transcript = ""; this.transcriptReady = false;
-    if (++this.attempts > 3) { this.fail("A sessão caiu repetidamente. Reative a escuta para tentar novamente."); return; }
+    if (++this.attempts > 5) { this.fail("A sessão caiu repetidamente. Reative a escuta para tentar novamente."); return; }
     this.emit("resuming", "Reconectando Gemini Live…");
     this.later(() => { void this.connect(); }, 500 * 2 ** (this.attempts - 1));
   }
@@ -296,9 +298,24 @@ export class GeminiLiveVoiceAdapter {
   disableListening() {
     if (!this.enabled) return;
     this.enabled = false;
+    // Pause only microphone capture. Never close the Live session or abort an
+    // in-flight Jarvis request / Gemini response when the user toggles listening off.
     this.audio.pauseCapture();
     this.audioStarted = false;
-    this.emit(this.playing || this.outputAllowed ? "speaking" : this.processing ? "processing" : "off", this.sessionActive && this.ready ? "Escuta infinita desligada · Gemini continua conectado e responde por texto" : "Escuta infinita desligada · mantendo a conexão Gemini");
+    // Explicitly finish a partially captured turn so Gemini does not wait for
+    // more microphone frames after the user has disabled infinite listening.
+    if (this.transcript.trim() || this.pending) {
+      try { this.session?.sendRealtimeInput({ audioStreamEnd: true }); } catch {}
+      if (this.pending) this.schedulePendingRun(120);
+      this.emit(this.processing ? "processing" : "command", "Finalizando a fala recebida · sessão Gemini preservada");
+      return;
+    }
+    this.emit(
+      this.processing ? "processing" : this.playing || this.outputAllowed ? "speaking" : "off",
+      this.sessionActive && this.ready
+        ? "Microfone pausado · sessão Gemini preservada e pronta para responder por texto"
+        : "Microfone pausado · mantendo a conexão Gemini",
+    );
   }
   stop(message = "Sessão Gemini encerrada.") {
     this.enabled = false; this.sessionActive = false; this.epoch++; this.connection++; this.ready = false;
