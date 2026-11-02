@@ -12,7 +12,7 @@ type Result = { text: string; model: "jk-settings"; provider: "local_operational
 const answer = (text: string): Result => ({text,model:"jk-settings",provider:"local_operational",usage:null,visual:undefined});
 export function jarvisSettingsCommand(text: string): Result | null {
   const raw = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-  const requested = /\b(jarvis|configur|preferenc|ajust|ativ|desativ|lig|deslig|aument|diminu|reduz|alter|mudar|trocar|coloc|selecion|voz|volume|tom|velocidade|holograma|historico|escuta)\b/.test(raw);
+  const requested = /(jarvis|configur|preferenc|ajust|ativ|desativ|aument|diminu|reduz|alter|mudar|trocar|coloc|selecion|voz|volume|tom|velocidade|holograma|historico|escuta)/.test(raw);
   if (!requested) return null;
   const voice = VOICES.find(v => new RegExp("\\b" + v.toLowerCase() + "\\b").test(raw));
   const command = /\b(mudar|trocar|selecionar|colocar|usar|escolher|definir|quero|alterar|configure|configurar)\b/.test(raw);
@@ -26,7 +26,7 @@ export function jarvisSettingsCommand(text: string): Result | null {
     if (/\b(automatico|normal|padrao|auto)\b/.test(raw)) { setGraphicsPreference("auto"); return answer("Holograma configurado para qualidade automática."); }
     if (/\b(qual|estado|atual|como)\b/.test(raw)) return answer("Qualidade atual do holograma: "+(readGraphicsPreference()==="eco"?"econômica":"automática")+".");
   }
-  if (/\bhistorico\b/.test(raw) && /\b(conversa|local|dispositivo|salv|memoria)\b/.test(raw)) {
+  if (/\bhistorico\b/.test(raw) && /(conversa|local|dispositivo|salv|memoria)/.test(raw)) {
     if (/\b(desativar|desative|desligar|desligue|apagar|limpar)\b/.test(raw)) return answer("Desativar o histórico local também elimina as mensagens salvas. Para evitar perda irreversível, confirme essa operação na tela de configurações.");
     if (/\b(ativar|ative|ligar|ligue|habilitar)\b/.test(raw)) { setHistoryConsent(true); return answer("Histórico local deste dispositivo habilitado. Não altera a memória central do Jarvis."); }
     return answer("Histórico local está "+(historyConsent()?"habilitado.":"desabilitado.")+" A memória central do Jarvis é separada.");
