@@ -366,3 +366,12 @@ test("Gemini Live can be enabled by environment gates without branch pinning", (
   assert.match(token, /JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR/);
   assert.match(token, /await authorized\(\)/);
 });
+
+test("Gemini PCM playback schedules chunks without a fixed inter-chunk pause", () => {
+  const audio = fs.readFileSync("lib/voice/gemini-audio.ts", "utf8");
+  assert.match(audio, /playbackCursor/);
+  assert.match(audio, /Math\.max\(context\.currentTime \+ 0\.025, this\.playbackCursor\)/);
+  assert.match(audio, /source\.start\(startsAt\)/);
+  assert.doesNotMatch(audio, /source\.start\(context\.currentTime \+ 0\.01\)/);
+  assert.match(audio, /this\.playbackCursor = 0/);
+});
