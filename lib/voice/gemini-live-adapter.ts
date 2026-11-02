@@ -105,7 +105,7 @@ export class GeminiLiveVoiceAdapter {
     this.attempts = 0;
     ++this.epoch;
     if (this.sessionActive) {
-      if (this.ready) { if (this.playing || this.outputAllowed) this.emit("speaking", "Gemini Live continua respondendo · microfone será retomado após a fala"); else void this.startCapture(); }
+      if (this.ready) { if (this.playing) this.emit("speaking", "Gemini Live continua respondendo · microfone será retomado após a fala"); else void this.startCapture(); }
       else this.emit("resuming", "Gemini Live continua conectando · escuta será retomada quando estiver pronto");
       return;
     }
