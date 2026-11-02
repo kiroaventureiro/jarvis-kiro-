@@ -1,6 +1,7 @@
 import { GoogleGenAI, type LiveServerMessage, type Session, type FunctionCall } from "@google/genai";
 import { GeminiAudio } from "./gemini-audio";
 import { GEMINI_JARVIS_TOOL } from "./gemini-config";
+import { getVoiceManager } from "./speech-output";
 import type { VoiceSnapshot } from "./voice-controller";
 import type { VoiceReply } from "./voice-types";
 type Options = {
@@ -269,9 +270,33 @@ export class GeminiLiveVoiceAdapter {
       if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) { this.processing = false; return; }
       this.processing = false;
       this.options.onReply({ ...reply, speechPending: true });
-      this.outputAllowed = true;
+      // Gemini Live owns listening, turn detection and reasoning. The registered
+      // VoiceStudio profile af5bbbba owns speech output; do not play Gemini's
+      // generic audio stream in parallel.
+      this.outputAllowed = false;
       this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
-      if (reply.navigate) { this.stop(); this.options.navigate(reply.navigate); }
+      if (reply.navigate) { this.stop(); this.options.navigate(reply.navigate); return; }
+      if (this.options.volume() <= 0) {
+        this.playing = false;
+        this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live conectado · escuta infinita ativa" : "Escuta infinita desligada · Gemini continua conectado");
+        return;
+      }
+      this.playing = true;
+      this.emit("speaking", "Respondendo com a voz oficial do Jarvis Kiro…");
+      this.options.onSpeechAvailable?.();
+      try {
+        await getVoiceManager().speak(reply.text, abort.signal);
+      } catch {
+        if (!abort.signal.aborted && connection === this.connection && this.sessionActive) {
+          this.options.onSpeechUnavailable();
+          this.emit("error", "A voz oficial do VoiceStudio não está disponível; a resposta permanece no texto.");
+        }
+      } finally {
+        if (!abort.signal.aborted && connection === this.connection && this.sessionActive) {
+          this.playing = false;
+          this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live conectado · escuta infinita ativa" : "Escuta infinita desligada · Gemini continua conectado");
+        }
+      }
     } catch {
       this.processing = false;
       if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
@@ -288,6 +313,13 @@ export class GeminiLiveVoiceAdapter {
     this.transcript = text; this.transcriptReady = true;
     this.session?.sendClientContent({ turns: [{ role: "user", parts: [{ text }] }], turnComplete: true });
     return true;
+  }
+  interruptForUserSpeech() {
+    if (!this.playing) return;
+    this.abort?.abort();
+    getVoiceManager().cancel();
+    this.playing = false;
+    this.emit("command", "Interrupção detectada · ouvindo…");
   }
   updateVolume() { this.audio.volume(this.options.volume()); }
   audioMuted() { this.updateVolume(); }
