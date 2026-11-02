@@ -322,3 +322,10 @@ test("completed PCM playback returns status to waiting without disconnecting", a
   assert.equal(states.at(-1).connected, true, "turning off infinite microphone preserves transport");
   adapter.stop();
 });
+
+test("Jarvis UI accepts Gemini waiting state after spoken response", () => {
+  const ui = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.ok(!ui.includes('(snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding")'), "UI must not swallow end-of-playback waiting");
+  assert.match(ui, /snapshot\.phase === "waiting"\) geminiUtteranceActive\.current = false/);
+  assert.match(ui, /snapshot\.phase === "speaking"\s*\? "responding"[\s\S]*?: "idle"/);
+});
