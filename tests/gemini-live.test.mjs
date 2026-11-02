@@ -394,3 +394,13 @@ test("Jarvis uses central allowlisted settings controller without arbitrary conf
   assert.match(controller, /saveVoicePreferences/);
   assert.doesNotMatch(controller, /eval\(|Function\(/);
 });
+
+test("central preferences controller handles numeric voice settings and UI receives changes", () => {
+  const controller = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  const panel = fs.readFileSync("app/components/VoiceSettings.tsx", "utf8");
+  assert.match(controller, /const amount = raw\.match/);
+  assert.match(controller, /saveVoicePreferences\(next\)/);
+  assert.match(controller, /\(volume \|\| speed \|\| pitch\) && explicitChange/);
+  assert.match(panel, /VOICE_PREF_EVENT/);
+  assert.match(panel, /window\.addEventListener\(VOICE_PREF_EVENT, prefsChanged\)/);
+});
