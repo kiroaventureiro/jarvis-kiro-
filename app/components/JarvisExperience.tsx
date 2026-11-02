@@ -47,6 +47,7 @@ import {
 import { getVoiceManager } from "../../lib/voice/speech-output";
 import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voice-preferences";
 import { voiceAction } from "../../lib/voice/local-intents";
+import { jarvisSettingsCommand } from "../../lib/settings/jarvis-control";
 import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
 import { codexDraftIntent } from "../../lib/codex/chat-intent";
 import { APP_SHORTCUTS, browserActionIntent, appHandoffIntent, prepareAppHandoff, type AppHandoff } from "../../lib/codex/app-handoff";
@@ -922,6 +923,8 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
     return null;
   }
   function localConversationReply(text: string) {
+    const settings = jarvisSettingsCommand(text);
+    if (settings) return settings;
     const vocal = vocalSettingsReply(text);
     if (vocal) return vocal;
     const selfControl=selfControlReply(text);
