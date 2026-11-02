@@ -1,7 +1,6 @@
 import { GoogleGenAI, type LiveServerMessage, type Session, type FunctionCall } from "@google/genai";
 import { GeminiAudio } from "./gemini-audio";
 import { GEMINI_JARVIS_TOOL } from "./gemini-config";
-import { getVoiceManager } from "./speech-output";
 import type { VoiceSnapshot } from "./voice-controller";
 import type { VoiceReply } from "./voice-types";
 type Options = {
@@ -178,7 +177,7 @@ export class GeminiLiveVoiceAdapter {
       this.session = session; this.ready = true;
       this.updateVolume();
       if (this.enabled && !this.audioStarted) void this.startCapture();
-      else this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · escuta e raciocínio · saída pela voz oficial VoiceStudio" : "Gemini conectado · escuta infinita desligada");
+      else this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · escuta, raciocínio e voz nativa" : "Gemini conectado · escuta infinita desligada");
       this.later(() => { this.attempts = 0; }, 30000);
       this.later(() => this.reconnect(), Math.max(1000, Date.parse(token.expiresAt) - Date.now() - 30000));
     } catch (error) {
@@ -270,33 +269,26 @@ export class GeminiLiveVoiceAdapter {
       if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) { this.processing = false; return; }
       this.processing = false;
       this.options.onReply({ ...reply, speechPending: true });
-      // Gemini Live owns listening, turn detection and reasoning. The registered
-      // VoiceStudio profile af5bbbba owns speech output; do not play Gemini's
-      // generic audio stream in parallel.
-      this.outputAllowed = false;
-      this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
-      if (reply.navigate) { this.stop(); this.options.navigate(reply.navigate); return; }
-      if (this.options.volume() <= 0) {
-        this.playing = false;
-        this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live conectado · escuta infinita ativa" : "Escuta infinita desligada · Gemini continua conectado");
+      // Gemini Live generates and streams the spoken reply itself. The Jarvis
+      // core remains the source of truth for response content; Gemini supplies
+      // the audio rendering in this same live session.
+      if (reply.navigate) {
+        this.outputAllowed = false;
+        this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
+        this.stop();
+        this.options.navigate(reply.navigate);
         return;
       }
-      this.playing = true;
-      this.emit("speaking", "Respondendo com a voz oficial do Jarvis Kiro…");
-      this.options.onSpeechAvailable?.();
-      try {
-        await getVoiceManager().speak(reply.text, abort.signal);
-      } catch {
-        if (!abort.signal.aborted && connection === this.connection && this.sessionActive) {
-          this.options.onSpeechUnavailable();
-          this.emit(this.enabled ? "waiting" : "off", "Voz oficial do VoiceStudio indisponível; a resposta permanece no texto.");
-        }
-      } finally {
-        if (!abort.signal.aborted && connection === this.connection && this.sessionActive) {
-          this.playing = false;
-          this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live conectado · escuta infinita ativa" : "Escuta infinita desligada · Gemini continua conectado");
-        }
+      if (this.options.volume() <= 0) {
+        this.outputAllowed = false;
+        this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
+        this.playing = false;
+        this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live conectado · escuta infinita ativa" : "Gemini Live conectado · escuta infinita desligada");
+        return;
       }
+      this.outputAllowed = true;
+      this.emit("processing", "Preparando resposta de voz Gemini…");
+      this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text: reply.text } }] });
     } catch {
       this.processing = false;
       if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
@@ -317,7 +309,8 @@ export class GeminiLiveVoiceAdapter {
   interruptForUserSpeech() {
     if (!this.playing) return;
     this.abort?.abort();
-    getVoiceManager().cancel();
+    this.audio.interrupt();
+    this.outputAllowed = false;
     this.playing = false;
     this.emit("command", "Interrupção detectada · ouvindo…");
   }
@@ -330,7 +323,7 @@ export class GeminiLiveVoiceAdapter {
     this.enabled = false;
     this.audio.pauseCapture();
     this.audioStarted = false;
-    this.emit(this.playing || this.outputAllowed ? "speaking" : this.processing ? "processing" : "off", this.sessionActive && this.ready ? "Escuta infinita desligada · Gemini continua conectado e responde por texto" : "Escuta infinita desligada · mantendo a conexão Gemini");
+    this.emit(this.playing || this.outputAllowed ? "speaking" : this.processing ? "processing" : "off", this.sessionActive && this.ready ? "Escuta infinita desligada · Gemini continua conectado e responde por voz" : "Escuta infinita desligada · mantendo a conexão Gemini");
   }
   stop(message = "Sessão Gemini encerrada.") {
     this.enabled = false; this.sessionActive = false; this.epoch++; this.connection++; this.ready = false;
