@@ -47,8 +47,18 @@ export class GeminiLiveVoiceAdapter {
   private usedTurn = false;
   constructor(private options: Options) {
     this.audio.onEchoEvidence = (frames, aec) => { this.echoFrames = frames; this.aec = aec; };
-    this.audio.onMicrophoneEnded = () => this.fail("O microfone foi desconectado. Reative a sessão.");
-    this.audio.onDrained = () => { this.playing = false; if (this.sessionActive) this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Escuta infinita desligada · Gemini continua conectado"); };
+    this.audio.onMicrophoneEnded = () => {
+      // Losing the browser microphone must never close the Gemini Live transport.
+      this.audioStarted = false;
+      if (this.sessionActive) this.emit("error", "Microfone interrompido · sessão Gemini preservada. Reative a captura pelo áudio infinito.");
+    };
+    this.audio.onDrained = () => {
+      this.playing = false;
+      if (!this.sessionActive) return;
+      if (this.processing) { this.emit("processing", "Gemini Live · processando resposta"); return; }
+      this.outputAllowed = false;
+      this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Em espera · microfone pausado, Gemini conectado");
+    };
   }
   private emit(phase: VoiceSnapshot["phase"], message: string) {
     this.options.onState({ phase, message, enabled: this.enabled, microphoneActive: this.enabled && this.ready, connected: this.sessionActive && this.ready });
