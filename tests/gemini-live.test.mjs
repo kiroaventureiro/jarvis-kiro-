@@ -134,6 +134,9 @@ test("Gemini Live hybrid lifecycle", async t => {
     message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm", data: "reply-after-mic-off" } }] } } });
     assert.equal(states.at(-1).phase, "speaking", "Gemini playback must continue with the mic disabled");
     assert.equal(state.audio.at(-1).played.at(-1), "reply-after-mic-off");
+    adapter.audio.onDrained();
+    assert.equal(states.at(-1).phase, "off", "only the actual playback-drained event may end the response state");
+    assert.match(states.at(-1).message, /^Resposta concluída/);
     adapter.stop();
   });
 });
