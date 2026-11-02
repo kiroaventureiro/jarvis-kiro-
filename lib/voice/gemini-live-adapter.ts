@@ -49,7 +49,16 @@ export class GeminiLiveVoiceAdapter {
   private usedTurn = false;
   constructor(private options: Options) {
     this.audio.onEchoEvidence = (frames, aec) => { this.echoFrames = frames; this.aec = aec; };
-    this.audio.onMicrophoneEnded = () => this.fail("O microfone foi desconectado. Reative a sessão.");
+    this.audio.onMicrophoneEnded = () => {
+      // Losing a microphone track is an input failure, not a Gemini transport
+      // failure. Preserve in-flight Jarvis work, output PCM and keyboard access.
+      if (!this.sessionActive || !this.enabled) return;
+      this.disableListening();
+      this.emit(
+        this.processing ? "processing" : this.pending || this.transcript.trim() ? "command" : this.playing || this.outputAllowed ? "speaking" : "off",
+        "Microfone desconectado · sessão Gemini preservada. Use o teclado ou reative a escuta.",
+      );
+    };
     this.audio.onDrained = () => {
       this.playing = false;
       if (!this.sessionActive) return;
