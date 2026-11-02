@@ -1501,6 +1501,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
           <button type="button" className="subtle-button" aria-expanded={appsOpen} onClick={()=>setAppsOpen(open=>!open)}>Aplicativos</button>
           <WakeListener
             geminiRequested={geminiRequested}
+            requestGemini={() => setGeminiRequested(true)}
             registerActivate={(activate) => { liveActivate.current = activate; }}
             desktopAudio={desktopVoice}
             registerLiveText={(send) => { liveText.current = send; }}
