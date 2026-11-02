@@ -120,6 +120,22 @@ test("Gemini Live hybrid lifecycle", async t => {
     message({ goAway: {} }); const connects = state.connects; adapter.stop();
     await new Promise(r => setTimeout(r, 550)); assert.equal(state.connects, connects);
   });
+  await t.test("turning off infinite mic during listening preserves OUVINDO, then thinking and speaking", async () => {
+    const adapter = await setup();
+    message(transcript("Continua a minha pergunta"));
+    assert.equal(states.at(-1).phase, "command");
+    adapter.disableListening();
+    assert.equal(states.at(-1).phase, "command", "mic toggle must not demote an in-progress utterance to idle");
+    assert.equal(states.at(-1).enabled, false);
+    message(tool("mic-off-during-utterance"));
+    await tick();
+    assert.equal(calls.at(-1).text, "Continua a minha pergunta");
+    assert.equal(states.at(-1).phase, "processing");
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm", data: "reply-after-mic-off" } }] } } });
+    assert.equal(states.at(-1).phase, "speaking", "Gemini playback must continue with the mic disabled");
+    assert.equal(state.audio.at(-1).played.at(-1), "reply-after-mic-off");
+    adapter.stop();
+  });
 });
 test("AudioWorklet emits signed PCM in 20ms chunks without monitoring input", () => {
   let Processor; const chunks = [];
