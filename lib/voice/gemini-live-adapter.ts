@@ -1,4 +1,4 @@
-import { GoogleGenAI, type LiveServerMessage, type Session, type FunctionCall } from "@google/genai";
+import { GoogleGenAI, Modality, type LiveServerMessage, type Session, type FunctionCall } from "@google/genai";
 import { GeminiAudio } from "./gemini-audio";
 import { GEMINI_JARVIS_TOOL } from "./gemini-config";
 import type { VoiceSnapshot } from "./voice-controller";
@@ -178,7 +178,15 @@ export class GeminiLiveVoiceAdapter {
       const ai = new GoogleGenAI({ apiKey: token.token, httpOptions: { apiVersion: "v1beta" } });
       const session = await ai.live.connect({
         model: token.model,
-        config: { sessionResumption: this.handle ? { handle: this.handle } : {} },
+        // Match the server-locked ephemeral-token constraints explicitly. In particular,
+        // never rely on an implicit modality default for native voice output.
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } } },
+          inputAudioTranscription: {},
+          outputAudioTranscription: {},
+          sessionResumption: this.handle ? { handle: this.handle } : {},
+        },
         callbacks: {
           onmessage: message => { if (this.sessionActive && connection === this.connection) this.message(message); },
           onerror: () => { if (connection === this.connection) this.reconnect(); },
@@ -258,6 +266,13 @@ export class GeminiLiveVoiceAdapter {
       if (this.outputAllowed && !content?.interrupted) {
         for (const part of content?.modelTurn?.parts || []) {
           if (part.inlineData?.data && part.inlineData.mimeType?.startsWith("audio/pcm")) {
+            // A valid 24 kHz PCM chunk is much larger than a few base64 chars.
+            // Gemini 3.8 Live has been observed returning 4-char silent payloads
+            // alongside a full output transcription; do not treat those as speech.
+            if (part.inlineData.data.length < 128) {
+              this.trace("audio:discarded undersized PCM chunk " + part.inlineData.data.length);
+              continue;
+            }
             this.playing = true;
             this.updateVolume(); this.audio.play(part.inlineData.data); this.outputChunks++; this.options.onSpeechAvailable?.();
             this.emit("speaking", `Gemini Live ativo · entrada PCM16 ${this.inputChunks} blocos · saída PCM24 ${this.outputChunks} blocos · AEC ${this.aec ? "confirmado" : "não confirmado"} · eco filtrado ${this.echoFrames} · TTS bloqueado`);
