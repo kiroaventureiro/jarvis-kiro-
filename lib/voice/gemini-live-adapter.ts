@@ -1,4 +1,4 @@
-import { GoogleGenAI, Modality, type LiveServerMessage, type Session, type FunctionCall } from "@google/genai";
+import { GoogleGenAI, type LiveServerMessage, type Session, type FunctionCall } from "@google/genai";
 import { GeminiAudio } from "./gemini-audio";
 import { GEMINI_JARVIS_TOOL } from "./gemini-config";
 import type { VoiceSnapshot } from "./voice-controller";
@@ -178,15 +178,10 @@ export class GeminiLiveVoiceAdapter {
       const ai = new GoogleGenAI({ apiKey: token.token, httpOptions: { apiVersion: "v1beta" } });
       const session = await ai.live.connect({
         model: token.model,
-        // Match the server-locked ephemeral-token constraints explicitly. In particular,
-        // never rely on an implicit modality default for native voice output.
-        config: {
-          responseModalities: [Modality.AUDIO],
-          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } } },
-          inputAudioTranscription: {},
-          outputAudioTranscription: {},
-          sessionResumption: this.handle ? { handle: this.handle } : {},
-        },
+        // The server-created ephemeral token already locks the proven AUDIO
+        // modality and tool configuration. Keep the client config limited to
+        // session resumption, exactly as in the audible baseline.
+        config: { sessionResumption: this.handle ? { handle: this.handle } : {} },
         callbacks: {
           onmessage: message => { if (this.sessionActive && connection === this.connection) this.message(message); },
           onerror: () => { if (connection === this.connection) this.reconnect(); },
