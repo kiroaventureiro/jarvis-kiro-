@@ -150,7 +150,7 @@ export class GeminiLiveVoiceAdapter {
           COST_NOT_APPROVED: "JARVIS_GEMINI_LIVE_PAID_ALLOWED ausente ou sem aprovação.", SESSION_BUDGET_INVALID: "Limite JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR inválido.",
           PERSISTENT_LIMIT_UNAVAILABLE: "Limite persistente indisponível.", SESSION_LIMIT: "Limite de sessões atingido.",
         };
-        throw new Error(`Gemini Live · HTTP ${response.status} · ${code} · ${known[code] || "Falha ao preparar sessão; consulte o diagnóstico do servidor."} TTS alternativo bloqueado.`);
+        throw new Error(`Gemini Live · HTTP ${response.status} · ${code} · ${known[code] || "Falha ao preparar sessão; consulte o diagnóstico do servidor."} Voz oficial VoiceStudio disponível após a resposta do núcleo Jarvis.`);
       }
       if (!this.sessionActive || connection !== this.connection) return;
       if (!token.token || Date.parse(token.newSessionExpiresAt) <= Date.now()) throw new Error("Credencial temporária expirada. Reative a sessão.");
@@ -173,12 +173,12 @@ export class GeminiLiveVoiceAdapter {
           onerror: () => { if (connection === this.connection) this.reconnect(); },
           onclose: () => { if (this.sessionActive && connection === this.connection) this.reconnect(); },
         },
-      }).catch(() => { throw new Error("Gemini Live · falha no WebSocket Google. Verifique modelo, quota e token; TTS alternativo bloqueado."); });
+      }).catch(() => { throw new Error("Gemini Live · falha no WebSocket Google. Verifique modelo, quota e token; Voz oficial VoiceStudio disponível após a resposta do núcleo Jarvis."); });
       if (!this.sessionActive || connection !== this.connection) { session.close(); return; }
       this.session = session; this.ready = true;
       this.updateVolume();
       if (this.enabled && !this.audioStarted) void this.startCapture();
-      else this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · entrada PCM16 / saída PCM24 · TTS bloqueado" : "Gemini conectado · escuta infinita desligada");
+      else this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · escuta e raciocínio · saída pela voz oficial VoiceStudio" : "Gemini conectado · escuta infinita desligada");
       this.later(() => { this.attempts = 0; }, 30000);
       this.later(() => this.reconnect(), Math.max(1000, Date.parse(token.expiresAt) - Date.now() - 30000));
     } catch (error) {
@@ -249,7 +249,7 @@ export class GeminiLiveVoiceAdapter {
           if (part.inlineData?.data && part.inlineData.mimeType?.startsWith("audio/pcm")) {
             this.playing = true;
             this.updateVolume(); this.audio.play(part.inlineData.data); this.outputChunks++; this.options.onSpeechAvailable?.();
-            this.emit("speaking", `Gemini Live ativo · entrada PCM16 ${this.inputChunks} blocos · saída PCM24 ${this.outputChunks} blocos · AEC ${this.aec ? "confirmado" : "não confirmado"} · eco filtrado ${this.echoFrames} · TTS bloqueado`);
+            this.emit("speaking", `Gemini Live ativo · escuta contínua · AEC ${this.aec ? "confirmado" : "não confirmado"} · eco filtrado ${this.echoFrames}`);
           }
         }
       }
@@ -302,7 +302,7 @@ export class GeminiLiveVoiceAdapter {
       if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
     }
   }
-  /** Keyboard shares this session and the same Jarvis callback, not a second TTS. */
+  /** Keyboard shares this session and the same Jarvis callback and official VoiceStudio output. */
   sendText(text: string) {
     if (!this.sessionActive) return false;
     if (!this.ready) { this.emit("resuming", "Gemini Live está reconectando. Aguarde a sessão ficar disponível."); return false; }
