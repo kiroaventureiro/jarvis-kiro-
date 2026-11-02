@@ -21,8 +21,10 @@ export default function VoiceSettings() {
       "Consulte a disponibilidade autenticada do provedor.",
     );
   const preview = useRef<AbortController | null>(null);
+  const [geminiVoice, setGeminiVoice] = useState("Orus");
   useEffect(() => {
     setPrefs(readVoicePreferences());
+    try { setGeminiVoice(localStorage.getItem("jarvis.gemini.voice.v1") || "Orus"); } catch {}
     if (!("speechSynthesis" in window)) {
       setStatus("Síntese de fala indisponível neste navegador.");
       return;
@@ -105,6 +107,27 @@ export default function VoiceSettings() {
         exata depende das opções instaladas neste dispositivo; a preferência não
         é sincronizada entre aparelhos.
       </p>
+      <label>
+        Voz do Gemini Live (aplicada na próxima sessão)
+        <select
+          aria-label="Voz do Gemini Live"
+          value={geminiVoice}
+          onChange={(e) => {
+            const name = e.target.value;
+            setGeminiVoice(name);
+            try { localStorage.setItem("jarvis.gemini.voice.v1", name); } catch {}
+            setStatus("Voz Gemini salva. Será aplicada ao iniciar uma nova sessão; a conversa atual não será interrompida.");
+          }}
+        >
+          <option value="Orus">Orus — firme</option>
+          <option value="Charon">Charon — informativa</option>
+          <option value="Algenib">Algenib — encorpada</option>
+          <option value="Gacrux">Gacrux — madura</option>
+          <option value="Puck">Puck — expressiva</option>
+          <option value="Kore">Kore — suave</option>
+        </select>
+      </label>
+      <p className="intro">Gemini Live usa sua própria voz. A seleção acima não altera a voz do navegador; tom e velocidade abaixo são ajustes da síntese do navegador. O volume é compartilhado com o Gemini.</p>
       <div className="form-grid">
         <label>
           Voz em português brasileiro
