@@ -5,6 +5,8 @@ export const GEMINI_JARVIS_TOOL = "jarvis_conversation";
 export function geminiLiveConfig(instructions: string, handle?: string): LiveConnectConfig {
   return {
     responseModalities: [Modality.AUDIO],
+    // Experimental prebuilt voice only; never change the functional backup branch.
+    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Orus" } } },
     inputAudioTranscription: {},
     outputAudioTranscription: {},
     sessionResumption: handle ? { handle } : {},
