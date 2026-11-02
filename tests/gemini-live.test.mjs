@@ -329,3 +329,12 @@ test("Jarvis UI accepts Gemini waiting state after spoken response", () => {
   assert.match(ui, /snapshot\.phase === "waiting"\) geminiUtteranceActive\.current = false/);
   assert.match(ui, /snapshot\.phase === "speaking"\s*\? "responding"[\s\S]*?: "idle"/);
 });
+
+test("Gemini waiting drives hologram and label even with stale legacy responding state", () => {
+  const ui = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.match(ui, /const visualState = geminiRequested && voiceSnapshot.connected/);
+  assert.match(ui, /voiceSnapshot\.phase === "waiting" \|\| voiceSnapshot\.phase === "off" \? "idle"/);
+  assert.match(ui, /data-state=\{visualState\}/);
+  assert.match(ui, /visualState === "responding" \|\| voiceSnapshot\.phase === "speaking" \? "RESPONDENDO"/);
+  assert.match(ui, /\(!geminiRequested && connected\)/);
+});
