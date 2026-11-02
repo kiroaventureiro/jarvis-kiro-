@@ -1559,11 +1559,12 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
               // Track the utterance at the event source, not through a possibly stale
               // React state closure. Turning off capture must not erase OUVINDO.
               if (geminiRequested && snapshot.phase === "command") geminiUtteranceActive.current = true;
-              if (geminiRequested && (snapshot.phase === "processing" || snapshot.phase === "speaking" || snapshot.message.startsWith("Resposta concluída"))) geminiUtteranceActive.current = false;
-              if (geminiRequested && snapshot.phase === "off" && geminiUtteranceActive.current) {
+              if (geminiRequested && (snapshot.phase === "processing" || snapshot.phase === "speaking" || snapshot.phase === "error" || snapshot.message.startsWith("Resposta concluída"))) geminiUtteranceActive.current = false;
+              if (geminiRequested && snapshot.phase === "off" && snapshot.message.startsWith("Microfone pausado") && geminiUtteranceActive.current) {
                 setState("listening");
                 return;
               }
+              if (geminiRequested && snapshot.phase === "off" && !snapshot.message.startsWith("Microfone pausado")) geminiUtteranceActive.current = false;
               if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding") && !snapshot.message.startsWith("Resposta concluída")) return;
               if (snapshot.phase === "off" && !wasActive) return;
               setState(
