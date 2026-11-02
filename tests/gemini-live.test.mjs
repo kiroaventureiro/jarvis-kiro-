@@ -77,6 +77,29 @@ test("Gemini Live hybrid lifecycle", async t => {
     assert.equal(states.at(-1).enabled, true);
     adapter.stop();
   });
+  await t.test("late playback drain cannot demote a newer Jarvis command while microphone is active or paused", async () => {
+    const adapter = await setup();
+    let finishCommand;
+    command = () => new Promise(resolve => { finishCommand = resolve; });
+    message(transcript("Explique o relatório inteiro"));
+    message(tool("slow-command"));
+    await tick();
+    const audio = state.audio.at(-1);
+    assert.equal(states.at(-1).phase, "processing");
+    audio.onDrained();
+    assert.equal(states.at(-1).phase, "processing", "previous reply drain must not report idle while Jarvis is working");
+    adapter.disableListening();
+    assert.equal(states.at(-1).connected, true);
+    audio.onDrained();
+    assert.equal(states.at(-1).phase, "processing", "pausing the mic must not let a late drain erase processing");
+    finishCommand({ text: "Resposta completa do Jarvis" });
+    await tick();
+    assert.equal(state.responses.at(-1).functionResponses[0].response.text, "Resposta completa do Jarvis");
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "response-audio" } }] } } });
+    assert.deepEqual(audio.played, ["response-audio"]);
+    assert.equal(states.at(-1).phase, "speaking");
+    adapter.stop();
+  });
   await t.test("turn is finalized when the user disables infinite listening mid-utterance without closing Gemini", async () => {
     const adapter = await setup();
     const connects = state.connects;
