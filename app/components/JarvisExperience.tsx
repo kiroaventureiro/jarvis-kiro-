@@ -1571,7 +1571,10 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
                 return;
               }
               if (geminiRequested && snapshot.phase === "off" && !snapshot.message.startsWith("Microfone pausado")) geminiUtteranceActive.current = false;
-              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding") && !snapshot.message.startsWith("Resposta concluída")) return;
+              // PCM playback completion emits "waiting" (or "off" when capture is paused).
+              // Never discard that terminal state based on the previous React status:
+              // otherwise the holographic indicator stays stuck on RESPONDENDO.
+              if (geminiRequested && snapshot.phase === "waiting") geminiUtteranceActive.current = false;
               if (snapshot.phase === "off" && !wasActive) return;
               setState(
                 snapshot.phase === "processing"
