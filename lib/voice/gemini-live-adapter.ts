@@ -48,7 +48,17 @@ export class GeminiLiveVoiceAdapter {
   constructor(private options: Options) {
     this.audio.onEchoEvidence = (frames, aec) => { this.echoFrames = frames; this.aec = aec; };
     this.audio.onMicrophoneEnded = () => this.fail("O microfone foi desconectado. Reative a sessão.");
-    this.audio.onDrained = () => { this.playing = false; if (this.sessionActive) this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Escuta infinita desligada · Gemini continua conectado"); };
+    this.audio.onDrained = () => {
+      this.playing = false;
+      if (!this.sessionActive) return;
+      // A delayed drain from the previous reply must not replace the status
+      // of a newer Jarvis command that is still being processed.
+      if (this.processing) {
+        this.emit("processing", "Consultando o núcleo Jarvis…");
+        return;
+      }
+      this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Escuta infinita desligada · Gemini continua conectado");
+    };
   }
   private emit(phase: VoiceSnapshot["phase"], message: string) {
     this.options.onState({ phase, message, enabled: this.enabled, microphoneActive: this.enabled && this.ready, connected: this.sessionActive && this.ready });
