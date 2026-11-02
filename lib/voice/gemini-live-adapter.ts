@@ -212,8 +212,14 @@ export class GeminiLiveVoiceAdapter {
         this.emit("command", "Interrupção detectada · ouvindo…");
       }
       if (message.toolCallCancellation?.ids?.length) {
-        if (this.pending?.id && message.toolCallCancellation.ids.includes(this.pending.id)) this.pending = null;
-        this.abort?.abort(); this.outputAllowed = false;
+        // A stale cancellation must not silence a newer reply or abort an unrelated command.
+        // A pending tool call has not started an async command, so clear its debounce only.
+        if (this.pending?.id && message.toolCallCancellation.ids.includes(this.pending.id)) {
+          this.pending = null;
+          this.clearTranscriptTimers();
+          this.transcript = "";
+          this.transcriptReady = false;
+        }
       }
       // Transcription alone must never interrupt playback; native Live VAD controls barge-in.
       if (content?.inputTranscription && !this.playing) {
