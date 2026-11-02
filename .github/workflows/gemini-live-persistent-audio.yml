@@ -11,6 +11,8 @@ on:
       - 'lib/voice/gemini-live-adapter.ts'
       - 'lib/voice/voice-controller.ts'
       - 'tests/gemini-live.test.mjs'
+      - 'tests/gemini-token.test.mjs'
+      - 'app/api/voice/gemini-token/route.ts'
       - '.github/workflows/gemini-live-persistent-audio.yml'
   pull_request:
     branches:
@@ -29,7 +31,7 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - name: Gemini Live lifecycle regression
-        run: node --test tests/gemini-live.test.mjs tests/wake-listener.test.mjs
+        run: node --test tests/gemini-live.test.mjs tests/gemini-token.test.mjs tests/wake-listener.test.mjs
       - name: Full regression suite (baseline diagnostic)
         run: npm test
         continue-on-error: true
