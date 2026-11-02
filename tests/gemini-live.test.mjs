@@ -136,6 +136,42 @@ test("Gemini Live hybrid lifecycle", async t => {
       adapter.stop();
     }
   });
+  await t.test("unrelated tool cancellation cannot abort an active Jarvis command", async () => {
+    const adapter = await setup();
+    let finish;
+    command = () => new Promise(resolve => { finish = resolve; });
+    message(transcript("Explique a consulta atual")); message(tool("active-call")); await tick();
+    assert.equal(states.at(-1).phase, "processing");
+    message({ toolCallCancellation: { ids: ["older-unrelated-call"] } });
+    assert.equal(calls[0].signal.aborted, false, "unrelated cancellation must not abort active work");
+    assert.equal(states.at(-1).phase, "processing");
+    finish({ text: "Resposta atual completa" }); await tick();
+    assert.equal(state.responses.length, 1);
+    assert.equal(state.responses[0].functionResponses[0].response.text, "Resposta atual completa");
+    adapter.stop();
+  });
+  await t.test("matching cancellation aborts only its own command and preserves paused Gemini transport", async () => {
+    const adapter = await setup();
+    let finishCancelled;
+    command = text => text === "Comando cancelado"
+      ? new Promise(resolve => { finishCancelled = resolve; })
+      : Promise.resolve({ text: "Resposta após cancelamento" });
+    message(transcript("Comando cancelado")); message(tool("cancel-this-call")); await tick();
+    adapter.disableListening();
+    assert.equal(states.at(-1).connected, true);
+    message({ toolCallCancellation: { ids: ["cancel-this-call"] } });
+    assert.equal(calls[0].signal.aborted, true, "matching cancellation aborts its own request");
+    assert.equal(states.at(-1).phase, "off", "paused microphone stays off, not processing forever");
+    assert.equal(states.at(-1).connected, true, "cancellation must not tear down Gemini");
+    finishCancelled({ text: "Resposta antiga que não deve sair" }); await tick();
+    assert.equal(state.responses.length, 0);
+    assert.equal(adapter.sendText("Nova pergunta por teclado"), true);
+    message(tool("new-after-cancel")); await tick();
+    assert.equal(calls.at(-1).text, "Nova pergunta por teclado");
+    assert.equal(state.responses.length, 1);
+    assert.equal(state.responses[0].functionResponses[0].response.text, "Resposta após cancelamento");
+    adapter.stop();
+  });
   await t.test("cancelled tool never returns a late result", async () => {
     const adapter = await setup(); let resolve;
     command = () => new Promise(r => { resolve = r; });
