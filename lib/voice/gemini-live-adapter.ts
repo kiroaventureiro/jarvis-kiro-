@@ -151,7 +151,7 @@ export class GeminiLiveVoiceAdapter {
       const response = await fetch("/api/voice/gemini-token", {
         method: "POST", credentials: "same-origin", cache: "no-store",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle: this.handle, clientSessionId: this.clientSessionId }), signal: this.provisioning.signal,
+        body: JSON.stringify({ handle: this.handle, clientSessionId: this.clientSessionId, voiceName: (() => { try { return localStorage.getItem("jarvis.gemini.voice.v1") || "Orus"; } catch { return "Orus"; } })() }), signal: this.provisioning.signal,
       });
       const token = await response.json().catch(() => ({}));
       if (!response.ok) {
