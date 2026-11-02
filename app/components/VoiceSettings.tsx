@@ -24,6 +24,11 @@ export default function VoiceSettings() {
   const [geminiVoice, setGeminiVoice] = useState("Orus");
   useEffect(() => {
     setPrefs(readVoicePreferences());
+    const voiceChanged = (event: Event) => {
+      const name = (event as CustomEvent<string>).detail;
+      if (["Orus", "Charon", "Algenib", "Gacrux", "Puck", "Kore"].includes(name)) setGeminiVoice(name);
+    };
+    window.addEventListener("jarvis:gemini-voice", voiceChanged);
     try { setGeminiVoice(localStorage.getItem("jarvis.gemini.voice.v1") || "Orus"); } catch {}
     if (!("speechSynthesis" in window)) {
       setStatus("Síntese de fala indisponível neste navegador.");
@@ -35,6 +40,7 @@ export default function VoiceSettings() {
     window.speechSynthesis.addEventListener("voiceschanged", update);
     return () => {
       window.speechSynthesis.removeEventListener("voiceschanged", update);
+      window.removeEventListener("jarvis:gemini-voice", voiceChanged);
       preview.current?.abort();
     };
   }, []);
@@ -115,7 +121,7 @@ export default function VoiceSettings() {
           onChange={(e) => {
             const name = e.target.value;
             setGeminiVoice(name);
-            try { localStorage.setItem("jarvis.gemini.voice.v1", name); } catch {}
+            try { localStorage.setItem("jarvis.gemini.voice.v1", name); window.dispatchEvent(new CustomEvent("jarvis:gemini-voice", { detail: name })); } catch {}
             setStatus("Voz Gemini salva. Será aplicada ao iniciar uma nova sessão; a conversa atual não será interrompida.");
           }}
         >
