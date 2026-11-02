@@ -61,12 +61,32 @@ export class VoiceController {
   }
   private emit(phase: VoicePhase, message: string) {
     this.phase = phase;
+    if (typeof window !== "undefined" && window.localStorage?.getItem("jk_voice_debug") === "1") {
+      console.debug("[JarvisVoice] state", { phase, enabled: this.enabled, busy: this.busy, speechPending: this.speechPending, microphoneActive: this.mic, epoch: this.epoch });
+    }
     this.options.onState({
       phase,
       enabled: this.enabled,
       microphoneActive: this.mic,
       message,
     });
+  }
+  private trace(event: string) {
+    try {
+      if (typeof window === "undefined" || window.localStorage.getItem("jk_voice_debug") !== "1") return;
+      console.debug("[JarvisVoice] " + event, {
+        phase: this.phase,
+        enabled: this.enabled,
+        busy: this.busy,
+        speechPending: this.speechPending,
+        microphoneActive: this.mic,
+        epoch: this.epoch,
+        hasRecognition: Boolean(this.rec),
+        hasRequest: Boolean(this.abort),
+      });
+    } catch {
+      // Diagnostic logging must never interrupt voice operation.
+    }
   }
   private later(callback: () => void, ms: number) {
     const epoch = this.epoch;
@@ -123,12 +143,20 @@ export class VoiceController {
     return true;
   }
   start() {
+    this.trace("microphone:on requested");
     if (this.enabled) return;
     if (!this.options.recognition) {
       this.emit(
         "error",
         "Reconhecimento de fala indisponível. Use o teclado ou a sessão de voz manual.",
       );
+      return;
+    }
+    // Re-enable capture without invalidating an in-flight reply or its epoch.
+    if (this.busy) {
+      this.enabled = true;
+      this.trace("microphone:on deferred until reply ends");
+      this.emit(this.speechPending ? "speaking" : "processing", "Microfone reativado. A resposta continua.");
       return;
     }
     this.epoch++;
@@ -138,19 +166,26 @@ export class VoiceController {
     this.starts = [];
     this.armedUntil = 0;
     this.dedupe = new CommandDeduplicator();
+    this.trace("microphone:on listening requested");
     this.listen();
   }
   /** Turn off the user's microphone without cancelling a reply already being spoken. */
   disableListening() {
+    this.trace("microphone:off requested");
     if (!this.enabled) return;
-    if (!this.speechPending) {
+    if (!this.speechPending && !this.busy) {
       this.stop("Microfone desligado.");
       return;
     }
     this.enabled = false;
     this.clearTimers();
     this.pause();
-    this.emit("off", "Microfone desligado. A narração continua.");
+    this.trace("microphone:off capture stopped, reply preserved");
+    if (this.busy) {
+      this.emit(this.speechPending ? "speaking" : "processing", "Microfone desligado. A resposta continua.");
+    } else {
+      this.emit("off", "Microfone desligado. A narração continua.");
+    }
   }
   stop(message = "Escuta desligada.") {
     const ownedSpeech = this.speechPending || this.busy;
@@ -184,7 +219,11 @@ export class VoiceController {
     this.emit("error", message);
   }
   private listen() {
-    if (!this.enabled || this.busy || this.rec) return;
+    this.trace("recognition:start attempted");
+    if (!this.enabled || this.busy || this.rec) {
+      this.trace("recognition:start skipped");
+      return;
+    }
     if (this.options.externalSpeechActive?.()) {
       this.emit(
         "resuming",
@@ -219,6 +258,7 @@ export class VoiceController {
     rec.onstart = () => {
       if (this.rec !== rec || !this.enabled) return;
       this.mic = true;
+      this.trace("recognition:started");
       this.emit(
         this.now() < this.armedUntil ? "command" : "waiting",
         this.now() < this.armedUntil
@@ -308,7 +348,7 @@ export class VoiceController {
       const reply: VoiceReply = local
         ? { ...local, provider: "local" }
         : await this.options.command(command, abort.signal);
-      if (epoch !== this.epoch || !this.enabled) return;
+      if (epoch !== this.epoch) return;
       const candidate = this.options.onReply(reply);
       const prepared =
         candidate &&
@@ -336,9 +376,10 @@ export class VoiceController {
       } else {
         this.options.onSpeechUnavailable?.();
       }
-      if (epoch !== this.epoch || !this.enabled) return;
+      if (epoch !== this.epoch) return;
       this.busy = false;
       this.abort = null;
+      this.trace("reply:completed");
       if (reply.navigate) {
         this.stop();
         this.options.navigate?.(reply.navigate);
@@ -346,6 +387,10 @@ export class VoiceController {
       }
       if (!this.options.continuous()) {
         this.stop("Interação concluída. Toque para ouvir novamente.");
+        return;
+      }
+      if (!this.enabled) {
+        this.emit("off", "Resposta concluída. Microfone desligado.");
         return;
       }
       this.armedUntil = this.now() + 60000;

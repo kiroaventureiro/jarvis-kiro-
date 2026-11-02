@@ -12,8 +12,8 @@ const tick = async () => { for (let i = 0; i < 15; i++) await Promise.resolve();
 const state = { audio: [], callbacks: null, responses: [], inputs: [], connects: 0 };
 globalThis.__geminiTest = state;
 const { GeminiLiveVoiceAdapter } = await compile("lib/voice/gemini-live-adapter.ts", {
-  "@google/genai": `const GoogleGenAI = class { constructor(options) { globalThis.__geminiTest.credentials = options; } live = { connect: async ({callbacks, config}) => { const s = globalThis.__geminiTest; s.callbacks = callbacks; s.config = config; s.connects++; return { close() {}, sendRealtimeInput(v) { s.inputs.push(v); }, sendClientContent(v) { s.typed = v; }, sendToolResponse(v) { s.responses.push(v); } }; } }; };`,
-  "./gemini-audio": `const GeminiAudio = class { async start(fn) { this.capture = fn; this.starts = (this.starts || 0) + 1; globalThis.__geminiTest.audio.push(this); } pauseCapture() { this.paused = (this.paused || 0) + 1; } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
+  "@google/genai": `const Modality = { AUDIO: "AUDIO" }; const GoogleGenAI = class { constructor(options) { globalThis.__geminiTest.credentials = options; } live = { connect: async ({callbacks, config}) => { const s = globalThis.__geminiTest; s.callbacks = callbacks; s.config = config; s.connects++; return { close() {}, sendRealtimeInput(v) { s.inputs.push(v); }, sendClientContent(v) { s.typed = v; }, sendToolResponse(v) { s.responses.push(v); } }; } }; };`,
+  "./gemini-audio": `const GeminiAudio = class { unlockPlayback() {} async start(fn) { this.capture = fn; this.starts = (this.starts || 0) + 1; globalThis.__geminiTest.audio.push(this); } pauseCapture() { this.paused = (this.paused || 0) + 1; } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
   "./gemini-config": `const GEMINI_JARVIS_TOOL = "jarvis_conversation";`,
 });
 let calls = [], states = [], users = [], replies = [], volume = 0.4, command;
@@ -77,6 +77,20 @@ test("Gemini Live hybrid lifecycle", async t => {
     assert.equal(states.at(-1).enabled, true);
     adapter.stop();
   });
+  await t.test("native Gemini audio modality is explicit and silent 4-char PCM is rejected", async () => {
+    const adapter = await setup();
+    const configSource = fs.readFileSync("lib/voice/gemini-config.ts", "utf8");
+    assert.ok(configSource.includes('GEMINI_LIVE_MODEL = "gemini-3.8-live"'));
+    assert.ok(configSource.includes("responseModalities: [Modality.AUDIO]"));
+    assert.doesNotMatch(configSource, /speechConfig/, "the audible baseline used Gemini's default voice");
+    message(transcript("Responda por voz")); message(tool("audio-output-test")); await tick();
+    const audio = state.audio.at(-1);
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "AAAA" } }] } } });
+    assert.equal(audio.played, undefined, "empty/silent PCM payload must not be marked as speech");
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "A".repeat(128) } }] } } });
+    assert.deepEqual(audio.played, ["A".repeat(128)], "valid PCM audio must reach the playback queue");
+    adapter.stop();
+  });
   await t.test("tool before final transcript waits; duplicate calls cannot replay actions", async () => {
     const adapter = await setup(); message(tool()); await tick(); assert.equal(calls.length, 0);
     message({ serverContent: { inputTranscription: { text: "Meu ", finished: false } } });
@@ -120,6 +134,25 @@ test("Gemini Live hybrid lifecycle", async t => {
     message({ goAway: {} }); const connects = state.connects; adapter.stop();
     await new Promise(r => setTimeout(r, 550)); assert.equal(state.connects, connects);
   });
+  await t.test("turning off infinite mic during listening preserves OUVINDO, then thinking and speaking", async () => {
+    const adapter = await setup();
+    message(transcript("Continua a minha pergunta"));
+    assert.equal(states.at(-1).phase, "command");
+    adapter.disableListening();
+    assert.equal(states.at(-1).phase, "command", "mic toggle must not demote an in-progress utterance to idle");
+    assert.equal(states.at(-1).enabled, false);
+    message(tool("mic-off-during-utterance"));
+    await tick();
+    assert.equal(calls.at(-1).text, "Continua a minha pergunta");
+    assert.equal(states.at(-1).phase, "processing");
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm", data: "reply-after-mic-off" } }] } } });
+    assert.equal(states.at(-1).phase, "speaking", "Gemini playback must continue with the mic disabled");
+    assert.equal(state.audio.at(-1).played.at(-1), "reply-after-mic-off");
+    adapter.audio.onDrained();
+    assert.equal(states.at(-1).phase, "off", "only the actual playback-drained event may end the response state");
+    assert.match(states.at(-1).message, /^Resposta concluída/);
+    adapter.stop();
+  });
 });
 test("AudioWorklet emits signed PCM in 20ms chunks without monitoring input", () => {
   let Processor; const chunks = [];
@@ -132,7 +165,7 @@ test("AudioWorklet emits signed PCM in 20ms chunks without monitoring input", ()
   assert.equal(chunks.length, 2); assert.equal(chunks[0].byteLength, 640);
   assert.equal(new Int16Array(chunks[0])[0], 32767); assert.equal(new Int16Array(chunks[0])[128], -32768);
 });
-test("audio capture, PCM decode, cancellable playback and late permission cleanup", async () => {
+test("known-good serial PCM playback, click unlock and late permission cleanup", async () => {
   const contexts = [], tracks = [], nodes = [];
   globalThis.AudioContext = class {
     state = "running"; currentTime = 1; destination = {}; audioWorklet = { addModule: async () => {} };
@@ -239,6 +272,11 @@ test("exclusive owner blocks browser and neural speech until released", async ()
     assert.match(fs.readFileSync(`lib/voice/${file}`, "utf8"), /assertLegacyAudioAllowed\(\)/);
   const parent = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
   assert.match(parent, /if \(geminiRequested && !workspace.files.length\) \{ liveActivate.current\?\.\(\); return; \}/);
+  assert.match(parent, /workspace\.recording \|\| voiceSnapshot\.phase === "command" \|\| state === "listening"/, "a real listening utterance remains OUVINDO after mic-off; enabling the toggle alone does not set state=listening");
+  assert.match(parent, /geminiUtteranceActive = useRef\(false\)/, "the active utterance is latched independently of React render timing");
+  assert.match(parent, /snapshot\.phase === "off" && snapshot\.message\.startsWith\("Microfone pausado"\) && geminiUtteranceActive\.current/, "mic-off during a real utterance preserves OUVINDO");
+  assert.match(parent, /snapshot\.phase === "processing" \|\| snapshot\.phase === "speaking" \|\| snapshot\.phase === "error"/, "the listening latch clears on processing, playback, or error");
+  assert.match(parent, /!snapshot\.message\.startsWith\("Resposta concluída"\)/, "processing/responding are preserved until playback really drains");
   assert.match(parent, /desktopVoice && !geminiRequested && !muteRef.current/);
   assert.match(parent, /resposta somente por texto/);
   assert.match(parent, /shown.length && !holoSession.current && \(typing \|\| history\)/);
@@ -250,4 +288,24 @@ test("exclusive owner blocks browser and neural speech until released", async ()
   assert.match(adapter, /sessionActive/);
   assert.match(adapter, /connected: this\.sessionActive && this\.ready/);
   assert.match(adapter, /sendText\(text: string\)[\s\S]*?if \(!this\.sessionActive\) return false/);
+});
+
+test("a core timeout returns a truthful tool result without dropping Gemini Live", async t => {
+  const adapter = await setup();
+  t.after(() => adapter.stop());
+  const initialConnections = state.connects;
+  command = async () => { throw new Error("ABACUS_TIMEOUT"); };
+  message(transcript("Faça uma consulta demorada"));
+  message(tool("core-timeout"));
+  const deadline = Date.now() + 3000;
+  while (!state.responses.length && Date.now() < deadline)
+    await new Promise(resolve => setTimeout(resolve, 20));
+  assert.equal(state.connects, initialConnections, "core timeout must not create a new Gemini session");
+  assert.equal(state.responses.length, 1);
+  const response = state.responses[0].functionResponses[0].response.text;
+  assert.match(response, /ultrapassou o tempo de resposta/);
+  assert.equal(states.at(-1).phase, "waiting");
+  assert.equal(states.at(-1).connected, true);
+  assert.equal(states.at(-1).enabled, true);
+  assert.equal(state.audio.at(-1).closed, undefined, "the live audio owner remains open");
 });

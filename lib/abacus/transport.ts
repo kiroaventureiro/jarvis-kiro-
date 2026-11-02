@@ -63,7 +63,7 @@ export async function* runAbacus(
   },
 ): AsyncGenerator<AbacusChunk> {
   const timeout = new AbortController(),
-    timer = setTimeout(() => timeout.abort(), options.timeoutMs ?? 20000),
+    timer = setTimeout(() => timeout.abort(), options.timeoutMs ?? 55000),
     signal = options.signal
       ? AbortSignal.any([options.signal, timeout.signal])
       : timeout.signal;

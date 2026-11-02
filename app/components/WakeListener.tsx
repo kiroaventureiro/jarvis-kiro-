@@ -48,13 +48,18 @@ export default function WakeListener(props: Props) {
     [authorized, setAuthorized] = useState(false);
   const ios = useRef(false);
   const [diagnostic, setDiagnostic] = useState("");
+  // Gemini Live must always present its own explicit opt-in before the
+  // browser's separate microphone permission prompt.
+  useEffect(() => {
+    if (props.geminiRequested && !authorized) setConsent(true);
+  }, [props.geminiRequested, authorized]);
   async function diagnose() {
     try {
       const response = await fetch("/api/voice/gemini-token", { cache: "no-store", credentials: "same-origin" });
       const data = await response.json();
       const code = typeof data.code === "string" && /^[A-Z0-9_]{1,60}$/.test(data.code) ? data.code : "ENDPOINT_ERROR";
       setDiagnostic(`Gemini Live · HTTP ${response.status} · ${code} · teste sem custo, sem token, sem microfone`);
-    } catch { setDiagnostic("Gemini Live · falha de rede no diagnóstico; TTS bloqueado."); }
+    } catch { setDiagnostic("Gemini Live · falha de rede no diagnóstico."); }
   }
   useEffect(() => {
     let mounted = true;
@@ -108,7 +113,11 @@ export default function WakeListener(props: Props) {
     engine.current = controller;
     if (controller instanceof VoiceController)
       bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
-    else callback.current.registerLiveText?.(text => controller.sendText(text));
+    else {
+      // Gemini already receives continuous, echo-filtered PCM and owns VAD.
+      // An energy-only second microphone can mistake speaker output for barge-in.
+      callback.current.registerLiveText?.(text => controller.sendText(text));
+    }
     const preferences = () => { if (controller instanceof GeminiLiveVoiceAdapter) controller.updateVolume(); };
     window.addEventListener(VOICE_PREF_EVENT, preferences);
     props.registerStop(() => controller.stop());
@@ -139,9 +148,9 @@ export default function WakeListener(props: Props) {
       // may turn off the explicitly enabled Gemini infinite-listening session.
       if (engine.current instanceof VoiceController)
         engine.current.stop("Escuta desligada durante outra operação.");
-      setConsent(false);
+      if (!props.geminiRequested) setConsent(false);
     }
-  }, [props.blocked]);
+  }, [props.blocked, props.geminiRequested]);
   useEffect(() => {
     if (props.muted || engine.current instanceof GeminiLiveVoiceAdapter) engine.current?.audioMuted();
   }, [props.muted]);
@@ -182,7 +191,7 @@ export default function WakeListener(props: Props) {
             : "Ativar escuta de voz"
         }
         aria-pressed={snapshot.enabled}
-        title={props.geminiRequested ? "Gemini Live · entrada e saída · sem TTS alternativo" : "Escuta de voz"}
+        title={props.geminiRequested ? "Gemini Live · escuta e voz nativa" : "Escuta de voz"}
         className={"icon-button " + (snapshot.enabled ? "active" : "")}
         data-voice-phase={snapshot.phase}
       >
@@ -206,19 +215,18 @@ export default function WakeListener(props: Props) {
           {snapshot.microphoneActive ? " · microfone ativo" : ""}
         </span>
       ) : null}
-      {consent ? (
+      {(consent || (props.geminiRequested && !authorized)) ? (
         <section
           className="voice-consent glass"
           role="dialog"
           aria-modal="false"
           aria-labelledby="voice-consent-title"
         >
-          <h2 id="voice-consent-title">{props.geminiRequested ? "Ativar Gemini Live do Jarvis?" : "Ativar escuta do Jarvis?"}</h2>
+          <h2 id="voice-consent-title">{props.geminiRequested ? "Autorizar Gemini Live do Jarvis?" : "Ativar escuta do Jarvis?"}</h2>
           <p>
-            O navegador terá acesso ao microfone e poderá usar o serviço remoto
-            de reconhecimento do fornecedor. Nada é gravado de forma persistente
-            pelo Jarvis. Com a escuta ativada, você pode falar naturalmente,
-            sem precisar dizer uma palavra de ativação.
+            {props.geminiRequested
+              ? "O Jarvis abrirá uma sessão de conversação por voz com o Gemini Live. O áudio do microfone será enviado ao serviço do Google para reconhecimento e resposta falada. O Jarvis não grava o áudio de forma persistente."
+              : "O navegador terá acesso ao microfone e poderá usar o serviço remoto de reconhecimento do fornecedor. Nada é gravado de forma persistente pelo Jarvis. Com a escuta ativada, você pode falar naturalmente, sem precisar dizer uma palavra de ativação."}
           </p>
           <p>
             {ios.current
@@ -233,7 +241,7 @@ export default function WakeListener(props: Props) {
           </> : null}
           <div className="form-actions">
             <button type="button" onClick={allow}>
-              Ativar escuta
+              {props.geminiRequested ? "Autorizar Gemini Live e microfone" : "Ativar escuta"}
             </button>
             <button type="button" onClick={() => setConsent(false)}>
               Cancelar
