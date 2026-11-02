@@ -271,6 +271,9 @@ test("exclusive owner blocks browser and neural speech until released", async ()
   const parent = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
   assert.match(parent, /if \(geminiRequested && !workspace.files.length\) \{ liveActivate.current\?\.\(\); return; \}/);
   assert.match(parent, /workspace\.recording \|\| voiceSnapshot\.phase === "command" \|\| state === "listening"/, "a real listening utterance remains OUVINDO after mic-off; enabling the toggle alone does not set state=listening");
+  assert.match(parent, /geminiUtteranceActive = useRef\(false\)/, "the active utterance is latched independently of React render timing");
+  assert.match(parent, /snapshot\.phase === "off" && snapshot\.message\.startsWith\("Microfone pausado"\) && geminiUtteranceActive\.current/, "mic-off during a real utterance preserves OUVINDO");
+  assert.match(parent, /snapshot\.phase === "processing" \|\| snapshot\.phase === "speaking" \|\| snapshot\.phase === "error"/, "the listening latch clears on processing, playback, or error");
   assert.match(parent, /!snapshot\.message\.startsWith\("Resposta concluída"\)/, "processing/responding are preserved until playback really drains");
   assert.match(parent, /desktopVoice && !geminiRequested && !muteRef.current/);
   assert.match(parent, /resposta somente por texto/);
