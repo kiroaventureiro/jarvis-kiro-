@@ -61,6 +61,9 @@ export class VoiceController {
   }
   private emit(phase: VoicePhase, message: string) {
     this.phase = phase;
+    if (typeof window !== "undefined" && window.localStorage?.getItem("jk_voice_debug") === "1") {
+      console.debug("[JarvisVoice] state", { phase, enabled: this.enabled, busy: this.busy, speechPending: this.speechPending, microphoneActive: this.mic, epoch: this.epoch });
+    }
     this.options.onState({
       phase,
       enabled: this.enabled,
@@ -150,7 +153,11 @@ export class VoiceController {
     this.enabled = false;
     this.clearTimers();
     this.pause();
-    this.emit("off", "Microfone desligado. A narração continua.");
+    if (this.busy) {
+      this.emit(this.speechPending ? "speaking" : "processing", "Microfone desligado. A resposta continua.");
+    } else {
+      this.emit("off", "Microfone desligado. A narração continua.");
+    }
   }
   stop(message = "Escuta desligada.") {
     const ownedSpeech = this.speechPending || this.busy;
