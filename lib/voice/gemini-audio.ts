@@ -115,6 +115,15 @@ export class GeminiAudio {
       const buffer = context.createBuffer(1, Math.floor(bytes.length / 2), 24000);
       const floats = buffer.getChannelData(0);
       for (let i = 0; i < floats.length; i++) floats[i] = view.getInt16(i * 2, true) / 32768;
+      // PCM chunks may terminate at a nonzero sample and click at the boundary.
+      // A very short taper limits discontinuities without changing the speech rate
+      // or introducing the fixed inter-chunk delay removed in the prior fix.
+      const edge = Math.min(32, Math.floor(floats.length / 4));
+      for (let i = 0; i < edge; i++) {
+        const envelope = (i + 1) / (edge + 1);
+        floats[i] *= envelope;
+        floats[floats.length - 1 - i] *= envelope;
+      }
       const source = context.createBufferSource(); source.buffer = buffer; source.connect(gain);
       this.sources.add(source);
       // Schedule PCM chunks contiguously rather than inserting a 10ms gap per chunk.
