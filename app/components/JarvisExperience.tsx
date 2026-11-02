@@ -1555,7 +1555,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
                 return;
               // Microphone-off is not conversation completion. Keep the visible response state until Gemini finishes.
                             if (geminiRequested && snapshot.phase === "off" && state === "listening") return;
-              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding")) return;
+              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding") && !snapshot.message.startsWith("Resposta concluída")) return;
               if (snapshot.phase === "off" && !wasActive) return;
               setState(
                 snapshot.phase === "processing"
