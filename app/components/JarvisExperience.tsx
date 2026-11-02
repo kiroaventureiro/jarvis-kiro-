@@ -817,7 +817,14 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
     }
   }
   async function microphone() {
-    if (geminiRequested && !workspace.files.length) { liveActivate.current?.(); return; }
+    if (!workspace.files.length) {
+      // The infinite-audio control is the single entry point for Gemini Live.
+      // Switching modes mounts WakeListener, which prompts for Gemini consent
+      // before requesting its own browser microphone stream.
+      if (!geminiRequested) { setGeminiRequested(true); return; }
+      liveActivate.current?.();
+      return;
+    }
     window.dispatchEvent(new Event("jk-arrival-stop"));
     wakeStop.current();
     if (fileSpeech.current) {
@@ -1492,15 +1499,6 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
         ) : null}
         <div className="dock-controls glass">
           <button type="button" className="subtle-button" aria-expanded={appsOpen} onClick={()=>setAppsOpen(open=>!open)}>Aplicativos</button>
-          <button
-            type="button"
-            className="subtle-button"
-            aria-pressed={geminiRequested}
-            onClick={() => setGeminiRequested(selected => !selected)}
-            title="Selecionar Gemini Live; autorização de microfone, sessão e custos continuam obrigatórias"
-          >
-            {geminiRequested ? "Gemini Live selecionado" : "Ativar Gemini Live"}
-          </button>
           <WakeListener
             geminiRequested={geminiRequested}
             registerActivate={(activate) => { liveActivate.current = activate; }}
