@@ -12,7 +12,7 @@ const tick = async () => { for (let i = 0; i < 15; i++) await Promise.resolve();
 const state = { audio: [], callbacks: null, responses: [], inputs: [], connects: 0 };
 globalThis.__geminiTest = state;
 const { GeminiLiveVoiceAdapter } = await compile("lib/voice/gemini-live-adapter.ts", {
-  "@google/genai": `const GoogleGenAI = class { constructor(options) { globalThis.__geminiTest.credentials = options; } live = { connect: async ({callbacks, config}) => { const s = globalThis.__geminiTest; s.callbacks = callbacks; s.config = config; s.connects++; return { close() {}, sendRealtimeInput(v) { s.inputs.push(v); }, sendClientContent(v) { s.typed = v; }, sendToolResponse(v) { s.responses.push(v); } }; } }; };`,
+  "@google/genai": `const Modality = { AUDIO: "AUDIO" }; const GoogleGenAI = class { constructor(options) { globalThis.__geminiTest.credentials = options; } live = { connect: async ({callbacks, config}) => { const s = globalThis.__geminiTest; s.callbacks = callbacks; s.config = config; s.connects++; return { close() {}, sendRealtimeInput(v) { s.inputs.push(v); }, sendClientContent(v) { s.typed = v; }, sendToolResponse(v) { s.responses.push(v); } }; } }; };`,
   "./gemini-audio": `const GeminiAudio = class { unlockPlayback() {} async start(fn) { this.capture = fn; this.starts = (this.starts || 0) + 1; globalThis.__geminiTest.audio.push(this); } pauseCapture() { this.paused = (this.paused || 0) + 1; } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
   "./gemini-config": `const GEMINI_JARVIS_TOOL = "jarvis_conversation";`,
 });
@@ -20,7 +20,7 @@ let calls = [], states = [], users = [], replies = [], volume = 0.4, command;
 async function setup() {
   state.responses = []; calls = []; states = []; users = []; replies = [];
   command = async text => ({ text: `Jarvis: ${text}` });
-  globalThis.fetch = async () => ({ ok: true, json: async () => ({ token: "ephemeral-test", model: "gemini-3.8-live", newSessionExpiresAt: new Date(Date.now() + 60000).toISOString(), expiresAt: new Date(Date.now() + 1800000).toISOString() }) });
+  globalThis.fetch = async () => ({ ok: true, json: async () => ({ token: "ephemeral-test", model: "gemini-3.1-flash-live-preview", newSessionExpiresAt: new Date(Date.now() + 60000).toISOString(), expiresAt: new Date(Date.now() + 1800000).toISOString() }) });
   const adapter = new GeminiLiveVoiceAdapter({
     command: (text, signal) => { calls.push({ text, signal }); return command(text, signal); },
     onState: v => states.push(v), onUser: v => users.push(v), onReply: v => replies.push(v),
@@ -75,6 +75,18 @@ test("Gemini Live hybrid lifecycle", async t => {
     assert.equal(state.connects, connects);
     assert.equal(state.audio.at(-1).starts, 2);
     assert.equal(states.at(-1).enabled, true);
+    adapter.stop();
+  });
+  await t.test("native Gemini audio modality is explicit and silent 4-char PCM is rejected", async () => {
+    const adapter = await setup();
+    assert.deepEqual(state.config.responseModalities, ["AUDIO"]);
+    assert.equal(state.config.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName, "Charon");
+    message(transcript("Responda por voz")); message(tool("audio-output-test")); await tick();
+    const audio = state.audio.at(-1);
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "AAAA" } }] } } });
+    assert.equal(audio.played, undefined, "empty/silent PCM payload must not be marked as speech");
+    message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "A".repeat(128) } }] } } });
+    assert.deepEqual(audio.played, ["A".repeat(128)], "valid PCM audio must reach the playback queue");
     adapter.stop();
   });
   await t.test("tool before final transcript waits; duplicate calls cannot replay actions", async () => {
