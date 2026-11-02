@@ -48,7 +48,7 @@ export class GeminiLiveVoiceAdapter {
   constructor(private options: Options) {
     this.audio.onEchoEvidence = (frames, aec) => { this.echoFrames = frames; this.aec = aec; };
     this.audio.onMicrophoneEnded = () => this.fail("O microfone foi desconectado. Reative a sessão.");
-    this.audio.onDrained = () => { this.playing = false; if (this.sessionActive) { if (this.enabled && this.ready && !this.audioStarted) void this.startCapture(); this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Escuta infinita desligada · Gemini continua conectado"); } };
+    this.audio.onDrained = () => { this.playing = false; if (this.sessionActive) { if (this.enabled && this.ready && !this.audioStarted) void this.startCapture(); this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Resposta concluída · Gemini pronto para ouvir novamente" : "Resposta concluída · microfone desligado · Gemini continua conectado"); } };
   }
   private trace(event: string) {
     try {
