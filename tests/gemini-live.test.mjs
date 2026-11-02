@@ -354,3 +354,15 @@ test("integrated Jarvis vocal identity uses one settings panel and server voice 
   assert.match(jarvis, /const vocal = vocalSettingsReply\(text\)/);
   assert.match(jarvis, /normalized\.match\(\//);
 });
+
+test("Gemini Live can be enabled by environment gates without branch pinning", () => {
+  const page = fs.readFileSync("app/page.tsx", "utf8");
+  const token = fs.readFileSync("app/api/voice/gemini-token/route.ts", "utf8");
+  assert.match(page, /VERCEL_ENV === "preview" \|\| process\.env\.VERCEL_ENV === "production"/);
+  assert.doesNotMatch(token, /PRODUCTION_BLOCKED/);
+  assert.match(token, /ENVIRONMENT_UNSUPPORTED/);
+  assert.match(token, /JARVIS_GEMINI_LIVE_ENABLED/);
+  assert.match(token, /JARVIS_GEMINI_LIVE_PAID_ALLOWED/);
+  assert.match(token, /JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR/);
+  assert.match(token, /await authorized\(\)/);
+});
