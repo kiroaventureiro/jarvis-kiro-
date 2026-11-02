@@ -38,6 +38,8 @@ import {
 } from "../../../../lib/voice/cost-policy";
 import { processAbacusRequest } from "../../../../lib/voice/abacus-gateway";
 export const dynamic = "force-dynamic";
+// Allow streamed reasoning to finish before Vercel terminates the request.
+export const maxDuration = 60;
 export async function GET() {
   if (!(await authorized()))
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
