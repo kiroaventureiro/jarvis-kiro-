@@ -13,7 +13,7 @@ const state = { audio: [], callbacks: null, responses: [], inputs: [], connects:
 globalThis.__geminiTest = state;
 const { GeminiLiveVoiceAdapter } = await compile("lib/voice/gemini-live-adapter.ts", {
   "@google/genai": `const GoogleGenAI = class { constructor(options) { globalThis.__geminiTest.credentials = options; } live = { connect: async ({callbacks, config}) => { const s = globalThis.__geminiTest; s.callbacks = callbacks; s.config = config; s.connects++; return { close() {}, sendRealtimeInput(v) { s.inputs.push(v); }, sendClientContent(v) { s.typed = v; }, sendToolResponse(v) { s.responses.push(v); } }; } }; };`,
-  "./gemini-audio": `const GeminiAudio = class { async start(fn) { this.capture = fn; this.starts = (this.starts || 0) + 1; globalThis.__geminiTest.audio.push(this); } pauseCapture() { this.paused = (this.paused || 0) + 1; } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
+  "./gemini-audio": `const GeminiAudio = class { unlockPlayback() { this.unlocked = true; } async start(fn) { this.capture = fn; this.starts = (this.starts || 0) + 1; globalThis.__geminiTest.audio.push(this); } pauseCapture() { this.paused = (this.paused || 0) + 1; } volume(v) { this.level = v; } play(v) { (this.played ||= []).push(v); } interrupt() { this.interrupted = (this.interrupted || 0) + 1; } close() { this.closed = true; } };`,
   "./gemini-config": `const GEMINI_JARVIS_TOOL = "jarvis_conversation";`,
 });
 let calls = [], states = [], users = [], replies = [], volume = 0.4, command;
@@ -34,7 +34,7 @@ const transcript = text => ({ serverContent: { inputTranscription: { text, finis
 test("Gemini Live hybrid lifecycle", async t => {
   await t.test("PCM continuous input; Jarvis owns the answer; volume and immediate interruption", async () => {
     const adapter = await setup();
-    const audio = state.audio.at(-1); audio.capture("pcm-input");
+    const audio = state.audio.at(-1); assert.equal(audio.unlocked, true, "speaker output is unlocked by the explicit user gesture"); audio.capture("pcm-input");
     assert.equal(state.inputs.at(-1).audio.mimeType, "audio/pcm;rate=16000");
     message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm", data: "premature" } }] } } });
     assert.equal(audio.played, undefined);
@@ -75,6 +75,20 @@ test("Gemini Live hybrid lifecycle", async t => {
     assert.equal(state.connects, connects);
     assert.equal(state.audio.at(-1).starts, 2);
     assert.equal(states.at(-1).enabled, true);
+    adapter.stop();
+  });
+  await t.test("turn is finalized when the user disables infinite listening mid-utterance without closing Gemini", async () => {
+    const adapter = await setup();
+    const connects = state.connects;
+    message({ serverContent: { inputTranscription: { text: "Termine minha pergunta", finished: false } } });
+    message(tool("pending-before-toggle"));
+    adapter.disableListening();
+    assert.ok(state.inputs.some(input => input.audioStreamEnd === true), "send audioStreamEnd to close the captured turn");
+    await tick();
+    assert.equal(calls.at(-1).text, "Termine minha pergunta");
+    assert.equal(states.at(-1).connected, true, "Live session remains connected after microphone toggle");
+    assert.equal(adapter.sendText("Pergunta pelo teclado"), true);
+    assert.equal(state.connects, connects, "no new Gemini session is opened");
     adapter.stop();
   });
   await t.test("tool before final transcript waits; duplicate calls cannot replay actions", async () => {
