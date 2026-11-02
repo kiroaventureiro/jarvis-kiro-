@@ -109,7 +109,8 @@ export default function WakeListener(props: Props) {
     if (controller instanceof VoiceController)
       bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
     else {
-      bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
+      // Gemini already receives continuous, echo-filtered PCM and owns VAD.
+      // An energy-only second microphone can mistake speaker output for barge-in.
       callback.current.registerLiveText?.(text => controller.sendText(text));
     }
     const preferences = () => { if (controller instanceof GeminiLiveVoiceAdapter) controller.updateVolume(); };
@@ -185,7 +186,7 @@ export default function WakeListener(props: Props) {
             : "Ativar escuta de voz"
         }
         aria-pressed={snapshot.enabled}
-        title={props.geminiRequested ? "Gemini Live · escuta e raciocínio · voz oficial VoiceStudio" : "Escuta de voz"}
+        title={props.geminiRequested ? "Gemini Live · escuta e voz nativa" : "Escuta de voz"}
         className={"icon-button " + (snapshot.enabled ? "active" : "")}
         data-voice-phase={snapshot.phase}
       >
