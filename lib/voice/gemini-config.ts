@@ -1,5 +1,7 @@
 import { Modality, Type, type LiveConnectConfig } from "@google/genai";
-export const GEMINI_LIVE_MODEL = "gemini-3.8-live";
+// Temporary reliability pin: 3.8 Live has a reported output-audio regression (transcription arrives while PCM chunks are empty/tiny).
+// Keep the same Gemini Live architecture and voice config while validating 3.1 Live output.
+export const GEMINI_LIVE_MODEL = "gemini-3.1-flash-live-preview";
 export const GEMINI_JARVIS_TOOL = "jarvis_conversation";
 /** No operation/approval arguments: the bridge uses the user's transcript, not a model plan. */
 export function geminiLiveConfig(instructions: string, handle?: string): LiveConnectConfig {
