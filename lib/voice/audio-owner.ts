@@ -5,6 +5,6 @@ export function claimGeminiAudio() {
   let released = false;
   return () => { if (!released) { released = true; liveOwners--; } };
 }
-export function assertLegacyAudioAllowed(officialVoice = false) {
-  if (liveOwners > 0 && !officialVoice) throw new Error("GEMINI_EXCLUSIVE: síntese alternativa bloqueada enquanto Gemini Live está selecionado.");
+export function assertLegacyAudioAllowed() {
+  if (liveOwners > 0) throw new Error("GEMINI_EXCLUSIVE: síntese alternativa bloqueada enquanto Gemini Live está selecionado.");
 }
