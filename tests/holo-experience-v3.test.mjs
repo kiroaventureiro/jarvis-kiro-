@@ -176,9 +176,11 @@ test("speech chunks do not silently truncate long explanations or split Unicode 
   const p = speechChunks(text);
   assert.ok(p.join(" ").includes("FIM INTEGRAL"));
   assert.equal(p.join(" ").match(/família/g).length, 350);
-  assert.ok(p.length < text.length / 240);
+  // Browser TTS deliberately uses short (<= 180 UTF-16 units) chunks for reliability.
+  // Keep a generous bound against pathological over-fragmentation, not an old 240-unit target.
+  assert.ok(p.length <= Math.ceil(text.length / 120));
   assert.ok(p.every((x) => !x.includes("\ufffd")));
-  assert.ok(p.every((x) => x.length <= 640));
+  assert.ok(p.every((x) => x.length <= 180));
 });
 test("voice session remains pending until both spoken chapter and visual completion", async () => {
   const f = start();
