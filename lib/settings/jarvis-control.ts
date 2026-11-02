@@ -21,6 +21,30 @@ export function jarvisSettingsCommand(text: string): Result | null {
     catch { return answer("Não consegui salvar a preferência vocal neste navegador."); }
     return answer("Voz Gemini "+voice+" selecionada. Será aplicada na próxima sessão, sem interromper a conversa atual.");
   }
+  const prefs = readVoicePreferences();
+  const amount = raw.match(/\b(\d{1,3})\s*(?:%|por cento)\b/);
+  const volume = /\bvolume\b/.test(raw);
+  const speed = /\bvelocidade\b/.test(raw);
+  const pitch = /\btom\b/.test(raw);
+  const explicitChange = /\b(ajustar|ajuste|alterar|altere|configurar|configure|definir|defina|colocar|coloque|aumentar|aumente|diminuir|diminua|reduzir|reduza)\b/.test(raw);
+  if ((volume || speed || pitch) && explicitChange) {
+    const next = {...prefs};
+    const key = volume ? "volume" : speed ? "rate" : "pitch";
+    const min = key === "volume" ? 0 : key === "rate" ? 0.7 : 0.6;
+    const max = key === "volume" ? 1 : key === "rate" ? 1.3 : 1.2;
+    let value: number;
+    if (amount) {
+      const percentage = Number(amount[1]);
+      if (percentage > 100) return answer("Informe um percentual de zero a cem.");
+      value = min + percentage / 100 * (max - min);
+    } else if (/\b(aumentar|aumente|diminuir|diminua|reduzir|reduza)\b/.test(raw)) {
+      value = next[key] + (/\b(aumentar|aumente)\b/.test(raw) ? 1 : -1) * (key === "volume" ? 0.1 : 0.05);
+    } else return answer("Qual valor deseja? Você pode pedir, por exemplo, ajuste o volume para 60 por cento.");
+    next[key] = Math.max(min,Math.min(max,Number(value.toFixed(3))));
+    saveVoicePreferences(next);
+    const name = volume ? "Volume" : speed ? "Velocidade" : "Tom";
+    return answer(name + " ajustado para " + Math.round((next[key]-min)/(max-min)*100) + " por cento. " + (volume ? "O volume também controla a saída Gemini." : "O ajuste afeta a voz do navegador, não o Gemini Live."));
+  }
   if (/\bholograma\b|\bgrafico\b|\bgraficos\b/.test(raw)) {
     if (/\b(economico|economia|eco|reduzir)\b/.test(raw)) { setGraphicsPreference("eco"); return answer("Holograma configurado em modo econômico."); }
     if (/\b(automatico|normal|padrao|auto)\b/.test(raw)) { setGraphicsPreference("auto"); return answer("Holograma configurado para qualidade automática."); }
