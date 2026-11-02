@@ -80,8 +80,8 @@ test("Gemini Live hybrid lifecycle", async t => {
   await t.test("native Gemini audio modality is explicit and silent 4-char PCM is rejected", async () => {
     const adapter = await setup();
     const configSource = fs.readFileSync("lib/voice/gemini-config.ts", "utf8");
-    assert.match(configSource, /GEMINI_LIVE_MODEL = "gemini-3\\.8-live"/);
-    assert.match(configSource, /responseModalities: \\[Modality\\.AUDIO\\]/);
+    assert.ok(configSource.includes('GEMINI_LIVE_MODEL = "gemini-3.8-live"'));
+    assert.ok(configSource.includes("responseModalities: [Modality.AUDIO]"));
     assert.doesNotMatch(configSource, /speechConfig/, "the audible baseline used Gemini's default voice");
     message(transcript("Responda por voz")); message(tool("audio-output-test")); await tick();
     const audio = state.audio.at(-1);
