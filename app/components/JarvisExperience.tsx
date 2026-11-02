@@ -1559,7 +1559,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
                   ? "processing"
                   : snapshot.phase === "speaking"
                     ? "responding"
-                    : snapshot.phase === "command" || (snapshot.enabled && (snapshot.phase === "waiting" || snapshot.phase === "resuming"))
+                    : snapshot.phase === "command"
                       ? "listening"
                       : snapshot.phase === "error"
                         ? "error"
