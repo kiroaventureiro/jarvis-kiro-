@@ -383,3 +383,14 @@ test("PCM boundary smoothing preserves contiguous scheduling and avoids abrupt t
   assert.match(audio, /floats\[floats\.length - 1 - i\] \*= envelope/);
   assert.match(audio, /source\.start\(startsAt\)/);
 });
+
+test("Jarvis uses central allowlisted settings controller without arbitrary configuration writes", () => {
+  const controller = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  const ui = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.match(ui, /jarvisSettingsCommand\(text\)/);
+  assert.match(controller, /setGraphicsPreference\("eco"\)/);
+  assert.match(controller, /setGraphicsPreference\("auto"\)/);
+  assert.match(controller, /setHistoryConsent\(true\)/);
+  assert.match(controller, /saveVoicePreferences/);
+  assert.doesNotMatch(controller, /eval\(|Function\(/);
+});
