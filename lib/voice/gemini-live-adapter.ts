@@ -115,15 +115,14 @@ export class GeminiLiveVoiceAdapter {
         try { this.session?.sendRealtimeInput({ audio: { data, mimeType: "audio/pcm;rate=16000" } }); this.inputChunks++; }
         catch { this.reconnect(); }
       });
-      if (!this.enabled || !this.sessionActive || connection !== this.connection) { this.audio.pauseCapture(); return; }
+      if (!this.enabled || !this.sessionActive || !this.ready || connection !== this.connection) { this.audio.pauseCapture(); return; }
       this.audioStarted = true;
       this.emit("waiting", "Gemini Live conectado · escuta infinita ativa");
     } catch {
       if (this.sessionActive && connection === this.connection) {
-        this.enabled = false;
         this.audio.pauseCapture();
         this.audioStarted = false;
-        this.emit("off", "Gemini continua conectado; microfone não foi ativado. Use o teclado ou tente ligar a escuta novamente.");
+        this.emit("error", "Microfone indisponível · escuta infinita permanece selecionada. Verifique a permissão e toque novamente em áudio infinito para tentar capturar.");
       }
     }
   }
@@ -133,7 +132,7 @@ export class GeminiLiveVoiceAdapter {
     this.provisioning = new AbortController();
     this.later(() => {
       if (this.sessionActive && connection === this.connection && !this.ready)
-        this.fail("Tempo de conexão esgotado. Reative a sessão.");
+        this.reconnect();
     }, 20000);
     try {
       const response = await fetch("/api/voice/gemini-token", {
