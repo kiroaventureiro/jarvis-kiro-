@@ -108,7 +108,10 @@ export default function WakeListener(props: Props) {
     engine.current = controller;
     if (controller instanceof VoiceController)
       bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
-    else callback.current.registerLiveText?.(text => controller.sendText(text));
+    else {
+      bargeIn.current = createBargeInMonitor(() => controller.interruptForUserSpeech());
+      callback.current.registerLiveText?.(text => controller.sendText(text));
+    }
     const preferences = () => { if (controller instanceof GeminiLiveVoiceAdapter) controller.updateVolume(); };
     window.addEventListener(VOICE_PREF_EVENT, preferences);
     props.registerStop(() => controller.stop());
