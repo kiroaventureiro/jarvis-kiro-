@@ -1492,6 +1492,15 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
         ) : null}
         <div className="dock-controls glass">
           <button type="button" className="subtle-button" aria-expanded={appsOpen} onClick={()=>setAppsOpen(open=>!open)}>Aplicativos</button>
+          <button
+            type="button"
+            className="subtle-button"
+            aria-pressed={geminiRequested}
+            onClick={() => setGeminiRequested(selected => !selected)}
+            title="Selecionar Gemini Live; autorização de microfone, sessão e custos continuam obrigatórias"
+          >
+            {geminiRequested ? "Gemini Live selecionado" : "Ativar Gemini Live"}
+          </button>
           <WakeListener
             geminiRequested={geminiRequested}
             registerActivate={(activate) => { liveActivate.current = activate; }}
