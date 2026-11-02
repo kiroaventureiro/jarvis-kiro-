@@ -1501,7 +1501,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
             externalBusy={typingRequest || connected}
             registerStop={registerWakeStop}
             beforeStart={() => {
-              if (geminiRequested) { stop(); getVoiceManager().cancel(); }
+              if (geminiRequested) { if (connected) stop(); getVoiceManager().cancel(); }
               else if (connected) setWakeHandoff(true);
               setError("");
             }}
