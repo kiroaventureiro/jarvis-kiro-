@@ -51,3 +51,20 @@ export async function disconnectN8n(){
   await connectorStore.update(state=>{delete state.n8n;});
   return {connected:false,verified:false};
 }
+
+export async function listN8nWorkflows(signal?:AbortSignal) {
+  const state=await connectorStore.read();
+  if (!state.n8n) throw Error("N8N_NOT_CONNECTED");
+  const baseUrl=await n8nBaseUrl(state.n8n.baseUrl);
+  const response=await fetch(baseUrl+"/api/v1/workflows?limit=100",{
+    headers:{"X-N8N-API-KEY":state.n8n.apiKey},
+    cache:"no-store",redirect:"error",
+    signal:AbortSignal.any([signal||new AbortController().signal,AbortSignal.timeout(9000)])
+  });
+  if (!response.ok) throw Error("N8N_WORKFLOWS_UNAVAILABLE");
+  const raw=await response.text();
+  if(raw.length>250000) throw Error("N8N_RESPONSE_TOO_LARGE");
+  const json=JSON.parse(raw) as {data?:Array<{id?:unknown;name?:unknown;active?:unknown}>};
+  const items=Array.isArray(json.data)?json.data:[];
+  return {workflows:items.slice(0,100).filter(w=>typeof w.id==="string"&&typeof w.name==="string").map(w=>({id:String(w.id).slice(0,100),name:String(w.name).slice(0,150),active:w.active===true})),executionEnabled:false,partial:items.length>=100};
+}
