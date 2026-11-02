@@ -106,6 +106,7 @@ export type PersistentProject = {
   updatedAt: string;
 };
 export type VaultState = import("./workspace").WorkspaceState & {
+  n8n?: { baseUrl: string; apiKey: string; connectedAt: string; verifiedAt: string | null };
   voiceUsage?: import("../voice/ledger").VoiceUsageState;
   persistentProjects?: Record<string, PersistentProject>;
 
