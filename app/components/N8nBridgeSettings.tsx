@@ -1,0 +1,10 @@
+"use client";
+import {useEffect,useState} from "react";
+type Job={id:string;workflow:string;state:string;result?:string|null};
+export default function N8nBridgeSettings(){
+ const [jobs,setJobs]=useState<Job[]>([]),[enabled,setEnabled]=useState(false),[busy,setBusy]=useState(false),[note,setNote]=useState("");
+ async function refresh(){try{const r=await fetch("/api/director/n8n-jobs",{credentials:"same-origin",cache:"no-store"});if(!r.ok)throw Error("Sessão ou cofre indisponível");const data=await r.json();setEnabled(data.enabled===true);setJobs(data.jobs||[]);}catch(e){setNote(e instanceof Error?e.message:"Não foi possível consultar");}}
+ useEffect(()=>{void refresh();},[]);
+ async function request(workflow:string){setBusy(true);setNote("");try{const r=await fetch("/api/director/n8n-jobs",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({workflow,payload:{requestedBy:"owner"}})});if(!r.ok)throw Error("Não foi possível encaminhar a tarefa");setNote("Tarefa registrada; execução depende do worker n8n configurado.");await refresh();}catch(e){setNote(e instanceof Error?e.message:"Falha");}finally{setBusy(false);}}
+ return <section className="glass notice"><h2>Canal privado n8n — Jarvis</h2><p>Status: {enabled?"canal configurado no servidor":"aguardando segredo de conexão no servidor"}. O n8n consulta tarefas de saída; não é necessário publicar a porta local do Windows.</p><div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button type="button" disabled={busy||!enabled} onClick={()=>void request("project_report")}>Solicitar relatório de projetos</button><button type="button" disabled={busy||!enabled} onClick={()=>void request("daily_briefing")}>Solicitar boletim</button><button type="button" disabled={busy} onClick={()=>void refresh()}>Atualizar tarefas</button></div>{note?<p role="status">{note}</p>:null}<ul>{jobs.slice(-10).reverse().map(job=><li key={job.id}>{job.workflow}: {job.state}{job.result?" — "+job.result:""}</li>)}</ul><p>Esses pedidos só serão processados quando um workflow de execução autorizado estiver configurado no n8n.</p></section>;
+}
