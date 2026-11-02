@@ -1261,7 +1261,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
         <div role="status" aria-live="polite" aria-atomic="true" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginInlineStart: 0, whiteSpace: "nowrap", flexShrink: 0 }}>
           <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: state === "error" || workspace.phase === "error" ? "#f28f8f" : state === "processing" || workspace.busy ? "#c4b5fd" : state === "listening" || workspace.recording || voiceSnapshot.phase === "command" ? "#59ddf6" : state === "responding" || voiceSnapshot.phase === "speaking" ? "#78ead8" : "#96adbf", boxShadow: "0 0 9px currentColor", color: "#8cdbf2" }} />
           <span style={{ color: "#b9d3e4", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.09em" }}>
-            {workspace.phase === "error" || state === "error" ? "CONEXÃO INDISPONÍVEL" : workspace.busy || state === "processing" || voiceSnapshot.phase === "processing" ? "PENSANDO" : workspace.recording || state === "listening" || voiceSnapshot.phase === "command" ? "OUVINDO" : state === "responding" || voiceSnapshot.phase === "speaking" ? "RESPONDENDO" : state === "connecting" ? "CONECTANDO" : "EM ESPERA"}
+            {workspace.phase === "error" || state === "error" ? "CONEXÃO INDISPONÍVEL" : workspace.busy || state === "processing" || voiceSnapshot.phase === "processing" ? "PENSANDO" : workspace.recording || state === "listening" || (geminiRequested && voiceSnapshot.enabled && (voiceSnapshot.phase === "waiting" || voiceSnapshot.phase === "resuming" || voiceSnapshot.phase === "command")) || voiceSnapshot.phase === "command" ? "OUVINDO" : state === "responding" || voiceSnapshot.phase === "speaking" ? "RESPONDENDO" : state === "connecting" ? "CONECTANDO" : "EM ESPERA"}
           </span>
         </div>
         </div>
@@ -1559,7 +1559,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
                   ? "processing"
                   : snapshot.phase === "speaking"
                     ? "responding"
-                    : snapshot.phase === "command"
+                    : snapshot.phase === "command" || (snapshot.enabled && (snapshot.phase === "waiting" || snapshot.phase === "resuming"))
                       ? "listening"
                       : snapshot.phase === "error"
                         ? "error"
