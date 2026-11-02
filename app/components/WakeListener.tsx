@@ -54,7 +54,7 @@ export default function WakeListener(props: Props) {
       const data = await response.json();
       const code = typeof data.code === "string" && /^[A-Z0-9_]{1,60}$/.test(data.code) ? data.code : "ENDPOINT_ERROR";
       setDiagnostic(`Gemini Live · HTTP ${response.status} · ${code} · teste sem custo, sem token, sem microfone`);
-    } catch { setDiagnostic("Gemini Live · falha de rede no diagnóstico; TTS bloqueado."); }
+    } catch { setDiagnostic("Gemini Live · falha de rede no diagnóstico."); }
   }
   useEffect(() => {
     let mounted = true;
@@ -185,7 +185,7 @@ export default function WakeListener(props: Props) {
             : "Ativar escuta de voz"
         }
         aria-pressed={snapshot.enabled}
-        title={props.geminiRequested ? "Gemini Live · entrada e saída · sem TTS alternativo" : "Escuta de voz"}
+        title={props.geminiRequested ? "Gemini Live · escuta e raciocínio · voz oficial VoiceStudio" : "Escuta de voz"}
         className={"icon-button " + (snapshot.enabled ? "active" : "")}
         data-voice-phase={snapshot.phase}
       >
