@@ -14,6 +14,19 @@ export function jarvisSettingsCommand(text: string): Result | null {
   const raw = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   const requested = /(jarvis|configur|preferenc|ajust|ativ|desativ|aument|diminu|reduz|alter|mudar|trocar|coloc|selecion|voz|volume|tom|velocidade|holograma|historico|escuta)/.test(raw);
   if (!requested) return null;
+  // Read-only inventory: report actual persisted preferences, never invent access.
+  if (/(status|estado|resumo|lista|listar|quais|consultar|mostrar|controle)/.test(raw) &&
+      /(configur|preferenc|ajust|componentes|sistema)/.test(raw)) {
+    const current = readVoicePreferences();
+    let gemini = "não consultada";
+    try { const value = localStorage.getItem("jarvis.gemini.voice.v1"); gemini = VOICES.find(v => v === value) || "Orus (padrão experimental)"; } catch {}
+    return answer("Configurações disponíveis neste dispositivo: Gemini Live: " + gemini +
+      "; volume: " + Math.round(current.volume * 100) + "%; velocidade do navegador: " + current.rate.toFixed(2) +
+      "; tom do navegador: " + current.pitch.toFixed(2) + "; retomada da escuta: " + (current.continuous ? "ativada" : "desativada") +
+      "; holograma: " + (readGraphicsPreference() === "eco" ? "econômico" : "automático") +
+      "; histórico local: " + (historyConsent() ? "habilitado" : "desabilitado") +
+      ". Memória central, integrações, credenciais, custos e publicação não são alterados por este controlador.");
+  }
   const voice = VOICES.find(v => new RegExp("\\b" + v.toLowerCase() + "\\b").test(raw));
   const command = /\b(mudar|trocar|selecionar|colocar|usar|escolher|definir|quero|alterar|configure|configurar)\b/.test(raw);
   if (voice && (command || /\bvoz\b/.test(raw))) {
