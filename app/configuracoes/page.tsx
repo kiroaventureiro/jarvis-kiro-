@@ -7,6 +7,7 @@ import AbacusBudgetSettings from "../components/AbacusBudgetSettings";
 import VoiceSettings from "../components/VoiceSettings";
 import VoiceStudioSettings from "../components/VoiceStudioSettings";
 import HologramSettings from "../components/HologramSettings";
+import N8nConnectionSettings from "../components/N8nConnectionSettings";
 export default function SettingsPage() {
   return (
     <InternalPage title="Configurações" eyebrow="Preferências e acesso">
@@ -22,6 +23,7 @@ export default function SettingsPage() {
         </p>
         <Link href="/conexoes">Abrir Central de Conexões →</Link>
       </section>
+      <N8nConnectionSettings />
       <MemorySyncSettings />
       <AbacusBudgetSettings />
       <VoiceSettings />
