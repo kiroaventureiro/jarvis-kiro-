@@ -175,6 +175,27 @@ test("Gemini Live hybrid lifecycle", async t => {
     assert.equal(state.responses[0].functionResponses[0].response.text, "Resposta nova completa");
     adapter.stop();
   });
+  await t.test("late rejection from a previous connection cannot fail a newer Jarvis command", async () => {
+    const adapter = await setup();
+    let rejectOld, finishNew;
+    command = text => new Promise((resolve, reject) => {
+      if (text === "Consulta antiga") rejectOld = reject;
+      else if (text === "Consulta atual") finishNew = resolve;
+      else reject(new Error("unexpected test command"));
+    });
+    message(transcript("Consulta antiga")); message(tool("old-rejection")); await tick();
+    message({ goAway: { timeLeft: "5s" } });
+    await new Promise(resolve => setTimeout(resolve, 550)); await tick();
+    message(transcript("Consulta atual")); message(tool("new-after-reconnect")); await tick();
+    assert.equal(states.at(-1).phase, "processing");
+    rejectOld(new Error("old request failed after reconnect")); await tick();
+    assert.equal(states.at(-1).phase, "processing", "old failure must not fail or demote the new command");
+    assert.equal(states.at(-1).connected, true);
+    finishNew({ text: "Consulta atual respondida" }); await tick();
+    assert.equal(state.responses.length, 1);
+    assert.equal(state.responses[0].functionResponses[0].response.text, "Consulta atual respondida");
+    adapter.stop();
+  });
   await t.test("GoAway resumes with an in-memory handle; stop cancels retries", async () => {
     const adapter = await setup();
     message({ sessionResumptionUpdate: { resumable: true, newHandle: "resume-test" } });
