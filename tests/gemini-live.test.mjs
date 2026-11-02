@@ -77,6 +77,47 @@ test("Gemini Live hybrid lifecycle", async t => {
     assert.equal(states.at(-1).enabled, true);
     adapter.stop();
   });
+  await t.test("microphone track loss preserves Gemini connection and keyboard replies", async () => {
+    const adapter = await setup();
+    const audio = state.audio.at(-1), connects = state.connects;
+    audio.onMicrophoneEnded();
+    assert.equal(states.at(-1).enabled, false, "failed microphone must not be marked active");
+    assert.equal(states.at(-1).connected, true, "microphone failure must not close Gemini transport");
+    assert.equal(states.at(-1).phase, "off");
+    assert.match(states.at(-1).message, /Microfone desconectado/);
+    assert.equal(audio.closed, undefined, "speaker context must remain open");
+    assert.equal(adapter.sendText("Resposta pelo teclado após perda do microfone"), true);
+    message(tool("keyboard-after-mic-loss")); await tick();
+    assert.equal(calls.at(-1).text, "Resposta pelo teclado após perda do microfone");
+    assert.equal(state.responses.at(-1).functionResponses[0].response.text, "Jarvis: Resposta pelo teclado após perda do microfone");
+    assert.equal(state.connects, connects, "no extra session admission or reconnection");
+    adapter.stop();
+  });
+  await t.test("microphone loss during a long Jarvis command does not abort processing or PCM output", async () => {
+    const adapter = await setup();
+    const audio = state.audio.at(-1);
+    let finish;
+    command = () => new Promise(resolve => { finish = resolve; });
+    message(transcript("Explique o relatório completo"));
+    message(tool("command-during-mic-loss")); await tick();
+    assert.equal(states.at(-1).phase, "processing");
+    audio.onMicrophoneEnded();
+    assert.equal(calls.at(-1).signal.aborted, false, "losing capture must not cancel an ongoing Jarvis request");
+    assert.equal(states.at(-1).phase, "processing");
+    assert.equal(states.at(-1).connected, true);
+    finish({ text: "Relatório integral, sem corte" }); await tick();
+    assert.equal(state.responses.at(-1).functionResponses[0].response.text, "Relatório integral, sem corte");
+    message({ serverContent: { modelTurn: { parts: [
+      { inlineData: { mimeType: "audio/pcm;rate=24000", data: "chunk-one" } },
+      { inlineData: { mimeType: "audio/pcm;rate=24000", data: "chunk-two" } },
+    ] } } });
+    assert.deepEqual(audio.played, ["chunk-one", "chunk-two"]);
+    assert.equal(states.at(-1).phase, "speaking");
+    audio.onDrained();
+    assert.equal(states.at(-1).phase, "off");
+    assert.equal(states.at(-1).connected, true);
+    adapter.stop();
+  });
   await t.test("late playback drain cannot demote a newer Jarvis command while microphone is active or paused", async () => {
     const adapter = await setup();
     let finishCommand;
