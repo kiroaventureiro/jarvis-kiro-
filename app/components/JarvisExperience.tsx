@@ -246,6 +246,9 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
   }, []);
   const [wakeHandoff, setWakeHandoff] = useState(false);
   const wakeWasActive = useRef(false);
+  // Latch an utterance independently of React's render timing: the mic toggle
+  // may emit "off" before the listening-state render has committed.
+  const geminiUtteranceActive = useRef(false);
   const liveActivate = useRef<(() => void) | null>(null);
   const liveText = useRef<((text: string) => boolean) | null>(null);
   const wakeStop = useRef<() => void>(() => {});
@@ -1553,8 +1556,14 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
               if (!snapshot.enabled) setWakeHandoff(false);
               if (typingAbort.current || fileSpeech.current || connected)
                 return;
-              // Microphone-off is not conversation completion. Keep the visible response state until Gemini finishes.
-                            if (geminiRequested && snapshot.phase === "off" && state === "listening") return;
+              // Track the utterance at the event source, not through a possibly stale
+              // React state closure. Turning off capture must not erase OUVINDO.
+              if (geminiRequested && snapshot.phase === "command") geminiUtteranceActive.current = true;
+              if (geminiRequested && (snapshot.phase === "processing" || snapshot.phase === "speaking" || snapshot.message.startsWith("Resposta concluída"))) geminiUtteranceActive.current = false;
+              if (geminiRequested && snapshot.phase === "off" && geminiUtteranceActive.current) {
+                setState("listening");
+                return;
+              }
               if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding") && !snapshot.message.startsWith("Resposta concluída")) return;
               if (snapshot.phase === "off" && !wasActive) return;
               setState(
