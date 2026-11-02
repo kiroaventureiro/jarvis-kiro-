@@ -1553,8 +1553,10 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
               if (!snapshot.enabled) setWakeHandoff(false);
               if (typingAbort.current || fileSpeech.current || connected)
                 return;
-              // Microphone-off is not conversation completion. Keep the visible response state until Gemini finishes.\n              if (geminiRequested && snapshot.phase === "off" && state === "listening") return;
-              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding")) return;\n              if (snapshot.phase === "off" && !wasActive) return;
+              // Microphone-off is not conversation completion. Keep the visible response state until Gemini finishes.
+                            if (geminiRequested && snapshot.phase === "off" && state === "listening") return;
+              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding")) return;
+              if (snapshot.phase === "off" && !wasActive) return;
               setState(
                 snapshot.phase === "processing"
                   ? "processing"
