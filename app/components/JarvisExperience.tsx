@@ -246,6 +246,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
   }, []);
   const [wakeHandoff, setWakeHandoff] = useState(false);
   const wakeWasActive = useRef(false);
+  const geminiUtteranceActive = useRef(false);
   const liveActivate = useRef<(() => void) | null>(null);
   const liveText = useRef<((text: string) => boolean) | null>(null);
   const wakeStop = useRef<() => void>(() => {});
@@ -1501,7 +1502,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
             externalBusy={typingRequest || connected}
             registerStop={registerWakeStop}
             beforeStart={() => {
-              if (geminiRequested) { stop(); getVoiceManager().cancel(); }
+              if (geminiRequested) { if (connected) stop(); getVoiceManager().cancel(); }
               else if (connected) setWakeHandoff(true);
               setError("");
             }}
@@ -1553,6 +1554,16 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
               if (!snapshot.enabled) setWakeHandoff(false);
               if (typingAbort.current || fileSpeech.current || connected)
                 return;
+              // Keep the visible conversation state while capture is paused;
+              // disabling the microphone must not erase an in-flight utterance.
+              if (geminiRequested && snapshot.phase === "command") geminiUtteranceActive.current = true;
+              if (geminiRequested && (snapshot.phase === "processing" || snapshot.phase === "speaking" || snapshot.phase === "error" || snapshot.message.startsWith("Resposta concluída"))) geminiUtteranceActive.current = false;
+              if (geminiRequested && snapshot.phase === "off" && snapshot.message.startsWith("Microfone pausado") && geminiUtteranceActive.current) {
+                setState("listening");
+                return;
+              }
+              if (geminiRequested && snapshot.phase === "off" && !snapshot.message.startsWith("Microfone pausado")) geminiUtteranceActive.current = false;
+              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding") && !snapshot.message.startsWith("Resposta concluída")) return;
               if (snapshot.phase === "off" && !wasActive) return;
               setState(
                 snapshot.phase === "processing"
