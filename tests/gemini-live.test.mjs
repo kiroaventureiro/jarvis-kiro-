@@ -265,3 +265,76 @@ test("exclusive owner blocks browser and neural speech until released", async ()
   assert.match(adapter, /connected: this\.sessionActive && this\.ready/);
   assert.match(adapter, /sendText\(text: string\)[\s\S]*?if \(!this\.sessionActive\) return false/);
 });
+
+test("stale tool cancellation must not suppress a newer audible answer", async () => {
+  const adapter = await setup();
+  message(transcript("Pergunta atual"));
+  message(tool("current-call"));
+  await tick();
+  assert.equal(state.responses.length, 1);
+  const before = state.audio.at(-1).played?.length || 0;
+  message({ toolCallCancellation: { ids: ["outdated-call"] } });
+  message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "current-voice" } }] } } });
+  assert.equal(state.audio.at(-1).played?.length, before + 1, "unrelated cancellation cannot mute current PCM");
+  adapter.stop();
+});
+
+test("infinite-audio entry selects Gemini before trying to activate the microphone", () => {
+  const component = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  const start = component.indexOf("async function microphone()");
+  const end = component.indexOf("\\n  }", start);
+  const handler = component.slice(start, start + 900);
+  assert.ok(handler.includes("setGeminiRequested(true)"), "infinite audio selects Gemini Live");
+  assert.ok(handler.includes("liveActivate.current?.()"), "subsequent use activates Gemini and browser microphone together");
+  assert.ok(!component.includes('>Ativar Gemini Live</button>'), "no separate Gemini toggle to inadvertently reset microphone");
+  const listener = fs.readFileSync("app/components/WakeListener.tsx", "utf8");
+  assert.match(listener, /if \(props\.geminiRequested && !authorized\) setConsent\(true\)/);
+  assert.match(listener, /engine\.current\?\.start\(\)/);
+});
+
+test("handshake timeout reconnects instead of permanently disabling the Live session", () => {
+  const source = fs.readFileSync("lib/voice/gemini-live-adapter.ts", "utf8");
+  assert.match(source, /if \(this\.sessionActive && connection === this\.connection && !this\.ready\)\s*this\.reconnect\(\)/);
+  assert.match(source, /if \(this\.enabled\) \{\s*if \(this\.sessionActive && this\.ready && !this\.audioStarted\) void this\.startCapture\(\)/);
+  assert.ok(!source.includes('this.enabled = false;\n        this.audio.pauseCapture();'), "microphone error does not clear user-selected infinite listening");
+});
+
+test("Gemini Live stays connected when browser microphone track ends", async () => {
+  const adapter = await setup();
+  const audio = state.audio.at(-1);
+  const previousConnects = state.connects;
+  audio.onMicrophoneEnded();
+  assert.equal(states.at(-1).connected, true, "mic loss cannot close Gemini transport");
+  assert.equal(state.connects, previousConnects, "mic loss should not reconnect the socket");
+  adapter.stop();
+});
+
+test("completed PCM playback returns status to waiting without disconnecting", async () => {
+  const adapter = await setup();
+  message(transcript("Diga olá")); message(tool("drain-call"));
+  await tick();
+  message({ serverContent: { modelTurn: { parts: [{ inlineData: { mimeType: "audio/pcm;rate=24000", data: "response-audio" } }] } } });
+  assert.equal(states.at(-1).phase, "speaking");
+  state.audio.at(-1).onDrained();
+  assert.equal(states.at(-1).phase, "waiting");
+  assert.equal(states.at(-1).connected, true);
+  adapter.disableListening();
+  assert.equal(states.at(-1).connected, true, "turning off infinite microphone preserves transport");
+  adapter.stop();
+});
+
+test("Jarvis UI accepts Gemini waiting state after spoken response", () => {
+  const ui = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.ok(!ui.includes('(snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding")'), "UI must not swallow end-of-playback waiting");
+  assert.match(ui, /snapshot\.phase === "waiting"\) geminiUtteranceActive\.current = false/);
+  assert.match(ui, /snapshot\.phase === "speaking"\s*\? "responding"[\s\S]*?: "idle"/);
+});
+
+test("Gemini waiting drives hologram and label even with stale legacy responding state", () => {
+  const ui = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.match(ui, /const visualState = geminiRequested && voiceSnapshot.connected/);
+  assert.match(ui, /voiceSnapshot\.phase === "waiting" \|\| voiceSnapshot\.phase === "off" \? "idle"/);
+  assert.match(ui, /data-state=\{visualState\}/);
+  assert.match(ui, /visualState === "responding" \|\| voiceSnapshot\.phase === "speaking" \? "RESPONDENDO"/);
+  assert.match(ui, /\(!geminiRequested && connected\)/);
+});

@@ -47,8 +47,18 @@ export class GeminiLiveVoiceAdapter {
   private usedTurn = false;
   constructor(private options: Options) {
     this.audio.onEchoEvidence = (frames, aec) => { this.echoFrames = frames; this.aec = aec; };
-    this.audio.onMicrophoneEnded = () => this.fail("O microfone foi desconectado. Reative a sessão.");
-    this.audio.onDrained = () => { this.playing = false; if (this.sessionActive) this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Escuta infinita desligada · Gemini continua conectado"); };
+    this.audio.onMicrophoneEnded = () => {
+      // Losing the browser microphone must never close the Gemini Live transport.
+      this.audioStarted = false;
+      if (this.sessionActive) this.emit("error", "Microfone interrompido · sessão Gemini preservada. Reative a captura pelo áudio infinito.");
+    };
+    this.audio.onDrained = () => {
+      this.playing = false;
+      if (!this.sessionActive) return;
+      if (this.processing) { this.emit("processing", "Gemini Live · processando resposta"); return; }
+      this.outputAllowed = false;
+      this.emit(this.enabled ? "waiting" : "off", this.enabled ? "Gemini Live ativo · ouvindo continuamente" : "Em espera · microfone pausado, Gemini conectado");
+    };
   }
   private emit(phase: VoiceSnapshot["phase"], message: string) {
     this.options.onState({ phase, message, enabled: this.enabled, microphoneActive: this.enabled && this.ready, connected: this.sessionActive && this.ready });
@@ -90,7 +100,10 @@ export class GeminiLiveVoiceAdapter {
     }, delay);
   }
   start() {
-    if (this.enabled) return;
+    if (this.enabled) {
+      if (this.sessionActive && this.ready && !this.audioStarted) void this.startCapture();
+      return;
+    }
     if (!this.options.desktopAudioAllowed()) { this.emit("off", "Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
     // Browser autoplay policy requires the speaker context to be resumed from this user gesture.
     this.audio.unlockPlayback();
@@ -115,15 +128,14 @@ export class GeminiLiveVoiceAdapter {
         try { this.session?.sendRealtimeInput({ audio: { data, mimeType: "audio/pcm;rate=16000" } }); this.inputChunks++; }
         catch { this.reconnect(); }
       });
-      if (!this.enabled || !this.sessionActive || connection !== this.connection) { this.audio.pauseCapture(); return; }
+      if (!this.enabled || !this.sessionActive || !this.ready || connection !== this.connection) { this.audio.pauseCapture(); return; }
       this.audioStarted = true;
       this.emit("waiting", "Gemini Live conectado · escuta infinita ativa");
     } catch {
       if (this.sessionActive && connection === this.connection) {
-        this.enabled = false;
         this.audio.pauseCapture();
         this.audioStarted = false;
-        this.emit("off", "Gemini continua conectado; microfone não foi ativado. Use o teclado ou tente ligar a escuta novamente.");
+        this.emit("error", "Microfone indisponível · escuta infinita permanece selecionada. Verifique a permissão e toque novamente em áudio infinito para tentar capturar.");
       }
     }
   }
@@ -133,7 +145,7 @@ export class GeminiLiveVoiceAdapter {
     this.provisioning = new AbortController();
     this.later(() => {
       if (this.sessionActive && connection === this.connection && !this.ready)
-        this.fail("Tempo de conexão esgotado. Reative a sessão.");
+        this.reconnect();
     }, 20000);
     try {
       const response = await fetch("/api/voice/gemini-token", {
@@ -212,8 +224,14 @@ export class GeminiLiveVoiceAdapter {
         this.emit("command", "Interrupção detectada · ouvindo…");
       }
       if (message.toolCallCancellation?.ids?.length) {
-        if (this.pending?.id && message.toolCallCancellation.ids.includes(this.pending.id)) this.pending = null;
-        this.abort?.abort(); this.outputAllowed = false;
+        // A stale cancellation must not silence a newer reply or abort an unrelated command.
+        // A pending tool call has not started an async command, so clear its debounce only.
+        if (this.pending?.id && message.toolCallCancellation.ids.includes(this.pending.id)) {
+          this.pending = null;
+          this.clearTranscriptTimers();
+          this.transcript = "";
+          this.transcriptReady = false;
+        }
       }
       // Transcription alone must never interrupt playback; native Live VAD controls barge-in.
       if (content?.inputTranscription && !this.playing) {

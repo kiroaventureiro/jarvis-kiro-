@@ -817,7 +817,14 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
     }
   }
   async function microphone() {
-    if (geminiRequested && !workspace.files.length) { liveActivate.current?.(); return; }
+    if (!workspace.files.length) {
+      // The infinite-audio control is the single entry point for Gemini Live.
+      // Switching modes mounts WakeListener, which prompts for Gemini consent
+      // before requesting its own browser microphone stream.
+      if (!geminiRequested) { setGeminiRequested(true); return; }
+      liveActivate.current?.();
+      return;
+    }
     window.dispatchEvent(new Event("jk-arrival-stop"));
     wakeStop.current();
     if (fileSpeech.current) {
@@ -1171,6 +1178,14 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
   const responses = visibleMessages.filter((item) => item.role === "assistant");
   const last = responses[responses.length - 1];
   const shown = history ? visibleMessages : last ? [last] : [];
+  // A stale React state must not override a confirmed end-of-audio from Gemini.
+  const visualState = geminiRequested && voiceSnapshot.connected
+    ? voiceSnapshot.phase === "waiting" || voiceSnapshot.phase === "off" ? "idle"
+      : voiceSnapshot.phase === "speaking" ? "responding"
+      : voiceSnapshot.phase === "processing" ? "processing"
+      : voiceSnapshot.phase === "command" ? "listening"
+      : state
+    : state;
   return (
     <main
       className={
@@ -1180,19 +1195,19 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
         (workspace.files.length ? "has-attachments " : "") +
         (dragging ? "is-dragging" : "")
       }
-      data-state={state}
+      data-state={visualState}
       data-codex-alert={codexAlertVisual || "none"}
       data-holo-scene={holoSession.current?.mode || "none"}
       data-holo-state={
-        state === "error"
+        visualState === "error"
           ? "error"
           : workspace.busy
             ? "executing"
-            : state === "responding"
+            : visualState === "responding"
               ? "responding"
-              : state === "processing"
+              : visualState === "processing"
                 ? "thinking"
-                : state === "listening"
+                : visualState === "listening"
                   ? "listening"
                   : holoSession.current?.modules.some((m) => m.kind === "media")
                     ? "media"
@@ -1260,9 +1275,9 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
           Jarvis Kiro
         </Link>
         <div role="status" aria-live="polite" aria-atomic="true" style={{ display: "inline-flex", alignItems: "center", gap: 8, marginInlineStart: 0, whiteSpace: "nowrap", flexShrink: 0 }}>
-          <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: state === "error" || workspace.phase === "error" ? "#f28f8f" : state === "processing" || workspace.busy ? "#c4b5fd" : state === "listening" || workspace.recording || voiceSnapshot.phase === "command" ? "#59ddf6" : state === "responding" || voiceSnapshot.phase === "speaking" ? "#78ead8" : "#96adbf", boxShadow: "0 0 9px currentColor", color: "#8cdbf2" }} />
+          <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: state === "error" || workspace.phase === "error" ? "#f28f8f" : state === "processing" || workspace.busy ? "#c4b5fd" : state === "listening" || workspace.recording || voiceSnapshot.phase === "command" ? "#59ddf6" : visualState === "responding" || voiceSnapshot.phase === "speaking" ? "#78ead8" : "#96adbf", boxShadow: "0 0 9px currentColor", color: "#8cdbf2" }} />
           <span style={{ color: "#b9d3e4", fontSize: "0.68rem", fontWeight: 600, letterSpacing: "0.09em" }}>
-            {workspace.phase === "error" || state === "error" ? "CONEXÃO INDISPONÍVEL" : workspace.busy || state === "processing" || voiceSnapshot.phase === "processing" ? "PENSANDO" : workspace.recording || state === "listening" || voiceSnapshot.phase === "command" ? "OUVINDO" : state === "responding" || voiceSnapshot.phase === "speaking" ? "RESPONDENDO" : state === "connecting" ? "CONECTANDO" : "EM ESPERA"}
+            {workspace.phase === "error" || state === "error" ? "CONEXÃO INDISPONÍVEL" : workspace.busy || visualState === "processing" || voiceSnapshot.phase === "processing" ? "PENSANDO" : workspace.recording || visualState === "listening" || voiceSnapshot.phase === "command" ? "OUVINDO" : visualState === "responding" || voiceSnapshot.phase === "speaking" ? "RESPONDENDO" : state === "connecting" ? "CONECTANDO" : "EM ESPERA"}
           </span>
         </div>
         </div>
@@ -1271,7 +1286,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
       <section id="cosmic-home" className="presence" aria-label="Presença do Jarvis">
         <RefinedJarvisCore
           phase={corePhase(
-            workspace.phase === "error" ? "error" : state,
+            workspace.phase === "error" ? "error" : visualState,
             voiceSnapshot.phase,
             workspace.busy,
             workspace.recording,
@@ -1321,7 +1336,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
         </div>
       </section>
       <HoloResponseHUD
-        externalAudioActive={(connected || voiceSnapshot.connected) && state === "responding"}
+        externalAudioActive={(connected || voiceSnapshot.connected) && visualState === "responding"}
         showNarration={
           !!last && (!desktopVoice || muted || last.speechAvailable === false)
         }
@@ -1494,6 +1509,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
           <button type="button" className="subtle-button" aria-expanded={appsOpen} onClick={()=>setAppsOpen(open=>!open)}>Aplicativos</button>
           <WakeListener
             geminiRequested={geminiRequested}
+            requestGemini={() => setGeminiRequested(true)}
             registerActivate={(activate) => { liveActivate.current = activate; }}
             desktopAudio={desktopVoice}
             registerLiveText={(send) => { liveText.current = send; }}
@@ -1552,7 +1568,8 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
               wakeWasActive.current = snapshot.enabled;
               setVoiceSnapshot(snapshot);
               if (!snapshot.enabled) setWakeHandoff(false);
-              if (typingAbort.current || fileSpeech.current || connected)
+              // Gemini Live owns the visible lifecycle even if legacy transport is connected.
+              if (typingAbort.current || fileSpeech.current || (!geminiRequested && connected))
                 return;
               // Keep the visible conversation state while capture is paused;
               // disabling the microphone must not erase an in-flight utterance.
@@ -1563,8 +1580,11 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
                 return;
               }
               if (geminiRequested && snapshot.phase === "off" && !snapshot.message.startsWith("Microfone pausado")) geminiUtteranceActive.current = false;
-              if (geminiRequested && (snapshot.phase === "off" || snapshot.phase === "waiting") && (state === "processing" || state === "responding") && !snapshot.message.startsWith("Resposta concluída")) return;
-              if (snapshot.phase === "off" && !wasActive) return;
+              // PCM playback completion emits "waiting" (or "off" when capture is paused).
+              // Never discard that terminal state based on the previous React status:
+              // otherwise the holographic indicator stays stuck on RESPONDENDO.
+              if (geminiRequested && snapshot.phase === "waiting") geminiUtteranceActive.current = false;
+              if (snapshot.phase === "off" && !wasActive && !geminiRequested) return;
               setState(
                 snapshot.phase === "processing"
                   ? "processing"
