@@ -33,3 +33,4 @@ export default function SimpleDevelopmentConnections(){
  {manual===p.provider?<form onSubmit={e=>{e.preventDefault();void saveToken(p.provider)}}><label>Token de acesso <input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} required/></label>{p.provider==="vercel"?<label>ID da equipe (opcional)<input value={teamId} onChange={e=>setTeamId(e.target.value)}/></label>:null}<button disabled={!!busy||!token} type="submit">Salvar conexão</button><button type="button" onClick={()=>{setManual(null);setToken("");}}>Cancelar</button></form>:null}
  </div>})}
  </section>;
+}
