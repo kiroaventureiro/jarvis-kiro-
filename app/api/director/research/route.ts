@@ -81,7 +81,7 @@ return NextResponse.json({ error: "Origem inválida" }, { status: 403 });
     const { normalizeProviderSpeech } = await import("../../../../lib/connectors/provider-speech");
     const understood = normalizeProviderSpeech(body.query, history);
     const { parseGitHubWriteIntent } = await import("../../../../lib/connectors/write-intent");
-    const isWrite = !!parseGitHubWriteIntent(understood) || /^(?:jarvis[,!:.]?\s*)?aprovar\s+[a-f0-9]{8}[.!\s]*$/i.test(understood.trim());
+    const isWrite = !!parseGitHubWriteIntent(understood) || /^(?:sim[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar)[.! ]*$/i.test(understood.trim()) || /^(?:jarvis[,!:.]?\s*)?aprovar\s+[a-f0-9]{8}[.!\s]*$/i.test(understood.trim());
     const reply =
       (isWrite ? await answerNativeRequest(understood, request.signal, history, true) : null) ||
       answerCodexPlanning(understood) ||
