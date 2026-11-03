@@ -26,6 +26,7 @@ export function normalizeAction(value: unknown): Action {
   const allowed: Record<string, string[]> = {
     repo: [],
     file: ["path", "ref"],
+    tree: ["path"],
     branches: [],
     commits: [],
     issues: [],
@@ -62,6 +63,7 @@ export function normalizeAction(value: unknown): Action {
   if (p === "github") {
     if (!/^[\w.-]+\/[\w.-]+$/.test(resource))
       throw new ConnectorError("RESOURCE_INVALID");
+    if (id === "tree") args = input.path ? { path: filePath(input.path) } : {};
     if (id === "file")
       args = {
         path: filePath(input.path),
