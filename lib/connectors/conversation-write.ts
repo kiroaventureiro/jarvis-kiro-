@@ -86,7 +86,7 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
     }
   }
   if(resources.length!==1)
-    return reply("Não foi possível identificar um único repositório autorizado. Nenhuma alteração foi preparada.");
+    return reply(explicitlyJarvis ? "A credencial GitHub do Jarvis não retornou o repositório kiroaventureiro/jarvis-kiro- após a atualização automática. A escrita foi bloqueada: é necessário autorizar esse repositório na instalação GitHub vinculada ao Jarvis." : "Não encontrei uma correspondência única entre o nome solicitado e os repositórios autorizados. Nenhuma alteração foi preparada.");
   const resource=resources[0];
   const repo=await connectors.readAuthorized("github",resource.id,"repo");
   const commits=await connectors.readAuthorized("github",resource.id,"commits");
