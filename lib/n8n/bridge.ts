@@ -74,7 +74,7 @@ export async function finishGithubExecution(jobId:string,ok:boolean,result:strin
 }
 export async function lease(){
  if(!bridgeEnabled())throw Error("BRIDGE_NOT_CONFIGURED");
- return connectorStore.update(s=>{const q=queue(s);const now=Date.now();const job=q.jobs.find(j=>j.state==="queued"||(j.workflow!=="github_plan_execute"&&j.state==="leased"&&(j.leaseUntil||0)<now&&j.attempts<3));if(!job)return {job:null};job.state="leased";job.attempts++;job.leaseUntil=now+120000;s.n8nBridge=q;return {job:{id:job.id,workflow:job.workflow,payload:job.payload,...(job.workflow==="github_plan_execute"?{ticket:executionTicket(job.id,job.payload.planId,job.payload.digest)}:{})},leaseSeconds:120};});
+ return connectorStore.update(s=>{const q=queue(s);const now=Date.now();const job=q.jobs.find(j=>j.state==="queued"||(j.workflow!=="github_plan_execute"&&j.state==="leased"&&(j.leaseUntil||0)<now&&j.attempts<3));if(!job)return {protocolVersion:2,build:process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,8)||"local",job:null};job.state="leased";job.attempts++;job.leaseUntil=now+120000;s.n8nBridge=q;return {protocolVersion:2,build:process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,8)||"local",job:{id:job.id,workflow:job.workflow,payload:job.payload,...(job.workflow==="github_plan_execute"?{ticket:executionTicket(job.id,job.payload.planId,job.payload.digest)}:{})},leaseSeconds:120};});
 }
 export async function finish(id:string,ok:boolean,result:string){
  if(!bridgeEnabled())throw Error("BRIDGE_NOT_CONFIGURED");
