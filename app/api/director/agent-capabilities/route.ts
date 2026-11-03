@@ -3,6 +3,7 @@ import { authorized } from "../../../../lib/auth";
 import { capabilityInventory } from "../../../../lib/agents/capability-inventory";
 import { connectorStore, connectors } from "../../../../lib/connectors/server";
 import { AGENT_TRANSPORT } from "../../../../lib/agent-transport-contract";
+import { sourceSecret } from "../../../../lib/agent-transport-auth";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
@@ -40,7 +41,7 @@ export async function GET() {
   return NextResponse.json({
     checkedAt: new Date().toISOString(), inventory, connectors: { state: connectorsState, providers },
     agentTransport: {
-      state: AGENT_TRANSPORT.enabled ? "configured" : "not_configured",
+      state: connectorStore.configured() && (sourceSecret("n8n") || sourceSecret("windows_agent")) ? "inbox_configured" : "not_configured",
       remoteExecutionAvailable: AGENT_TRANSPORT.enabled && AGENT_TRANSPORT.allowRemoteExecution,
     },
     note: "Credencial e último teste não comprovam execução atual. Cada operação requer validação de permissões e resultado real. Repositórios externos são candidatos, não agentes ativados.",
