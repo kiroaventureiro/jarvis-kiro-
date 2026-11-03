@@ -1,5 +1,6 @@
 import { depthFor, normalized } from "./intent";
 import { humanizerGuidance } from "./humanizer";
+import { codexSkillsGuidance } from "./codex-skill-catalog";
 import {
   specialistGuidance,
   voiceSpecialistGuidance,
@@ -52,6 +53,7 @@ export function cognitiveProtocol(
       ? voiceSpecialistGuidance()
       : specialistGuidance(message),
     humanizerGuidance(channel),
+    codexSkillsGuidance(message),
     channel === "voice"
       ? "Narre naturalmente, sem Markdown, JSON, identificadores extensos, código bruto ou URLs. Referências técnicas ficam no resultado visual. Não alegue ferramentas de outra modalidade; utilize apenas as funções declaradas nesta sessão de voz."
       : "Quando ajudar a leitura, use negrito, listas curtas ou tabelas. A fala usa roteiro próprio; dados técnicos e resultados visuais permanecem separados.",
