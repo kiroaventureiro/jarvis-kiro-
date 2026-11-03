@@ -3,10 +3,10 @@ export type GitHubWriteIntent =
   | { kind: "create_folder"; path: string; content: string }
   | null;
 
-export function parseGitHubWriteIntent(message: string): GitHubWriteIntent {
+export function parseGitHubWriteIntent(message: string, context = ""): GitHubWriteIntent {
   const folded = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (!/\b(crie|cria|criar|adicione|adiciona|adicionar|escreva|escrever|monte|montar)\b/.test(folded)) return null;
-  if (!/\b(github|repositorio|projeto|jarvis\s+kiro)\b/.test(folded)) return null;
+  if (!/\b(github|git hub|kit hub|repositori|projeto|jarvis\s+kiro|javaski)\b/.test((message+" "+context).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase())) return null;
 
   const folder = /\b(?:pasta|diret[oó]rio)\s+(?:chamad[ao]\s+|com\s+nome\s+)?["']?([a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*)["']?/i.exec(message);
   if (folder) {
