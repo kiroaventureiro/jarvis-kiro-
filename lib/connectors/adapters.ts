@@ -118,9 +118,11 @@ export function createAdapters(call: Call) {
         const ref = encodeURIComponent(s(metadata.default_branch || resource.defaultBranch));
         if (!ref) throw new ConnectorError("UPSTREAM_INVALID", 502);
         const branch = record(await call(p, c, base + "/branches/" + ref));
-        const rootSha = sha(branch.commit?.sha);
+        const commitSha = sha(branch.commit?.sha);
+        const commit = record(await call(p, c, base + "/git/commits/" + commitSha));
+        const rootSha = sha(commit.tree?.sha);
         const tree = record(await call(p, c, base + "/git/trees/" + rootSha + "?recursive=1"));
-        const prefix = a.path ? String(a.path).replace(/\\/$/, "") + "/" : "";
+        const prefix = a.path ? String(a.path) + "/" : "";
         const entries = array(tree.tree)
           .filter((e) => typeof e.path === "string" && (!prefix || e.path === a.path || e.path.startsWith(prefix)))
           .slice(0, 120)
