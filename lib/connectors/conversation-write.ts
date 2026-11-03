@@ -6,7 +6,7 @@ import { hash } from "./security";
 import { connectors, connectorStore } from "./server";
 import { requestedProject, selectProjectResources } from "./project-selection";
 import { parseGitHubWriteIntent } from "./write-intent";
-import { enqueueApprovedGithubPlan, status as bridgeStatus } from "../n8n/bridge";
+import { enqueueApprovedGithubPlan, workerReady, status as bridgeStatus } from "../n8n/bridge";
 export async function prepareGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
   const previous=history.slice(-8).reverse().find(t=>t.role==="user"&&/github|git hub|jarvis kiro|repositori|projeto/i.test(t.content));
   const contextual=previous?.content||"";
@@ -97,6 +97,7 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
   if(!main||!sha) return reply("Não foi possível confirmar a branch principal e o commit base.");
   const branch="jk/arquivo-"+randomUUID().slice(0,8);
   const description=request.kind==="create_folder"?"Criar a pasta "+request.path.slice(0,-9):"Criar o arquivo "+request.path;
+  if(!await workerReady())return reply("O GitHub está autorizado, mas o executor n8n não está ativo nesta mesma versão do Jarvis. Não vou pedir aprovação para uma escrita que não consigo encaminhar.");
   const plan=await connectors.plan(description+" em "+resource.name,[
     {provider:"github",resource:resource.id,operation:"branch",args:{branch,baseSha:sha}},
     {provider:"github",resource:resource.id,operation:"commit",args:{branch,baseSha:sha,path:request.path,content:request.content,message:"feat: "+(request.kind==="create_folder"?"criar pasta ":"adicionar arquivo ")+(request.kind==="create_folder"?request.path.slice(0,-9):request.path)}},
