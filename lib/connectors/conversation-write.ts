@@ -12,11 +12,22 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
   const contextual=previous?.content||"";
   const request=parseGitHubWriteIntent(message,contextual);
   if(!request)return null;
-  const state=await connectorStore.read();
-  const account=state.connections.github;
+  let state=await connectorStore.read();
+  let account=state.connections.github;
   const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
-  if(!account?.verifiedAt||account.status!=="connected"||!account.grants.includes("write"))
-    return reply("GitHub conectado para leitura, mas a permissão de escrita ainda não está validada. Nenhum arquivo foi alterado.");
+  if(!account||account.status!=="connected")
+    return reply("A conexão GitHub não está ativa nesta sessão. Nenhuma alteração foi preparada.");
+  if(!account.verifiedAt||!account.grants.includes("write")){
+    try {
+      await connectors.test("github");
+      state=await connectorStore.read();
+      account=state.connections.github;
+    } catch {
+      return reply("O GitHub recusou a revalidação da credencial de escrita. Nenhuma alteração foi preparada.");
+    }
+  }
+  if(!account?.verifiedAt||!account.grants.includes("write"))
+    return reply("A autorização de escrita GitHub não está disponível nesta conexão. Nenhuma alteração foi preparada.");
   const explicitlyJarvis=/(?:jarvis[ -]*(?:kiro|quiro|cairo)|java[ -]*skiro|javaskiro)/i.test(message+" "+contextual);
   const selection=requestedProject(message,account.resources);
   let resources=selectProjectResources(selection,account.resources);
