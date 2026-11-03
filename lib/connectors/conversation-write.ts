@@ -36,7 +36,8 @@ export async function prepareGitHubWrite(message:string) {
 
 export async function approveGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
   const match=/^(?:jarvis[,!:.]?\s*)?aprovar\s+([a-f0-9]{8})[.!\s]*$/i.exec(message.trim());
-  if(!match)return null;
+  const plain=/^(?:sim[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar)[.! ]*$/i.test(message.trim());
+  if(!match&&!plain)return null;
   const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
   const session=(await cookies()).get(cookieName)?.value;
   if(!session)return reply("Sessão do proprietário ausente. Nada foi executado.");
