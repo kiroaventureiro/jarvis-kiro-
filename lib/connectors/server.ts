@@ -79,6 +79,8 @@ export async function answerNativeRequest(
   history: import("./read-context").ReadTurn[] = [],
   localOnly = false,
 ) {
+  const { normalizeProviderSpeech } = await import("./provider-speech");
+  message = normalizeProviderSpeech(message, history);
   // Explicit daily briefing or a direct greeting to Jarvis. No background polling.
   const greeting = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   if (
