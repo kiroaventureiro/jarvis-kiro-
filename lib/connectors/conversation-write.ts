@@ -1,5 +1,8 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
+import { cookies } from "next/headers";
+import { cookieName } from "../auth";
+import { hash } from "./security";
 import { connectors, connectorStore } from "./server";
 import { requestedProject, selectProjectResources } from "./project-selection";
 import { parseGitHubWriteIntent } from "./write-intent";
@@ -28,4 +31,24 @@ export async function prepareGitHubWrite(message:string) {
     {provider:"github",resource:resource.id,operation:"pull",args:{branch,base:main,title:"Adicionar "+request.path,body:"Alteração solicitada pelo proprietário; revisar antes de merge."}}
   ]);
   return {text:"Preparei o arquivo "+request.path+" no repositório "+resource.name+" com branch, commit e PR em rascunho. Para autorizar, diga: APROVAR "+plan.digest.slice(0,8)+". Nenhuma alteração foi executada ainda.",model:"jk-github",provider:"local_operational" as const,usage:null};
+}
+
+export async function approveGitHubWrite(message:string) {
+  const match=/^(?:jarvis[,!:.]?\s*)?aprovar\s+([a-f0-9]{8})[.!\s]*$/i.exec(message.trim());
+  if(!match)return null;
+  const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
+  const session=(await cookies()).get(cookieName)?.value;
+  if(!session)return reply("Sessão do proprietário ausente. Nada foi executado.");
+  const state=await connectorStore.read();
+  const matches=state.plans.filter(p=>p.digest.startsWith(match[1].toLowerCase())&&p.status==="draft"&&p.expiresAt>Date.now());
+  if(matches.length!==1)return reply("Não encontrei uma proposta única e válida. Nada foi executado.");
+  const plan=matches[0];
+  if(plan.steps.some(step=>step.action.provider!=="github"))
+    return reply("Este plano inclui outras plataformas e precisa de aprovação separada.");
+  const sessionId=hash(session);
+  await connectors.approve(plan.id,plan.digest,"APROVAR "+match[1].toLowerCase(),sessionId);
+  const completed=await connectors.execute(plan.id,plan.digest,sessionId);
+  const pr=completed.steps.find(step=>step.action.operation==="pull")?.result as {url?:string}|undefined;
+  return reply("Execução GitHub: "+completed.status+"."+(pr?.url?" Pull request: "+pr.url:"")+
+    (completed.status==="waiting"?" O plano ainda está em andamento.":""));
 }
