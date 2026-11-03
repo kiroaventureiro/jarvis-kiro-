@@ -55,7 +55,7 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
     try {
       await connectors.test("github");
       const refreshed = (await connectorStore.read()).connections.github?.resources || [];
-      const key = (value:string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+      const key = (value:string) => value.normalize("NFD").toLowerCase().replace(/[^a-z0-9]/g,"");
       const textKey = key(message + " " + contextual);
       const matched = refreshed.filter(r => {
         const name = key(r.name.split("/").at(-1) || "");
