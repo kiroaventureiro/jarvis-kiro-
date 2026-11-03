@@ -252,6 +252,15 @@ export class ConnectorService {
         current.verifiedAt = new Date(this.now()).toISOString();
         current.lastTestAt = current.verifiedAt;
         current.account = result.account;
+        if (p === "github") {
+          // Connect means all repositories returned by this authorized GitHub account.
+          // Provider-side permission checks still govern actual writes.
+          const needsResources = current.resources.length === 0;
+          const needsWrite = !current.grants.includes("write");
+          if (needsResources) current.resources = result.resources;
+          if (needsWrite) current.grants = [...new Set([...current.grants, "read", "write"])] as Grant[];
+          if (needsResources || needsWrite) current.revision++;
+        }
         current.providerScopes = [
           ...new Set([...current.providerScopes, ...result.providerScopes]),
         ];
