@@ -10,7 +10,7 @@ export function parseGitHubWriteIntent(message: string, context = ""): GitHubWri
 
   // Preserve multiword names spoken in Portuguese, e.g. "JavaScript Texts".
   // Stop at repository/project context, not at the first whitespace.
-  const folder = /\b(?:pasta|diret[oó]rio)\s+(?:chamad[ao]\s+|com\s+(?:o\s+)?nome\s+)?(?:"([^"]+)"|'([^']+)'|(.+?))(?=\s+(?:no|na|do|da|para\s+o|para\s+a)\s+(?:reposit[oó]rio|projeto|github|git\s*hub|jarvis\b)|[.!?;,]|$)/i.exec(message);
+  const folder = /\b(?:pasta|diret[oó]rio)\s+(?:chamad[ao]\s+|com\s+(?:o\s+)?nome\s+)?(?:"([^"]+)"|'([^']+)'|(.+?))(?=\s+(?:no|na|do|da|para\s+o|para\s+a)\s+(?:reposit[oó]rio|projeto|github|git\s*hub)|[.!?;,]|$)/i.exec(message);
   if (folder) {
     const name = (folder[1] || folder[2] || folder[3] || "").trim().replace(/\/+$/, "");
     if (!name || name.length > 180 || name === "." || name === ".." ||
