@@ -127,7 +127,8 @@ export async function conversationalConnectorRead(
   if (selfDiagnosticIntent(message))
     message = "Diagnostique Jarvis Kiro no GitHub, na Vercel e no Supabase";
   let n = normalize(message);
-  if (/\\b(crie|cria|criar|adicione|adicionar|escreva|escrever|grave|gravar|salve|salvar|edite|editar|altere|alterar|publique|publicar|corrija|corrige|implemente|implementa)\\b/.test(n)) return null;\n  const followup = isReadFollowup(message) && history.length > 0;
+  if (/\b(crie|cria|criar|adicione|adicionar|escreva|escrever|grave|gravar|salve|salvar|edite|editar|altere|alterar|publique|publicar|corrija|corrige|implemente|implementa)\b/.test(n)) return null;
+  const followup = isReadFollowup(message) && history.length > 0;
   if (!readIntent.test(n) && !followup) return null;
   const mentioned = (Object.keys(READ_PROVIDERS) as Provider[]).filter((p) =>
     READ_PROVIDERS[p].aliases.some((alias) => n.includes(alias)),
