@@ -15,7 +15,7 @@ export function normalizeProviderSpeech(input: string, history: Array<{role:stri
   replace(/\b(?:vercel|versel|v[ée]rsel|ver\s*cel)\b/gi,"Vercel");
   // "Russell" is a normal name. Interpret it as a platform only alongside
   // deployment vocabulary or when recent conversation explicitly identifies Vercel.
-  const vercelContext=/\b(deploys?|deployments?|implantac(?:ao|oes)|hospedagem|builds?|preview|publicac(?:ao|oes)|vercel|versel)\b/.test(n)
+  const vercelContext=/\b(deploys?|deployments?|implantac(?:ao|oes)|hospedagem|builds?|preview|publicac(?:ao|oes)|projetos?|conex(?:ao|oes)|vercel|versel)\b/.test(n)
     || (previous ? /\b(vercel|versel)\b/.test(fold(previous.content)) : false);
   if(inTechnicalContext && vercelContext)replace(/\b(?:russell|rusel|russel|rucel)\b/gi,"Vercel");
   return result;
