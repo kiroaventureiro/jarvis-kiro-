@@ -16,3 +16,15 @@ test("does not treat a general request as a file write",()=>{
 test("rejects oversized uploads",()=>{
   assert.equal(parse("Crie no GitHub o arquivo a.md com o conteúdo: "+ "x".repeat(25000)),null);
 });
+
+test("recognizes creating a GitHub folder as a gitkeep file",()=>{
+  const result=parse("Jarvis, crie uma pasta docs/relatorios no projeto Jarvis Kiro");
+  assert.deepEqual(result,{kind:"create_folder",path:"docs/relatorios/.gitkeep",content:""});
+});
+test("recognizes a spoken directory request",()=>{
+  const result=parse("Crie um diretório chamado testes no repositório GitHub");
+  assert.deepEqual(result,{kind:"create_folder",path:"testes/.gitkeep",content:""});
+});
+test("rejects directory traversal",()=>{
+  assert.equal(parse("Crie a pasta ../segredos no projeto Jarvis Kiro"),null);
+});
