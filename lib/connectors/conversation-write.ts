@@ -87,6 +87,8 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
   const plan=matches[0];
   await connectors.approve(plan.id,plan.digest,"APROVAR "+plan.digest.slice(0,8),sessionId);
   const completed=await connectors.execute(plan.id,plan.digest,sessionId);
+  const failed=completed.steps.find(step=>step.status==="failed"||step.status==="uncertain");
+  if(failed)return reply("Execução GitHub "+completed.status+" na etapa "+failed.action.operation+" ("+(failed.error||"erro não identificado")+"). Verifique o registro antes de repetir a alteração.");
   const pr=completed.steps.find(step=>step.action.operation==="pull")?.result as {url?:string}|undefined;
   return reply("Execução GitHub: "+completed.status+"."+(pr?.url?" Pull request: "+pr.url:"")+
     (completed.status==="waiting"?" O plano ainda está em andamento.":""));
