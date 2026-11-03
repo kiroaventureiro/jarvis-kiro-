@@ -74,7 +74,7 @@ export async function finishGithubExecution(jobId:string,ok:boolean,result:strin
 }
 export async function lease(){
  if(!bridgeEnabled())throw Error("BRIDGE_NOT_CONFIGURED");
- return connectorStore.update(s=>{const q=queue(s);const now=Date.now();const job=q.jobs.find(j=>j.state==="queued"||(j.workflow!=="github_plan_execute"&&j.state==="leased"&&(j.leaseUntil||0)<now&&j.attempts<3));if(!job)return {protocolVersion:2,build:process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,8)||"local",job:null};job.state="leased";job.attempts++;job.leaseUntil=now+120000;s.n8nBridge=q;return {protocolVersion:2,build:process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,8)||"local",job:{id:job.id,workflow:job.workflow,payload:job.payload,...(job.workflow==="github_plan_execute"?{ticket:executionTicket(job.id,job.payload.planId,job.payload.digest)}:{})},leaseSeconds:120};});
+ return connectorStore.update(s=>{const q=queue(s);const now=Date.now();q.lastWorkerPollAt=now;s.n8nBridge=q;const job=q.jobs.find(j=>j.state==="queued"||(j.workflow!=="github_plan_execute"&&j.state==="leased"&&(j.leaseUntil||0)<now&&j.attempts<3));if(!job)return {protocolVersion:2,build:process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,8)||"local",job:null};job.state="leased";job.attempts++;job.leaseUntil=now+120000;s.n8nBridge=q;return {protocolVersion:2,build:process.env.VERCEL_GIT_COMMIT_SHA?.slice(0,8)||"local",job:{id:job.id,workflow:job.workflow,payload:job.payload,...(job.workflow==="github_plan_execute"?{ticket:executionTicket(job.id,job.payload.planId,job.payload.digest)}:{})},leaseSeconds:120};});
 }
 export async function finish(id:string,ok:boolean,result:string){
  if(!bridgeEnabled())throw Error("BRIDGE_NOT_CONFIGURED");
@@ -82,3 +82,10 @@ export async function finish(id:string,ok:boolean,result:string){
  return connectorStore.update(s=>{const q=queue(s),job=q.jobs.find(j=>j.id===id);if(!job||job.state!=="leased"||(job.workflow==="github_plan_execute"&&ok))throw Error("JOB_NOT_LEASED");job.state=ok?"completed":"failed";job.result=result.replace(/[\r\n\t]/g," ").slice(0,2000);s.n8nBridge=q;return {id:job.id,state:job.state};});
 }
 export async function status(){if(!bridgeEnabled())return {enabled:false};const q=queue(await connectorStore.read());return {enabled:true,jobs:q.jobs.slice(-30).map(j=>({id:j.id,workflow:j.workflow,state:j.state,createdAt:j.createdAt,attempts:j.attempts,result:j.result||null}))};}
+
+/** True only if a worker has polled this exact deployment recently. */
+export async function workerReady(){
+ if(!bridgeEnabled())return false;
+ const state=await connectorStore.read();
+ return typeof state.n8nBridge?.lastWorkerPollAt==="number" && Date.now()-state.n8nBridge.lastWorkerPollAt<90000;
+}
