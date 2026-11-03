@@ -255,9 +255,19 @@ export class ConnectorService {
         if (p === "github") {
           // Connect means all repositories returned by this authorized GitHub account.
           // Provider-side permission checks still govern actual writes.
-          const needsResources = current.resources.length === 0;
+          // Refresh the authorized repository list, not only when it was empty:
+          // an older connection can contain six repositories while missing
+          // a newer repository that the owner explicitly requested.
+          const known = new Map(current.resources.map(r => [r.id, r]));
+          for (const resource of result.resources) {
+            const previous = known.get(resource.id);
+            known.set(resource.id, previous
+              ? { ...resource, ...(previous.kiroProject ? { kiroProject: previous.kiroProject } : {}) }
+              : resource);
+          }
+          const needsResources = known.size !== current.resources.length;
           const needsWrite = !current.grants.includes("write");
-          if (needsResources) current.resources = result.resources;
+          if (needsResources) current.resources = [...known.values()];
           if (needsWrite) current.grants = [...new Set([...current.grants, "read", "write"])] as Grant[];
           if (needsResources || needsWrite) current.revision++;
         }
