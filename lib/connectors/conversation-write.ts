@@ -18,6 +18,10 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
     return reply("GitHub conectado para leitura, mas a permissão de escrita ainda não está validada. Nenhum arquivo foi alterado.");
   const selection=requestedProject(message,account.resources);
   let resources=selectProjectResources(selection,account.resources);
+  if(resources.length!==1 && contextual){
+    const priorSelection=requestedProject(contextual,account.resources);
+    if(priorSelection.kind==="target")resources=selectProjectResources(priorSelection,account.resources);
+  }
   // Speech recognition can omit hyphens or trailing punctuation in repo names.
   // Use only a unique, exact alias among the provider-authorized repositories.
   if(resources.length!==1) {
