@@ -1,7 +1,7 @@
 param(
- [string]$PreProductionUrl = $env:JARVIS_PREPRODUCTION_URL,
- [string]$ProductionUrl = $env:JARVIS_PRODUCTION_URL,
- [switch]$OnlyPreProduction
+ [string]$PreProductionUrl = "https://jarvis-kiro-preproducao.vercel.app",
+ [string]$ProductionUrl = "https://jarvis-kiro.vercel.app",
+ [switch]$IncludeProduction
 )
 $ErrorActionPreference = "Stop"
 $worker = Join-Path $PSScriptRoot "n8n-bridge-worker.ps1"
@@ -10,7 +10,7 @@ if (-not $env:JARVIS_N8N_API_KEY) { throw "Configure JARVIS_N8N_API_KEY no Windo
 if (-not $env:JARVIS_N8N_BRIDGE_SECRET_PREPRODUCTION -and -not $env:JARVIS_N8N_BRIDGE_SECRET) {
  throw "Configure a credencial privada da ponte de pré-produção."
 }
-if (-not $OnlyPreProduction -and -not $env:JARVIS_N8N_BRIDGE_SECRET_PRODUCTION) {
+if ($IncludeProduction -and -not $env:JARVIS_N8N_BRIDGE_SECRET_PRODUCTION) {
  throw "Configure a credencial separada da ponte de produção."
 }
 function Confirm-StableUrl([string]$url,[string]$name) {
@@ -27,7 +27,7 @@ function Confirm-StableUrl([string]$url,[string]$name) {
  return $uri.GetLeftPart([UriPartial]::Authority)
 }
 $pre = Confirm-StableUrl $PreProductionUrl "pré-produção"
-if (-not $OnlyPreProduction) {
+if ($IncludeProduction) {
  $prod = Confirm-StableUrl $ProductionUrl "produção"
  if ($pre -eq $prod) { throw "Pré-produção e produção precisam de endereços diferentes." }
 }
@@ -39,5 +39,5 @@ function Start-JarvisWorker([string]$environment,[string]$url) {
  Write-Host "Worker $environment iniciado para o endereço estável: $url"
 }
 Start-JarvisWorker "preproduction" $pre
-if (-not $OnlyPreProduction) { Start-JarvisWorker "production" $prod }
+if ($IncludeProduction) { Start-JarvisWorker "production" $prod }
 Write-Host "Os workers usam domínios estáveis; não é preciso trocar URLs por commit."
