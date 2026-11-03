@@ -45,3 +45,17 @@ test("voice approvals are recognized with Jarvis prefix and natural Portuguese",
  for(const value of ["sim","pode ser","não autorizo"])
   assert.equal(approval(value),false,value);
 });
+
+test("multiword folder names keep every word and stop at repository context",()=>{
+  for(const phrase of [
+    "Jarvis, crie uma pasta chamada JavaScript Texts no projeto Jarvis Kiro",
+    "Crie a pasta JavaScript Texts no repositório GitHub",
+    "Crie uma pasta \"JavaScript Texts\" no GitHub",
+  ]) assert.deepEqual(parse(phrase),{
+    kind:"create_folder",path:"JavaScript Texts/.gitkeep",content:""
+  },phrase);
+});
+test("GitHub folder creation never silently truncates at a space",()=>{
+  assert.equal(parse("Crie a pasta Testes do Jarvis no projeto Jarvis Kiro")?.path,
+    "Testes do Jarvis/.gitkeep");
+});
