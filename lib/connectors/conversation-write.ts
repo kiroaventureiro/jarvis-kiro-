@@ -130,7 +130,8 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
     p.createdAt>Date.now()-300000 &&
     p.steps.every(step=>step.action.provider==="github")
   );
-  const matches=digestCode?pending.filter(p=>p.digest.startsWith(digestCode)):plain?pending:[];
+  const withCode=digestCode?pending.filter(p=>p.digest.startsWith(digestCode)):[];
+  const matches=withCode.length?withCode:(plain&&pending.length===1?pending:[]);
   if(matches.length!==1)
     return reply("Não encontrei uma única proposta recente de escrita autorizável nesta sessão. Nenhuma alteração foi executada.");
   const plan=matches[0];
