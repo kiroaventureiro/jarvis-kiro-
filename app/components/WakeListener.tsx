@@ -161,7 +161,13 @@ export default function WakeListener(props: Props) {
   function activate() {
     if (!props.geminiRequested) { props.requestGemini?.(); return; }
     if (snapshot.enabled) {
-      engine.current?.disableListening();
+      // A failed transport leaves the user's infinite-listening selection intact.
+      // Clicking it then reconnects instead of unexpectedly switching it off.
+      if (props.geminiRequested && snapshot.phase === "error" && !snapshot.connected) {
+        engine.current?.start();
+      } else {
+        engine.current?.disableListening();
+      }
       return;
     }
     if (!authorized) {

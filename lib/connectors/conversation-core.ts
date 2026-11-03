@@ -24,6 +24,9 @@ const READ_PROVIDERS: Record<Provider, { aliases: string[]; summary: string }> =
         "commit",
         "branch",
         "branches",
+        "arquivos",
+        "pastas",
+        "diretorios",
       ],
       summary: "Repositórios, código e commits",
     },
@@ -51,7 +54,7 @@ function normalize(input: string) {
     .toLowerCase();
 }
 const readIntent =
-  /\b(consult|verifi[cq]|analis|diagnosti[cq]|listar|liste|mostr|entre|entrar|acesse|acessar|abra|abrir|pesquis|status|situacao|meus projetos|minhas conexoes)\w*/;
+  /\b(consult|verifi[cq]|analis|diagnosti[cq]|listar|liste|mostr|entre|entrar|acesse|acessar|abra|abrir|pesquis|status|situacao|meus projetos|minhas conexoes|arquivos|pastas|estrutura)\w*/;
 /** Convert provider responses into bounded, non-sensitive observations. Never send raw rows to speech. */
 function observation(provider: Provider, data: unknown): string {
   const items = Array.isArray(data) ? data : null;
@@ -124,13 +127,14 @@ export async function conversationalConnectorRead(
   if (selfDiagnosticIntent(message))
     message = "Diagnostique Jarvis Kiro no GitHub, na Vercel e no Supabase";
   let n = normalize(message);
+  if (/\b(crie|cria|criar|adicione|adicionar|escreva|escrever|grave|gravar|salve|salvar|edite|editar|altere|alterar|publique|publicar|corrija|corrige|implemente|implementa)\b/.test(n)) return null;
   const followup = isReadFollowup(message) && history.length > 0;
   if (!readIntent.test(n) && !followup) return null;
   const mentioned = (Object.keys(READ_PROVIDERS) as Provider[]).filter((p) =>
     READ_PROVIDERS[p].aliases.some((alias) => n.includes(alias)),
   );
   const detailedGitHub =
-    /\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes)\b/.test(
+    /\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes|arquivos|pastas|estrutura|diretorios)\b/.test(
       n,
     );
   const all =
@@ -255,8 +259,10 @@ export async function conversationalConnectorRead(
           verifiedNames.push(resource.name);
           let finding = observation(provider, checked.data);
           if (provider === "github" && detailedGitHub) {
-            const detailOperation = /\b(branch|branches)\b/.test(n)
-              ? "branches"
+            const detailOperation = /\b(arquivos|pastas|estrutura|diretorios)\b/.test(n)
+              ? "tree"
+              : /\b(branch|branches)\b/.test(n)
+                ? "branches"
               : /\b(issues|problemas abertos)\b/.test(n)
                 ? "issues"
                 : /\b(pulls|pull requests)\b/.test(n)
@@ -270,13 +276,13 @@ export async function conversationalConnectorRead(
                 {},
                 signal,
               );
-              const rows = Array.isArray(detail.data)
-                ? detail.data.slice(0, 5)
-                : [];
+              const list = detailOperation === "tree" && detail.data && typeof detail.data === "object" ? (detail.data as {files?:unknown}).files : detail.data;
+              const rows = Array.isArray(list) ? list.slice(0, 25) : [];
               const names = rows.flatMap((item) => {
                 if (!item || typeof item !== "object") return [];
                 const entry = item as Record<string, unknown>;
                 const label =
+                  typeof entry.path === "string" ? entry.path :
                   typeof entry.message === "string"
                     ? entry.message
                     : typeof entry.title === "string"
@@ -366,7 +372,7 @@ export async function conversationalConnectorRead(
         "."
       : ".";
     const focused =
-      /commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes|detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnosti[cq]|analis/.test(
+      /commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes|arquivos|pastas|estrutura|diretorios|detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnosti[cq]|analis/.test(
         n,
       );
     const selectedFindings = focused ? findings.slice(0, 3) : [];

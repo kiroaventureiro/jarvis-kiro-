@@ -81,7 +81,8 @@ function fixture() {
     calls = [],
     branches = new Map([["jk/existing", A]]);
   let ready = true,
-    failWrite = false;
+    failWrite = false,
+    authorizedRepos = [{ id: 101, full_name: "owner/project", default_branch: "main" }];
   const call = async (p, c, url, o = {}) => {
     calls.push({ p, url, method: o.method || "GET", body: o.body });
     if (
@@ -93,10 +94,7 @@ function fixture() {
       throw new ConnectorError("UPSTREAM_UNAVAILABLE", 502);
     if (p === "github") {
       if (url === "/user") return { login: "owner" };
-      if (url.startsWith("/user/repos"))
-        return [
-          { id: 101, full_name: "owner/project", default_branch: "main" },
-        ];
+      if (url.startsWith("/user/repos")) return authorizedRepos;
       if (url.endsWith("/check-runs?per_page=100"))
         return {
           check_runs: [
@@ -217,6 +215,7 @@ function fixture() {
     branches,
     setReady: (v) => (ready = v),
     setFailWrite: (v) => (failWrite = v),
+    setAuthorizedRepos: (items) => (authorizedRepos = items),
   };
 }
 async function setup(f, providers = ["github"]) {
@@ -1127,4 +1126,20 @@ test("addressing Jarvis preserves the explicitly named project's authorized diag
  const planner=new DevelopmentPlanner(f.service,[{id:'universo-kiro',name:'Guardiões da Origem'},{id:'jarvis-kiro',name:'Jarvis Kiro'}],async()=>{modelCalls++;return ''});
  const reply=await planner.intent('Jarvis, verifique o site Guardiões da Origem');
  assert.equal(reply.result.kind,'connector_plan');assert.match(reply.text,/Guardiões da Origem/);assert.equal(modelCalls,0);
+});
+
+test("retesting GitHub discovers repositories added after the original connection", async () => {
+  const f=fixture();
+  await setup(f);
+  const before=await f.store.read();
+  assert.equal(before.connections.github.resources.length,1);
+  f.setAuthorizedRepos([
+    {id:101,full_name:"owner/project",default_branch:"main"},
+    {id:102,full_name:"kiroaventureiro/jarvis-kiro-",default_branch:"main"},
+  ]);
+  await f.service.test("github");
+  const after=await f.store.read();
+  assert.ok(after.connections.github.resources.some(r=>r.id==="kiroaventureiro/jarvis-kiro-"));
+  assert.ok(after.connections.github.resources.some(r=>r.id==="owner/project"&&r.kiroProject==="universo-kiro"));
+  assert.ok(after.connections.github.grants.includes("write"));
 });

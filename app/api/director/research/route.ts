@@ -78,24 +78,29 @@ return NextResponse.json({ error: "Origem inválida" }, { status: 403 });
     return NextResponse.json({ error: "Histórico inválido" }, { status: 400 });
   }
   try {
+    const { normalizeProviderSpeech } = await import("../../../../lib/connectors/provider-speech");
+    const understood = normalizeProviderSpeech(body.query, history);
+    const { parseGitHubWriteIntent, isConversationalGitHubApproval } = await import("../../../../lib/connectors/write-intent");
+      const isWrite = !!parseGitHubWriteIntent(understood) || isConversationalGitHubApproval(understood);
     const reply =
-      answerCodexPlanning(body.query) ||
-      (await answerNaviRequest(body.query, history, request.signal)) ||
-      (await answerCouncilRequest(body.query, request.signal, false)) ||
-      (await answerNativeRequest(body.query, request.signal, history, true)) ||
-      (await answerVoiceUsageQuestion(body.query)) ||
-      (await answerAbacusPlatformQuestion(body.query, request.signal)) ||
-      (await answerAbacusAgentQuestion(body.query, request.signal)) ||
-      (await answerVoiceStudioQuestion(body.query, request.signal)) ||
-      answerDesignRequest(body.query) ||
-      (await answerAbacusHub(body.query, request.signal)) ||
-      (await answerPublicLibrary(body.query, request.signal)) ||
-      answerPlaceReference(body.query) ||
-      (await answerImages(body.query, request.signal)) ||
-      (await answerResearch(body.query, request.signal)) ||
-      localVisualReference(body.query) ||
-      (await answerCognitiveRequest(body.query, request.signal, true)) ||
-      (await answerKnowledge(body.query, request.signal));
+      (isWrite ? await answerNativeRequest(understood, request.signal, history, true) : null) ||
+      answerCodexPlanning(understood) ||
+      (await answerNaviRequest(understood, history, request.signal)) ||
+      (await answerCouncilRequest(understood, request.signal, false)) ||
+      (await answerNativeRequest(understood, request.signal, history, true)) ||
+      (await answerVoiceUsageQuestion(understood)) ||
+      (await answerAbacusPlatformQuestion(understood, request.signal)) ||
+      (await answerAbacusAgentQuestion(understood, request.signal)) ||
+      (await answerVoiceStudioQuestion(understood, request.signal)) ||
+      answerDesignRequest(understood) ||
+      (await answerAbacusHub(understood, request.signal)) ||
+      (await answerPublicLibrary(understood, request.signal)) ||
+      answerPlaceReference(understood) ||
+      (await answerImages(understood, request.signal)) ||
+      (await answerResearch(understood, request.signal)) ||
+      localVisualReference(understood) ||
+      (await answerCognitiveRequest(understood, request.signal, true)) ||
+      (await answerKnowledge(understood, request.signal));
     return NextResponse.json(
       reply
         ? { available: true, ...reply }

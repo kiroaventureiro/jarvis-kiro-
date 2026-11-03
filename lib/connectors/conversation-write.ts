@@ -1,0 +1,224 @@
+import "server-only";
+import { randomUUID } from "node:crypto";
+import { cookies } from "next/headers";
+import { cookieName } from "../auth";
+import { hash } from "./security";
+import { connectors, connectorStore } from "./server";
+import { requestedProject, selectProjectResources } from "./project-selection";
+import { parseGitHubWriteIntent, isConversationalGitHubApproval } from "./write-intent";
+import { enqueueApprovedGithubPlan, workerReady, status as bridgeStatus } from "../n8n/bridge";
+export async function prepareGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
+  const previous=history.slice(-8).reverse().find(t=>t.role==="user"&&/github|git hub|jarvis kiro|repositori|projeto/i.test(t.content));
+  const contextual=previous?.content||"";
+  const request=parseGitHubWriteIntent(message,contextual);
+  if(!request)return null;
+  let state=await connectorStore.read();
+  let account=state.connections.github;
+  const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
+  if(!account||account.status!=="connected")
+    return reply("A conexão GitHub não está ativa nesta sessão. Nenhuma alteração foi preparada.");
+  if(!account.verifiedAt||!account.grants.includes("write")){
+    try {
+      await connectors.test("github");
+      state=await connectorStore.read();
+      account=state.connections.github;
+    } catch {
+      return reply("O GitHub recusou a revalidação da credencial de escrita. Nenhuma alteração foi preparada.");
+    }
+  }
+  if(!account?.verifiedAt||!account.grants.includes("write"))
+    return reply("A autorização de escrita GitHub não está disponível nesta conexão. Nenhuma alteração foi preparada.");
+  const explicitlyJarvis=/(?:jarvis[ -]*(?:kiro|quiro|cairo)|java[ -]*skiro|javaskiro)/i.test(message+" "+contextual);
+  const selection=requestedProject(message,account.resources);
+  let resources=selectProjectResources(selection,account.resources);
+  if(explicitlyJarvis)
+    resources=account.resources.filter(r=>r.id.toLowerCase()==="kiroaventureiro/jarvis-kiro-");
+  if(resources.length!==1 && contextual && !explicitlyJarvis){
+    const priorSelection=requestedProject(contextual,account.resources);
+    if(priorSelection.kind==="target")resources=selectProjectResources(priorSelection,account.resources);
+  }
+  // Speech recognition can omit hyphens or trailing punctuation in repo names.
+  // Use only a unique, exact alias among the provider-authorized repositories.
+  // Canonical Jarvis repository is known, but it can only be selected when
+  // it is present in the owner's actual GitHub authorization.
+  if(resources.length!==1 && /(?:jarvis[ -]*(?:kiro|quiro|cairo)|java[ -]*skiro|javaskiro)/i.test(message+" "+contextual)) {
+    const matched=account.resources.filter(r=>r.id.toLowerCase()==="kiroaventureiro/jarvis-kiro-");
+    if(matched.length===1)resources=matched;
+  }
+  if(resources.length!==1 && !explicitlyJarvis) {
+    const fold=(v:string)=>v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+    const said=fold(message);
+    const aliases=[
+      {alias:"jarviskiro",repo:"jarviskiro"},
+      {alias:"javaskiro",repo:"jarviskiro"},
+      {alias:"jarvisquiro",repo:"jarviskiro"},
+    ];
+    const requested=aliases.filter(x=>said.includes(x.alias)).map(x=>x.repo);
+    if(requested.length===1){
+      const matches=account.resources.filter(r=>fold(r.name.split("/").at(-1)||"")===requested[0]);
+      if(matches.length===1)resources=matches;
+    }
+  }
+  if (resources.length !== 1) {
+    // A previous "connected" view may hold an outdated list of repositories.
+    // Refresh the GitHub credential against the live API once, then match the
+    // real owner/repository identifier rather than inventing a project.
+    try {
+      await connectors.test("github");
+      const refreshed = (await connectorStore.read()).connections.github?.resources || [];
+      const key = (value:string) => value.normalize("NFD").toLowerCase().replace(/[^a-z0-9]/g,"");
+      const textKey = key(message + " " + contextual);
+      const matched = refreshed.filter(r => {
+        const name = key(r.name.split("/").at(-1) || "");
+        return name.length >= 5 && textKey.includes(name);
+      });
+      if (explicitlyJarvis) {
+        const exact=refreshed.filter(r=>r.id.toLowerCase()==="kiroaventureiro/jarvis-kiro-");
+        if(exact.length===1) resources=exact;
+      } else if (matched.length === 1) resources = matched;
+      else {
+        const selection = requestedProject(message || contextual,refreshed);
+        const matching = selectProjectResources(selection,refreshed);
+        if (matching.length === 1) resources = matching;
+      }
+    } catch {
+      return reply("Não consegui atualizar os repositórios autorizados do GitHub. Nenhuma alteração foi preparada.");
+    }
+  }
+  if(resources.length!==1)
+    return reply(explicitlyJarvis ? "A credencial GitHub do Jarvis não retornou o repositório kiroaventureiro/jarvis-kiro- após a atualização automática. A escrita foi bloqueada: é necessário autorizar esse repositório na instalação GitHub vinculada ao Jarvis." : "Não encontrei uma correspondência única entre o nome solicitado e os repositórios autorizados. Nenhuma alteração foi preparada.");
+  const resource=resources[0];
+  const repo=await connectors.readAuthorized("github",resource.id,"repo");
+  const commits=await connectors.readAuthorized("github",resource.id,"commits");
+  const main=(repo.data as {defaultBranch?:string}).defaultBranch;
+  // GitHub's /commits endpoint defaults to the repository's default branch.
+  // Unlike the first page of /branches, this works when many branches exist.
+  const sha=(commits.data as Array<{sha?:string}>)[0]?.sha;
+  if(!main||!sha) return reply("Não foi possível confirmar a branch principal e o commit base.");
+  const branch="jk/arquivo-"+randomUUID().slice(0,8);
+  const description=request.kind==="create_folder"?"Criar a pasta "+request.path.slice(0,-9):"Criar o arquivo "+request.path;
+  if(process.env.JARVIS_GITHUB_EXECUTION_MODE!=="direct" && !await workerReady())return reply("O GitHub está autorizado, mas o executor n8n não está ativo nesta versão. Não vou solicitar aprovação sem um executor disponível.");
+  const plan=await connectors.plan(description+" em "+resource.name,[
+    {provider:"github",resource:resource.id,operation:"branch",args:{branch,baseSha:sha}},
+    {provider:"github",resource:resource.id,operation:"commit",args:{branch,baseSha:sha,path:request.path,content:request.content,message:"feat: "+(request.kind==="create_folder"?"criar pasta ":"adicionar arquivo ")+(request.kind==="create_folder"?request.path.slice(0,-9):request.path)}},
+    {provider:"github",resource:resource.id,operation:"pull",args:{branch,base:main,title:description,body:"Alteração solicitada pelo proprietário; revisar antes de merge."}}
+  ]);
+  const ownerCookie=(await cookies()).get(cookieName)?.value;
+  if(!ownerCookie) return reply("Sua sessão expirou. A proposta não pode ser autorizada; nenhuma alteração foi executada.");
+  await connectorStore.update(state=>{
+    const saved=state.plans.find(p=>p.id===plan.id);
+    if(saved && saved.status==="draft") saved.conversationSession=hash(ownerCookie);
+  });
+  return {text:"Preparei "+(request.kind==="create_folder"?"a pasta "+request.path.slice(0,-9)+" (com arquivo .gitkeep para registrá-la no GitHub)":"o arquivo "+request.path)+" no repositório "+resource.name+" com branch, commit e PR em rascunho. Para autorizar, diga: APROVAR "+plan.digest.slice(0,8)+". Nenhuma alteração foi executada ainda.",model:"jk-github",provider:"local_operational" as const,usage:null};
+}
+
+export async function approveGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
+  const match=/^(?:jarvis[,!:.]?\s*)?aprovar\s+([a-f0-9]{8})[.!\s]*$/i.exec(message.trim());
+  const plain=/^(?:(?:sim|eu)[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar|pode fazer|pode prosseguir|esta aprovado|está aprovado|aprovado)[.! ]*$/i.test(message.trim());
+  if(!match&&!isConversationalGitHubApproval(message))return null;
+  const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
+  const prior=history.slice(-6).reverse().find(turn=>turn.role==="assistant"&&/\bAPROVAR\s+[a-f0-9]{8}\b/i.test(turn.content));
+  const previousCode=/\bAPROVAR\s+([a-f0-9]{8})\b/i.exec(prior?.content||"")?.[1];
+  const session=(await cookies()).get(cookieName)?.value;
+  if(!session)return reply("Sessão do proprietário ausente. Nenhuma alteração foi executada.");
+  const sessionId=hash(session);
+  const state=await connectorStore.read();
+  const digestCode=match?.[1]?.toLowerCase() || (isConversationalGitHubApproval(message) ? previousCode?.toLowerCase() : undefined);
+  const pending=state.plans.filter(p=>
+    ["draft","approved"].includes(p.status) &&
+    p.conversationSession===sessionId &&
+    p.expiresAt>Date.now() &&
+    p.createdAt>Date.now()-300000 &&
+    p.steps.every(step=>step.action.provider==="github")
+  );
+  const withCode=digestCode?pending.filter(p=>p.digest.startsWith(digestCode)):[];
+  const matches=withCode.length?withCode:(isConversationalGitHubApproval(message)&&pending.length===1?pending:[]);
+  if(matches.length!==1)
+    return reply("Não encontrei uma única proposta recente de escrita autorizável nesta sessão. Nenhuma alteração foi executada.");
+  const plan=matches[0];
+  if(plan.status==="draft")await connectors.approve(plan.id,plan.digest,"APROVAR "+plan.digest.slice(0,8),sessionId);
+  if(process.env.JARVIS_GITHUB_EXECUTION_MODE==="direct" && process.env.VERCEL_ENV==="preview") {
+    try {
+      // Execute the same owner-approved GitHub connector plan inside the existing
+      // Vercel function. No local n8n worker, GitHub PAT or extra host is needed.
+      let result=await connectors.execute(plan.id,plan.digest,sessionId);
+      for(let i=0;i<3&&result.status==="waiting";i++)
+        result=await connectors.execute(plan.id,plan.digest,sessionId);
+      const step=result.steps.find(s=>s.action.operation==="pull");
+      const pr=step?.result as {url?:string}|undefined;
+      const commit=result.steps.find(s=>s.action.operation==="commit")?.result as {sha?:string}|undefined;
+      const path=result.steps.find(s=>s.action.operation==="commit")?.action.args.path;
+      if(result.status==="done" && typeof pr?.url==="string" &&
+         pr.url.startsWith("https://github.com/") && typeof commit?.sha==="string") {
+        return reply("Confirmado no GitHub: "+
+          (typeof path==="string"?path+"; ":"")+
+          "commit "+commit.sha+"; PR em rascunho "+pr.url+
+          ". A branch principal não foi alterada.");
+      }
+      const failing=result.steps.find(step=>step.status==="failed"||step.status==="uncertain");
+      const detail=failing ? " Etapa: "+failing.action.operation+"; código: "+
+        (failing.error||"DESCONHECIDO")+"." : "";
+      return reply("A criação no GitHub NÃO foi confirmada. Status do plano: "+
+        result.status+"."+detail+" Consulte o status antes de repetir; não criarei outra tarefa automaticamente.");
+    } catch(error) {
+      const code=error instanceof Error ? error.message : "EXECUTION_UNAVAILABLE";
+      return reply("Execução direta não confirmada: "+code+
+        ". Consulte o status do GitHub antes de repetir a operação.");
+    }
+  }
+  try {
+    const job=await enqueueApprovedGithubPlan(plan.id,sessionId);
+    return reply("Autorização registrada. Enviei ao n8n a tarefa GitHub "+job.id.slice(0,8)+
+      " ("+job.state+"). A criação ainda não está concluída. Pergunte 'status da escrita no GitHub' para conferir commit e PR.");
+  } catch {
+    return reply("A operação foi autorizada, mas a ponte n8n não recebeu a tarefa. Nenhuma escrita foi confirmada. Verifique a conexão n8n.");
+  }
+}
+
+export async function githubBridgeWriteStatus(message:string){
+  const n=message.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  if(!(/\b(status|resultado|terminou|concluiu|conseguiu|andamento)\b/.test(n)&&
+    /\b(github|git hub|escrita|pasta|commit|repositorio|criacao|n8n)\b/.test(n)))return null;
+  const reply=(text:string)=>({text,model:"jk-github-bridge",provider:"local_operational" as const,usage:null});
+  const session=(await cookies()).get(cookieName)?.value;
+  if(!session)return reply("Sessão expirada. Não consigo consultar o andamento.");
+  const sessionId=hash(session);
+  const state=await connectorStore.read();
+  const plans=state.plans.filter(p=>p.conversationSession===sessionId&&p.steps.some(step=>step.action.provider==="github")).sort((a,b)=>b.createdAt-a.createdAt);
+  const last=plans[0];
+  if(!last)return reply("Nenhuma proposta GitHub recente encontrada nesta sessão.");
+  // The plan is the durable source of truth. A stale or truncated n8n job list
+  // must not hide a verified GitHub commit and draft PR.
+  const successful=plans.find(p=>p.status==="done" &&
+    p.steps.some(step=>step.action.operation==="commit" && step.status==="done") &&
+    p.steps.some(step=>step.action.operation==="pull" && step.status==="done"));
+  if(successful && (!last || successful.createdAt>=last.createdAt)){
+    const written=successful.steps.find(step=>step.action.operation==="commit");
+    const requested=written?.action.args.files as Array<{path:string}>|undefined;
+    const commit=written?.result as {sha?:string;branch?:string}|undefined;
+    const pull=successful.steps.find(step=>step.action.operation==="pull")?.result as {url?:string;number?:number}|undefined;
+    if(pull?.url?.startsWith("https://github.com/") && commit?.sha && /^[a-f0-9]{40}$/.test(commit.sha))
+      return reply("Escrita confirmada no GitHub. Arquivos: "+
+        (requested?.map(f=>f.path).join(", ")||"conforme plano")+
+        ". Commit "+commit.sha+". Pull request em rascunho: "+pull.url+
+        ". A pasta existe na branch do PR; não foi incorporada à branch principal.");
+  }
+  if(process.env.JARVIS_GITHUB_EXECUTION_MODE==="direct" && process.env.VERCEL_ENV==="preview"){
+    const problem=last.steps.find(step=>step.status==="failed"||step.status==="uncertain");
+    const committed=last.steps.find(step=>step.action.operation==="commit");
+    const requested=committed?.action.args.files as Array<{path:string}>|undefined;
+    return reply("Último plano GitHub: "+last.status+
+      ". Caminho solicitado: "+(requested?.map(f=>f.path).join(", ")||"indisponível")+
+      (problem ? ". Falha na etapa "+problem.action.operation+"; código "+(problem.error||"desconhecido") : "")+
+      ". Nenhum commit e PR completos foram confirmados nesta consulta. Não repita antes de verificar.");
+  }
+  const jobs=await bridgeStatus();
+  if(!jobs.enabled||!("jobs" in jobs))return reply("Ponte n8n não está disponível. Nenhuma escrita confirmada.");
+  const entries=("jobs" in jobs && Array.isArray(jobs.jobs)) ? jobs.jobs : [];
+  const planIds=new Set(plans.map(plan=>plan.id));
+  const job=[...entries].reverse().find(j=>j.workflow==="github_plan_execute" &&
+    planIds.has(state.n8nBridge?.jobs.find(raw=>raw.id===j.id)?.payload.planId || ""));
+  if(!job)return reply("Última proposta: "+last.status+". Nenhuma tarefa de escrita localizada na ponte n8n.");
+  return reply("Tarefa de escrita GitHub "+job.id.slice(0,8)+": "+job.state+"."+
+    (job.result?" Resultado: "+job.result:" O commit e o PR ainda não foram confirmados."));
+}

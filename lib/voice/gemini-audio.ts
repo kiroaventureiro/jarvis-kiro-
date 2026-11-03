@@ -7,6 +7,7 @@ export class GeminiAudio {
   private sources = new Set<AudioBufferSourceNode>();
   private playbackQueue: string[] = [];
   private scheduling = false;
+  private playbackCursor = 0;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
   private epoch = 0;
   onDrained = () => {};
@@ -90,7 +91,7 @@ export class GeminiAudio {
     this.scheduleNext();
   }
   private scheduleNext() {
-    if (this.scheduling || this.sources.size || !this.playbackQueue.length) return;
+    if (this.scheduling || !this.playbackQueue.length) return;
     const context = this.context;
     const gain = this.gain;
     if (!context || !gain || context.state === "closed") return;
@@ -114,12 +115,25 @@ export class GeminiAudio {
       const buffer = context.createBuffer(1, Math.floor(bytes.length / 2), 24000);
       const floats = buffer.getChannelData(0);
       for (let i = 0; i < floats.length; i++) floats[i] = view.getInt16(i * 2, true) / 32768;
+      // PCM chunks may terminate at a nonzero sample and click at the boundary.
+      // A very short taper limits discontinuities without changing the speech rate
+      // or introducing the fixed inter-chunk delay removed in the prior fix.
+      const edge = Math.min(32, Math.floor(floats.length / 4));
+      for (let i = 0; i < edge; i++) {
+        const envelope = (i + 1) / (edge + 1);
+        floats[i] *= envelope;
+        floats[floats.length - 1 - i] *= envelope;
+      }
       const source = context.createBufferSource(); source.buffer = buffer; source.connect(gain);
       this.sources.add(source);
+      // Schedule PCM chunks contiguously rather than inserting a 10ms gap per chunk.
+      const startsAt = Math.max(context.currentTime + 0.025, this.playbackCursor);
+      this.playbackCursor = startsAt + buffer.duration;
       source.onended = () => {
         this.sources.delete(source);
         if (this.playbackQueue.length) this.scheduleNext();
         else if (!this.sources.size) {
+          this.playbackCursor = 0;
           if (this.drainTimer) clearTimeout(this.drainTimer);
           this.drainTimer = setTimeout(() => {
             this.drainTimer = null;
@@ -127,7 +141,9 @@ export class GeminiAudio {
           }, 300);
         }
       };
-      source.start(context.currentTime + 0.01);
+      source.start(startsAt);
+      // Keep scheduling the next chunk without waiting for this source to end.
+      if (this.playbackQueue.length) queueMicrotask(() => this.scheduleNext());
     } catch (error) {
       this.playbackQueue.unshift(data);
       throw error;
@@ -139,6 +155,7 @@ export class GeminiAudio {
     if (this.drainTimer) clearTimeout(this.drainTimer);
     this.drainTimer = null;
     this.playbackQueue = [];
+    this.playbackCursor = 0;
     for (const source of this.sources) { source.onended = null; source.stop(); source.disconnect(); }
     this.sources.clear();
   }

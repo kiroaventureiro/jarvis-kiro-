@@ -26,6 +26,7 @@ export function normalizeAction(value: unknown): Action {
   const allowed: Record<string, string[]> = {
     repo: [],
     file: ["path", "ref"],
+    tree: ["path"],
     branches: [],
     commits: [],
     issues: [],
@@ -62,6 +63,7 @@ export function normalizeAction(value: unknown): Action {
   if (p === "github") {
     if (!/^[\w.-]+\/[\w.-]+$/.test(resource))
       throw new ConnectorError("RESOURCE_INVALID");
+    if (id === "tree") args = input.path ? { path: filePath(input.path) } : {};
     if (id === "file")
       args = {
         path: filePath(input.path),
@@ -79,7 +81,7 @@ export function normalizeAction(value: unknown): Action {
       const files = Array.isArray(input.files)
         ? input.files
         : [{ path: input.path, content: input.content }];
-      if (!files.length || files.length > 6)
+      if (!files.length || files.length > 30)
         throw new ConnectorError("FILES_LIMIT");
       args = {
         branch: devBranch(input.branch),
@@ -98,7 +100,7 @@ export function normalizeAction(value: unknown): Action {
           return {
             path,
             content:
-              typeof v.content === "string" && v.content.length <= 24000
+              typeof v.content === "string" && v.content.length <= 100000
                 ? v.content
                 : (() => {
                     throw new ConnectorError("FILE_LIMIT");

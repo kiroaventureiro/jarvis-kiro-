@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
 import { runLocalSkill } from "../../../../lib/jarvis-local-skills";
+import { CODEX_SKILLS, CODEX_SKILL_SOURCE } from "../../../../lib/cognitive/codex-skill-catalog";
+import localSkills from "../../../../config/jarvis-local-skills.json";
+import {CODEX_AGENT_ROLES,CODEX_AGENT_SOURCE} from "../../../../lib/cognitive/codex-agent-roles";
 export const dynamic="force-dynamic";
 export async function POST(request:Request){
  if(!(await authorized()))return NextResponse.json({error:"Não autorizado"},{status:401});
@@ -16,4 +19,23 @@ export async function POST(request:Request){
  return NextResponse.json({error:"Parâmetros inválidos"},{status:400});
  const result=runLocalSkill(x as Parameters<typeof runLocalSkill>[0]);
  return NextResponse.json(result,{status:result.ok?200:400,headers:{"Cache-Control":"no-store"}});
+}
+
+/** Authenticated inventory. The 20 Codex-derived skills are contextual
+ * engineering guidance, not executable server operations or remote agents.
+ */
+export async function GET(){
+ if(!(await authorized()))return NextResponse.json({error:"Não autorizado"},{status:401});
+ return NextResponse.json({
+  version:3,
+  native:localSkills.skills.map(skill=>({...skill,kind:"local_operation",available:true})),
+  engineering:CODEX_SKILLS.map(({id,group,description})=>({
+   id,group,description,kind:"contextual_guidance",available:true,
+   independentExecution:false
+  })),
+  engineeringSource:CODEX_SKILL_SOURCE,
+  specialistAgents:CODEX_AGENT_ROLES.map(({id,plugin,purpose,sourcePath})=>({id,plugin,purpose,sourcePath,kind:"contextual_agent_role",available:true,independentExecution:false,requiresToolAuthorization:true})),
+  agentSource:CODEX_AGENT_SOURCE,
+  notes:"Skills e perfis especializados ativos como orientação contextual. Agentes independentes, scanners e mutações exigem executores reais, escopos e aprovação separados."
+ },{headers:{"Cache-Control":"no-store"}});
 }

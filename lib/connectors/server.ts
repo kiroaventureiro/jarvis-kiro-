@@ -79,6 +79,8 @@ export async function answerNativeRequest(
   history: import("./read-context").ReadTurn[] = [],
   localOnly = false,
 ) {
+  const { normalizeProviderSpeech } = await import("./provider-speech");
+  message = normalizeProviderSpeech(message, history);
   // Explicit daily briefing or a direct greeting to Jarvis. No background polling.
   const greeting = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   if (
@@ -87,6 +89,20 @@ export async function answerNativeRequest(
   ) {
     const { arrivalBriefing } = await import("./arrival-briefing");
     return arrivalBriefing(connectorStore);
+  }
+  const { prepareGitHubWrite, approveGitHubWrite, githubBridgeWriteStatus } = await import("./conversation-write");
+  try {
+    const bridgeReply=await githubBridgeWriteStatus(message);
+    if(bridgeReply)return bridgeReply;
+    const approvalReply = await approveGitHubWrite(message, history);
+    if (approvalReply) return approvalReply;
+    const writeReply = await prepareGitHubWrite(message, history);
+    if (writeReply) return writeReply;
+  } catch (error) {
+    const code=error instanceof ConnectorError?error.code:"WRITE_EXECUTION_UNAVAILABLE";
+    return {text:"Não consegui concluir a etapa de escrita ou aprovação: "+code+
+      ". A alteração não está confirmada. Verifique o estado da tarefa antes de repetir a operação.",
+      model:"jk-write-diagnostic",provider:"local_operational" as const,usage:null};
   }
   const workspaceIntent=workspaceReadIntent(message);
   if(workspaceIntent) {

@@ -9,7 +9,7 @@ function origin(value: string | null | undefined) {
     return u.origin;
   } catch { return null; }
 }
-const official = ["https://jarvis-kiro.vercel.app", "https://jarvis-kiro-umiversokiro.vercel.app"];
+const official = ["https://jarvis-kiro.vercel.app", "https://jarvis-kiro-umiversokiro.vercel.app", "https://jarvis-kiro-preproducao.vercel.app"];
 export function requestOriginStatus(request: Request, configuredOrigin?: string, requireOrigin = true) {
   const canonical = origin(configuredOrigin), urlOrigin = new URL(request.url).origin;
   const raw = request.headers.get("origin"), submitted = origin(raw);

@@ -7,7 +7,15 @@ import {
 } from "../../lib/hologram/policy";
 export default function HologramSettings() {
   const [preference, setPreference] = useState<GraphicsPreference>("auto");
-  useEffect(() => setPreference(readGraphicsPreference()), []);
+  useEffect(() => {
+    setPreference(readGraphicsPreference());
+    const changed = (event: Event) => {
+      const value = (event as CustomEvent<GraphicsPreference>).detail;
+      if (value === "auto" || value === "eco") setPreference(value);
+    };
+    window.addEventListener("jarvis-graphics", changed);
+    return () => window.removeEventListener("jarvis-graphics", changed);
+  }, []);
   return (
     <div className="graphics-settings">
       <label htmlFor="graphics-quality">Qualidade do holograma JK</label>

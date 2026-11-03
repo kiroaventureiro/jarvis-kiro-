@@ -104,7 +104,7 @@ export class ConnectorService {
             ? publicConnection(state.connections[provider]!)
             : null,
           operations: OPERATIONS.filter((x) => x.provider === provider),
-          writeAllowlist: this.options.writeResources()[provider] || [],
+          writeAllowlist: provider === "github" ? state?.connections.github?.resources.map(r=>r.id) || [] : this.options.writeResources()[provider] || [],
           revocationUrl:
             provider === "github"
               ? "https://github.com/settings/installations"
@@ -252,6 +252,25 @@ export class ConnectorService {
         current.verifiedAt = new Date(this.now()).toISOString();
         current.lastTestAt = current.verifiedAt;
         current.account = result.account;
+        if (p === "github") {
+          // Connect means all repositories returned by this authorized GitHub account.
+          // Provider-side permission checks still govern actual writes.
+          // Refresh the authorized repository list, not only when it was empty:
+          // an older connection can contain six repositories while missing
+          // a newer repository that the owner explicitly requested.
+          const known = new Map(current.resources.map(r => [r.id, r]));
+          for (const resource of result.resources) {
+            const previous = known.get(resource.id);
+            known.set(resource.id, previous
+              ? { ...resource, ...(previous.kiroProject ? { kiroProject: previous.kiroProject } : {}) }
+              : resource);
+          }
+          const needsResources = known.size !== current.resources.length;
+          const needsWrite = !current.grants.includes("write");
+          if (needsResources) current.resources = [...known.values()];
+          if (needsWrite) current.grants = [...new Set([...current.grants, "read", "write"])] as Grant[];
+          if (needsResources || needsWrite) current.revision++;
+        }
         current.providerScopes = [
           ...new Set([...current.providerScopes, ...result.providerScopes]),
         ];
@@ -395,7 +414,7 @@ export class ConnectorService {
     if (
       mutation(action) &&
       (resource.environment === "production" ||
-        !this.options.writeResources()[action.provider]?.includes(resource.id))
+        (action.provider !== "github" && !this.options.writeResources()[action.provider]?.includes(resource.id)))
     )
       throw new ConnectorError("PRODUCTION_BLOCKED", 403);
     return resource;

@@ -101,7 +101,12 @@ export class GeminiLiveVoiceAdapter {
   }
   start() {
     if (this.enabled) {
-      if (this.sessionActive && this.ready && !this.audioStarted) void this.startCapture();
+      if (!this.sessionActive) {
+        this.sessionActive = true;
+        this.attempts = 0;
+        this.emit("resuming", "Retomando a conexão Gemini sem desligar o áudio infinito…");
+        void this.connect();
+      } else if (this.ready && !this.audioStarted) void this.startCapture();
       return;
     }
     if (!this.options.desktopAudioAllowed()) { this.emit("off", "Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
@@ -151,7 +156,7 @@ export class GeminiLiveVoiceAdapter {
       const response = await fetch("/api/voice/gemini-token", {
         method: "POST", credentials: "same-origin", cache: "no-store",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle: this.handle, clientSessionId: this.clientSessionId }), signal: this.provisioning.signal,
+        body: JSON.stringify({ handle: this.handle, clientSessionId: this.clientSessionId, voiceName: (() => { try { return localStorage.getItem("jarvis.gemini.voice.v1") || "Orus"; } catch { return "Orus"; } })() }), signal: this.provisioning.signal,
       });
       const token = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -201,7 +206,9 @@ export class GeminiLiveVoiceAdapter {
   }
   private reconnect() {
     if (!this.sessionActive) return;
-    this.connection++; this.ready = false; this.clearTimers(); this.abort?.abort();
+    // The backend request may already have queued an approved write. Do not
+    // cancel it just because the audio transport dropped during a reply.
+    this.connection++; this.ready = false; this.clearTimers();
     this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false;
     this.audio.interrupt();
     this.audio.pauseCapture();
@@ -286,7 +293,14 @@ export class GeminiLiveVoiceAdapter {
     this.options.onUser(text); this.emit("processing", "Consultando o núcleo Jarvis…");
     try {
       const reply = await this.options.command(text, abort.signal);
-      if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) { this.processing = false; return; }
+      if (abort.signal.aborted || !this.sessionActive) { this.processing = false; return; }
+      if (connection !== this.connection) {
+        // Stale Gemini tool-call IDs cannot be replayed into a new session, but
+        // the confirmed Jarvis result must still be shown in the HUD.
+        this.processing = false;
+        this.options.onReply({ ...reply, speechPending: false });
+        return;
+      }
       this.processing = false;
       this.options.onReply({ ...reply, speechPending: true });
       this.outputAllowed = true;
@@ -343,5 +357,13 @@ export class GeminiLiveVoiceAdapter {
     this.transcript = ""; this.transcriptReady = false; this.pending = null; this.outputAllowed = false; this.playing = false; this.processing = false; this.inputChunks = 0; this.outputChunks = 0; this.usedTurn = false; this.seen.clear();
     this.emit("off", message);
   }
-  private fail(message: string) { this.options.onSpeechUnavailable(); this.stop(message); this.emit("error", message); }
+  private fail(message: string) {
+    const keepSelected = this.enabled;
+    this.options.onSpeechUnavailable();
+    this.stop(message);
+    // A transport failure must not change the user's infinite-listening choice.
+    // No automatic paid retry beyond the existing connection budget.
+    if (keepSelected) this.enabled = true;
+    this.emit("error", message + (keepSelected ? " Áudio infinito continua selecionado; toque nele para reconectar." : ""));
+  }
 }

@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { geminiLiveConfig, GEMINI_LIVE_MODEL } from "../../../../lib/voice/gemini-config";
+import { geminiLiveConfig, GEMINI_LIVE_MODEL, GEMINI_VOICE_CHOICES } from "../../../../lib/voice/gemini-config";
 import { requestOriginAllowed } from "../../../../lib/request-origin";
 import { NextResponse } from "next/server";
 import { authorized } from "../../../../lib/auth";
@@ -39,7 +39,7 @@ function failure(code: string, error: string, status: number) {
 }
 async function checkAccess(request: Request, requireOrigin = true) {
   if (!requestOriginAllowed(request, undefined, requireOrigin)) return failure("ORIGIN_DENIED", "Origem não autorizada.", 403);
-  if (process.env.VERCEL_ENV === "production") return failure("PRODUCTION_BLOCKED", "Experimento indisponível em produção.", 403);
+  if (process.env.VERCEL_ENV !== "preview" && process.env.VERCEL_ENV !== "production") return failure("ENVIRONMENT_UNSUPPORTED", "Gemini Live exige ambiente Preview ou Production autorizado.", 403);
   if (!(await authorized())) return failure("AUTH_REQUIRED", "Entre na área privada para usar Gemini Live.", 401);
   if (process.env.JARVIS_GEMINI_LIVE_ENABLED !== "true") return failure("LIVE_DISABLED", "JARVIS_GEMINI_LIVE_ENABLED não está habilitado no servidor.", 403);
   if (!process.env.GEMINI_API_KEY) return failure("KEY_MISSING", "GEMINI_API_KEY indisponível neste deployment.", 503);
@@ -64,8 +64,9 @@ export async function POST(request: Request) {
   const callsPerHour = Number(process.env.JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR);
   const body = await request.json().catch(() => ({}));
   if (!body || typeof body !== "object" || Array.isArray(body) ||
-      Object.keys(body).some(k => !["handle", "clientSessionId"].includes(k)) ||
+      Object.keys(body).some(k => !["handle", "clientSessionId", "voiceName"].includes(k)) ||
       (body.handle !== undefined && (typeof body.handle !== "string" || body.handle.length > 4096)) ||
+      (body.voiceName !== undefined && !GEMINI_VOICE_CHOICES.some(v => v === body.voiceName)) ||
       typeof body.clientSessionId !== "string" || !/^[a-f0-9-]{36}$/i.test(body.clientSessionId)) {
     return NextResponse.json({ error: "Sessão inválida." }, { status: 400 });
   }
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     const client = new GoogleGenAI({ apiKey: key, httpOptions: { apiVersion: "v1beta", timeout: 15000 } });
     const data = await client.authTokens.create({ config: {
       uses: 1, expireTime: expires, newSessionExpireTime: newSessionExpires,
-      liveConnectConstraints: { model: MODEL, config: geminiLiveConfig(await buildInstructions(), body.handle) },
+      liveConnectConstraints: { model: MODEL, config: geminiLiveConfig(await buildInstructions(), body.handle, body.voiceName || "Orus") },
     } });
     if (!data.name) return failure("TOKEN_UNAVAILABLE", "Google não retornou uma credencial temporária.", 502);
 

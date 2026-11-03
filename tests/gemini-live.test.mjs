@@ -338,3 +338,93 @@ test("Gemini waiting drives hologram and label even with stale legacy responding
   assert.match(ui, /visualState === "responding" \|\| voiceSnapshot\.phase === "speaking" \? "RESPONDENDO"/);
   assert.match(ui, /\(!geminiRequested && connected\)/);
 });
+
+test("integrated Jarvis vocal identity uses one settings panel and server voice allowlist", () => {
+  const ui = fs.readFileSync("app/components/VoiceSettings.tsx", "utf8");
+  const live = fs.readFileSync("lib/voice/gemini-live-adapter.ts", "utf8");
+  const api = fs.readFileSync("app/api/voice/gemini-token/route.ts", "utf8");
+  const config = fs.readFileSync("lib/voice/gemini-config.ts", "utf8");
+  const jarvis = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.match(ui, /Voz do Gemini Live/);
+  assert.match(ui, /jarvis\.gemini\.voice\.v1/);
+  assert.match(live, /voiceName:/);
+  assert.match(api, /GEMINI_VOICE_CHOICES\.some/);
+  assert.match(config, /speechConfig:/);
+  assert.match(jarvis, /function vocalSettingsReply\(text: string\)/);
+  assert.match(jarvis, /const vocal = vocalSettingsReply\(text\)/);
+  assert.match(jarvis, /normalized\.match\(\//);
+});
+
+test("Gemini Live can be enabled by environment gates without branch pinning", () => {
+  const page = fs.readFileSync("app/page.tsx", "utf8");
+  const token = fs.readFileSync("app/api/voice/gemini-token/route.ts", "utf8");
+  assert.match(page, /VERCEL_ENV === "preview" \|\| process\.env\.VERCEL_ENV === "production"/);
+  assert.doesNotMatch(token, /PRODUCTION_BLOCKED/);
+  assert.match(token, /ENVIRONMENT_UNSUPPORTED/);
+  assert.match(token, /JARVIS_GEMINI_LIVE_ENABLED/);
+  assert.match(token, /JARVIS_GEMINI_LIVE_PAID_ALLOWED/);
+  assert.match(token, /JARVIS_GEMINI_LIVE_MAX_CALLS_PER_HOUR/);
+  assert.match(token, /await authorized\(\)/);
+});
+
+test("Gemini PCM playback schedules chunks without a fixed inter-chunk pause", () => {
+  const audio = fs.readFileSync("lib/voice/gemini-audio.ts", "utf8");
+  assert.match(audio, /playbackCursor/);
+  assert.match(audio, /Math\.max\(context\.currentTime \+ 0\.025, this\.playbackCursor\)/);
+  assert.match(audio, /source\.start\(startsAt\)/);
+  assert.doesNotMatch(audio, /source\.start\(context\.currentTime \+ 0\.01\)/);
+  assert.match(audio, /this\.playbackCursor = 0/);
+});
+
+test("PCM boundary smoothing preserves contiguous scheduling and avoids abrupt tails", () => {
+  const audio = fs.readFileSync("lib/voice/gemini-audio.ts", "utf8");
+  assert.match(audio, /const edge = Math\.min\(32, Math\.floor\(floats\.length \/ 4\)\)/);
+  assert.match(audio, /floats\[i\] \*= envelope/);
+  assert.match(audio, /floats\[floats\.length - 1 - i\] \*= envelope/);
+  assert.match(audio, /source\.start\(startsAt\)/);
+});
+
+test("Jarvis uses central allowlisted settings controller without arbitrary configuration writes", () => {
+  const controller = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  const ui = fs.readFileSync("app/components/JarvisExperience.tsx", "utf8");
+  assert.match(ui, /jarvisSettingsCommand\(text\)/);
+  assert.match(controller, /setGraphicsPreference\("eco"\)/);
+  assert.match(controller, /setGraphicsPreference\("auto"\)/);
+  assert.match(controller, /setHistoryConsent\(true\)/);
+  assert.match(controller, /saveVoicePreferences/);
+  assert.doesNotMatch(controller, /eval\(|Function\(/);
+});
+
+test("central preferences controller handles numeric voice settings and UI receives changes", () => {
+  const controller = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  const panel = fs.readFileSync("app/components/VoiceSettings.tsx", "utf8");
+  assert.match(controller, /const amount = raw\.match/);
+  assert.match(controller, /saveVoicePreferences\(next\)/);
+  assert.match(controller, /\(volume \|\| speed \|\| pitch\) && explicitChange/);
+  assert.match(panel, /VOICE_PREF_EVENT/);
+  assert.match(panel, /window\.addEventListener\(VOICE_PREF_EVENT, prefsChanged\)/);
+});
+
+test("Jarvis settings inventory reflects persisted values without granting unsafe control", () => {
+  const controller = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  assert.match(controller, /Read-only inventory/);
+  assert.match(controller, /readVoicePreferences\(\)/);
+  assert.match(controller, /readGraphicsPreference\(\)/);
+  assert.match(controller, /historyConsent\(\)/);
+  assert.match(controller, /Credenciais|credenciais/);
+  assert.match(controller, /VOICES\.find/);
+});
+
+test("Jarvis hologram setting stays synchronized with spoken preference changes", () => {
+  const panel = fs.readFileSync("app/components/HologramSettings.tsx", "utf8");
+  const control = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  assert.match(panel, /window\.addEventListener\("jarvis-graphics", changed\)/);
+  assert.match(panel, /window\.removeEventListener\("jarvis-graphics", changed\)/);
+  assert.match(control, /setGraphicsPreference\("eco"\)/);
+  assert.match(control, /setGraphicsPreference\("auto"\)/);
+});
+test("Jarvis administrative configuration requests do not mutate secrets or paid service controls", () => {
+  const control = fs.readFileSync("lib/settings/jarvis-control.ts", "utf8");
+  assert.match(control, /serviço autenticado e autorização específica/);
+  assert.doesNotMatch(control, /process\.env\.[A-Z_]+\s*=/);
+});

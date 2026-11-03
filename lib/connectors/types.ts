@@ -66,6 +66,8 @@ export type Plan = {
     | "uncertain";
   connectionRevisions: Partial<Record<Provider, string>>;
   steps: Step[];
+  /** Owner session that initiated a conversational write; never exposed to the model. */
+  conversationSession?: string;
   approval?: { at: number; session: string; digest: string };
   results?: unknown[];
 };
@@ -106,6 +108,8 @@ export type PersistentProject = {
   updatedAt: string;
 };
 export type VaultState = import("./workspace").WorkspaceState & {
+  n8n?: { baseUrl: string; apiKey: string; connectedAt: string; verifiedAt: string | null };
+  n8nBridge?: { lastWorkerPollAt?: number; jobs: Array<{id:string;workflow:string;payload:Record<string,string>;state:"queued"|"leased"|"executing"|"completed"|"failed";createdAt:string;leaseUntil?:number;result?:string;attempts:number}> };
   voiceUsage?: import("../voice/ledger").VoiceUsageState;
   persistentProjects?: Record<string, PersistentProject>;
 

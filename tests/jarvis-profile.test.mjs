@@ -26,3 +26,14 @@ test("profile endpoint requires owner session", () => {
   assert.match(src, /status:\s*401/);
   assert.match(src, /Cache-Control["']:\s*["']no-store/);
 });
+
+test("operational persona is global rather than bound to a single integration", () => {
+  const p = JSON.parse(fs.readFileSync("config/jarvis-personality.json", "utf8"));
+  assert.ok(p.version >= 2);
+  assert.ok(p.interaction.operationalCycle.length >= 6);
+  assert.match(p.interaction.scope, /qualquer conector atual ou futuro/);
+  for (const key of ["completed", "partial", "failed", "blocked", "uncertain"]) {
+    assert.ok(p.interaction.responseContract[key]);
+  }
+  assert.match(p.principles.join(" "), /independente do serviço/);
+});

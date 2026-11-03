@@ -21,7 +21,7 @@ const projects = [
     id: p.id,
     names: [p.id, ...p.name.split("/").map((x) => x.trim())],
   })),
-  { id: "jarvis-kiro", names: ["Jarvis Kiro", "JarvisKiro", "JK"] },
+  { id: "jarvis-kiro", names: ["Jarvis Kiro", "JarvisKiro", "Jarvis Kiro -", "Javas Kiro", "Java Skiro", "Jarvis Quiro", "JK"] },
 ];
 export type ProjectSelection =
   | { kind: "all" }

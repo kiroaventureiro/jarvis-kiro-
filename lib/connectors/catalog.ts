@@ -28,6 +28,13 @@ export const OPERATIONS: Operation[] = [
     fields: [],
   },
   {
+    id: "tree",
+    provider: "github",
+    label: "Listar arquivos e pastas do repositório",
+    grant: "read",
+    fields: [field("path", "Pasta", "text", undefined, true)],
+  },
+  {
     id: "file",
     provider: "github",
     label: "Ler arquivo",

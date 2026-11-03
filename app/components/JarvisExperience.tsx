@@ -47,6 +47,7 @@ import {
 import { getVoiceManager } from "../../lib/voice/speech-output";
 import { readVoicePreferences, saveVoicePreferences } from "../../lib/voice/voice-preferences";
 import { voiceAction } from "../../lib/voice/local-intents";
+import { jarvisSettingsCommand } from "../../lib/settings/jarvis-control";
 import { capabilityQuestion } from "../../lib/orchestration/capability-intent";
 import { codexDraftIntent } from "../../lib/codex/chat-intent";
 import { APP_SHORTCUTS, browserActionIntent, appHandoffIntent, prepareAppHandoff, type AppHandoff } from "../../lib/codex/app-handoff";
@@ -878,7 +879,54 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
     }
     return {text:reply,model:"jk-local-action",provider:"local_operational" as const,usage:null,visual:undefined};
   }
+  function vocalSettingsReply(text: string) {
+    const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const voice = normalized.match(/(?:voz|voice)\s+(orus|charon|algenib|gacrux|puck|kore)\b/)?.[1];
+    const select = voice || (/\b(?:mudar|trocar|selecionar|colocar|usar|escolher|definir)\b/.test(normalized)
+      ? normalized.match(/\b(orus|charon|algenib|gacrux|puck|kore)\b/)?.[1] : undefined);
+    if (select) {
+      const name = select[0].toUpperCase() + select.slice(1);
+      try { localStorage.setItem("jarvis.gemini.voice.v1", name); window.dispatchEvent(new CustomEvent("jarvis:gemini-voice", { detail: name })); } catch {
+        return {text:"Não consegui salvar a voz neste navegador.",model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
+      }
+      return {text:"Voz Gemini " + name + " selecionada. A mudança será aplicada na próxima sessão Gemini Live, sem interromper a conversa atual.",model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
+    if (!/\b(voz|vocal|velocidade|tom|volume)\b/.test(normalized)) return null;
+    const amount = normalized.match(/\b(\d{1,3})\s*(?:%|por cento)\b/);
+    const prefs = readVoicePreferences();
+    const isVolume = /\bvolume\b/.test(normalized);
+    const isRate = /\bvelocidade\b/.test(normalized);
+    const isPitch = /\btom\b/.test(normalized);
+    if (amount && /\b(ajustar|definir|colocar|alterar|mudar|configurar)\b/.test(normalized) && (isVolume || isRate || isPitch)) {
+      const percentage = Number(amount[1]);
+      if (percentage > 100) return {text:"Informe um valor entre zero e cem por cento.",model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
+      const next = {...prefs};
+      if (isVolume) next.volume = percentage / 100;
+      else if (isRate) next.rate = 0.7 + percentage / 100 * 0.6;
+      else next.pitch = 0.6 + percentage / 100 * 0.6;
+      saveVoicePreferences(next);
+      return {text:(isVolume ? "Volume" : isRate ? "Velocidade" : "Tom") + " configurado em " + percentage + " por cento. " + (isVolume ? "O volume também controla a saída do Gemini." : "Este ajuste se aplica à síntese do navegador, não à voz Gemini Live."),model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
+    if (!amount && (isVolume || isRate || isPitch) && /\\b(aumentar|aumente|aumenta|diminuir|diminua|diminui|reduzir|reduza)\\b/.test(normalized)) {
+      const upward = /\\b(aumentar|aumente|aumenta)\\b/.test(normalized);
+      const direction = upward ? 1 : -1;
+      const next = {...prefs};
+      if (isVolume) next.volume = Math.max(0, Math.min(1, prefs.volume + direction * 0.1));
+      else if (isRate) next.rate = Math.max(0.7, Math.min(1.3, prefs.rate + direction * 0.05));
+      else next.pitch = Math.max(0.6, Math.min(1.2, prefs.pitch + direction * 0.05));
+      saveVoicePreferences(next);
+      const label = isVolume ? "Volume" : isRate ? "Velocidade" : "Tom";
+      return {text:label + " ajustado. " + (isVolume ? "Alteração também aplicada à saída do Gemini." : "Este controle afeta a voz do navegador, não a voz Gemini Live."),model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
+    }
+    if (/\b(?:opcoes|disponiveis|escolher|configuracoes)\b/.test(normalized) && /\b(?:voz|vozes|vocal)\b/.test(normalized))
+      return {text:"Na Identidade vocal do Jarvis você pode escolher Orus, Charon, Algenib, Gacrux, Puck ou Kore para o Gemini Live. Posso selecionar uma dessas vozes por comando. O tom e a velocidade ajustam apenas a voz do navegador; o volume é compartilhado.",model:"jk-voice-settings",provider:"local_operational" as const,usage:null,visual:undefined};
+    return null;
+  }
   function localConversationReply(text: string) {
+    const settings = jarvisSettingsCommand(text);
+    if (settings) return settings;
+    const vocal = vocalSettingsReply(text);
+    if (vocal) return vocal;
     const selfControl=selfControlReply(text);
     if(selfControl)return selfControl;
     const action = conversationAction(text);
