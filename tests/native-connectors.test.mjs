@@ -1127,3 +1127,19 @@ test("addressing Jarvis preserves the explicitly named project's authorized diag
  const reply=await planner.intent('Jarvis, verifique o site Guardiões da Origem');
  assert.equal(reply.result.kind,'connector_plan');assert.match(reply.text,/Guardiões da Origem/);assert.equal(modelCalls,0);
 });
+
+test("retesting GitHub discovers repositories added after the original connection", async () => {
+  const f=fixture();
+  await setup(f);
+  const before=await f.store.read();
+  assert.equal(before.connections.github.resources.length,1);
+  f.setAuthorizedRepos([
+    {id:101,full_name:"owner/project",default_branch:"main"},
+    {id:102,full_name:"kiroaventureiro/jarvis-kiro-",default_branch:"main"},
+  ]);
+  await f.service.test("github");
+  const after=await f.store.read();
+  assert.ok(after.connections.github.resources.some(r=>r.id==="kiroaventureiro/jarvis-kiro-"));
+  assert.ok(after.connections.github.resources.some(r=>r.id==="owner/project"&&r.kiroProject==="universo-kiro"));
+  assert.ok(after.connections.github.grants.includes("write"));
+});
