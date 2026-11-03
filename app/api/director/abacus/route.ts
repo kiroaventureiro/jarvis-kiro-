@@ -86,29 +86,33 @@ export async function POST(request: Request) {
     configured: () => !!process.env.ABACUS_API_KEY,
     permission: () => costPermission("abacus", process.env),
     admit: (permission) => providerCallBudget.admit("abacus", permission),
-    localReply: async (message, signal, input) =>
-      answerCodexPlanning(message) ||
-      (await answerNaviRequest(message, input.history || [], signal)) ||
-      (await answerCouncilRequest(message, signal)) ||
-      (await answerNativeRequest(message, signal, input.history)) ||
-      (await answerVoiceUsageQuestion(message)) ||
-      (await answerAbacusAgentQuestion(message, signal)) ||
-      (await answerVoiceStudioQuestion(message, signal)) ||
-      answerDesignRequest(message) ||
-      (await answerAbacusPlatformQuestion(message, signal)) ||
-      (await answerAbacusHub(message, signal)) ||
-      (await answerMediaRequest(message, signal)) ||
-      (await answerPublicLibrary(message, signal)) ||
-      answerPlaceReference(message) ||
-      (await answerImages(message, signal)) ||
-      (await answerResearch(message, signal)) ||
-      (await answerOperationalQuestion(message, signal)) ||
-      localVisualReference(message) ||
-      (await answerWebResearch(message, signal)) ||
+    localReply: async (message, signal, input) => {
+      const { normalizeProviderSpeech } = await import("../../../../lib/connectors/provider-speech");
+      const understood = normalizeProviderSpeech(understood, input.history || []);
+      return (
+      answerCodexPlanning(understood) ||
+      (await answerNaviRequest(understood, input.history || [], signal)) ||
+      (await answerCouncilRequest(understood, signal)) ||
+      (await answerNativeRequest(understood, signal, input.history)) ||
+      (await answerVoiceUsageQuestion(understood)) ||
+      (await answerAbacusAgentQuestion(understood, signal)) ||
+      (await answerVoiceStudioQuestion(understood, signal)) ||
+      answerDesignRequest(understood) ||
+      (await answerAbacusPlatformQuestion(understood, signal)) ||
+      (await answerAbacusHub(understood, signal)) ||
+      (await answerMediaRequest(understood, signal)) ||
+      (await answerPublicLibrary(understood, signal)) ||
+      answerPlaceReference(understood) ||
+      (await answerImages(understood, signal)) ||
+      (await answerResearch(understood, signal)) ||
+      (await answerOperationalQuestion(understood, signal)) ||
+      localVisualReference(understood) ||
+      (await answerWebResearch(understood, signal)) ||
       (!process.env.ABACUS_API_KEY ||
       !costPermission("abacus", process.env).allowed
-        ? await answerKnowledge(message, signal)
-        : null),
+        ? await answerKnowledge(understood, signal)
+        : null));
+    },
     prepare: async (message, signal, input) => {
       // Skip retrieval for ordinary conversation. Research is optional, not a
       // prerequisite for every response; this avoids serial pre-model latency.
