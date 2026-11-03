@@ -19,3 +19,9 @@ export function parseGitHubWriteIntent(message: string): GitHubWriteIntent {
   if (!file || file[2].length > 24000) return null;
   return { kind: "create_file", path: file[1], content: file[2] };
 }
+
+export function isConversationalGitHubApproval(message: string) {
+  const normalized=message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  return /^(?:jarvis[,!.]?\s*)?aprovar\s+[a-f0-9]{8}[.!\s]*$/.test(normalized) ||
+    /^(?:(?:sim|eu)[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar|pode fazer|pode prosseguir|esta aprovado|aprovado)[.! ]*$/.test(normalized);
+}
