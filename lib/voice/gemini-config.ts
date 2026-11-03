@@ -13,7 +13,7 @@ export function geminiLiveConfig(instructions: string, handle?: string, voiceNam
     sessionResumption: handle ? { handle } : {},
     contextWindowCompression: { slidingWindow: {} },
     realtimeInputConfig: { automaticActivityDetection: {} },
-    systemInstruction: { parts: [{ text: instructions }] },
+    systemInstruction: { parts: [{ text: instructions + "\nToda solicitação do usuário, inclusive criar pasta/arquivo, aprovar, consultar, alterar projeto ou mencionar GitHub, deve passar por jarvis_conversation ANTES da resposta. Não diga que não existe ferramenta de escrita com base em suposições: somente o núcleo Jarvis pode confirmar capacidade, execução, erro e permissão. Uma aprovação falada deve ser enviada ao núcleo como uma nova fala; nunca suponha que a alteração ocorreu. Relate fielmente o resultado retornado pelo núcleo, inclusive falhas e links verificáveis." }] },
     tools: [{ functionDeclarations: [{
       name: GEMINI_JARVIS_TOOL,
       description: "Consulte o núcleo Jarvis uma vez para CADA fala ou mensagem do usuário, antes de responder. O Jarvis recebe a transcrição original, aplica memória, agentes e autorizações. Não forneça argumentos nem execute ações por conta própria.",
