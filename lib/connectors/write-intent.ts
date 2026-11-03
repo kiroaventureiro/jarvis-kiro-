@@ -8,7 +8,7 @@ export function parseGitHubWriteIntent(message: string): GitHubWriteIntent {
   if (!/\b(crie|cria|criar|adicione|adiciona|adicionar|escreva|escrever|monte|montar)\b/.test(folded)) return null;
   if (!/\b(github|repositorio|projeto|jarvis\s+kiro)\b/.test(folded)) return null;
 
-  const folder = /\b(?:pasta|diret[oó]rio)\s+(?:chamada?\s+|com\s+nome\s+)?["']?([a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*)["']?/i.exec(message);
+  const folder = /\b(?:pasta|diret[oó]rio)\s+(?:chamad[ao]\s+|com\s+nome\s+)?["']?([a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*)["']?/i.exec(message);
   if (folder) {
     const name = folder[1].replace(/\/+$/, "");
     if (!name || name === "." || name === ".." || name.split("/").some(p => p === "." || p === "..")) return null;
