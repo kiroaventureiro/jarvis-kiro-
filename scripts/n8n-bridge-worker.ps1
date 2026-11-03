@@ -75,7 +75,9 @@ function Ensure-JarvisWorkflow {
   if (-not $workflowId) { throw "n8n não confirmou o novo workflow." }
  }
  try { Invoke-RestMethod -Uri "$n8nApi/workflows/$workflowId/publish" -Method Post -Headers $n8nHeaders -ContentType "application/json" -Body '{}' -TimeoutSec 20 | Out-Null } catch { Write-Host "n8n: publicação por API não suportada nesta versão; tentando ativar." }
- Invoke-RestMethod -Uri "$n8nApi/workflows/$workflowId/activate" -Method Post -Headers $n8nHeaders -ContentType "application/json" -Body '{}' -TimeoutSec 20 | Out-Null
+ if ($existing.Count -eq 0 -or -not $item.active) {
+  Invoke-RestMethod -Uri "$n8nApi/workflows/$workflowId/activate" -Method Post -Headers $n8nHeaders -ContentType "application/json" -Body '{}' -TimeoutSec 20 | Out-Null
+ }
  Write-Host "n8n GitHub: workflow $workflowId criado/ativado para execuções aprovadas."
 }
 Ensure-JarvisWorkflow
