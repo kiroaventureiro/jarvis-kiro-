@@ -47,6 +47,12 @@ export async function prepareGitHubWrite(message:string) {
     {provider:"github",resource:resource.id,operation:"commit",args:{branch,baseSha:sha,path:request.path,content:request.content,message:"feat: "+(request.kind==="create_folder"?"criar pasta ":"adicionar arquivo ")+(request.kind==="create_folder"?request.path.slice(0,-9):request.path)}},
     {provider:"github",resource:resource.id,operation:"pull",args:{branch,base:main,title:description,body:"Alteração solicitada pelo proprietário; revisar antes de merge."}}
   ]);
+  const ownerCookie=(await cookies()).get(cookieName)?.value;
+  if(!ownerCookie) return reply("Sua sessão expirou. A proposta não pode ser autorizada; nenhuma alteração foi executada.");
+  await connectorStore.update(state=>{
+    const saved=state.plans.find(p=>p.id===plan.id);
+    if(saved && saved.status==="draft") saved.conversationSession=hash(ownerCookie);
+  });
   return {text:"Preparei "+(request.kind==="create_folder"?"a pasta "+request.path.slice(0,-9)+" (com arquivo .gitkeep para registrá-la no GitHub)":"o arquivo "+request.path)+" no repositório "+resource.name+" com branch, commit e PR em rascunho. Para autorizar, diga: APROVAR "+plan.digest.slice(0,8)+". Nenhuma alteração foi executada ainda.",model:"jk-github",provider:"local_operational" as const,usage:null};
 }
 
