@@ -158,6 +158,22 @@ export async function githubBridgeWriteStatus(message:string){
   const plans=state.plans.filter(p=>p.conversationSession===sessionId&&p.steps.some(step=>step.action.provider==="github")).sort((a,b)=>b.createdAt-a.createdAt);
   const last=plans[0];
   if(!last)return reply("Nenhuma proposta GitHub recente encontrada nesta sessão.");
+  // The plan is the durable source of truth. A stale or truncated n8n job list
+  // must not hide a verified GitHub commit and draft PR.
+  const successful=plans.find(p=>p.status==="done" &&
+    p.steps.some(step=>step.action.operation==="commit" && step.status==="done") &&
+    p.steps.some(step=>step.action.operation==="pull" && step.status==="done"));
+  if(successful && (!last || successful.createdAt>=last.createdAt)){
+    const written=successful.steps.find(step=>step.action.operation==="commit");
+    const requested=written?.action.args.files as Array<{path:string}>|undefined;
+    const commit=written?.result as {sha?:string;branch?:string}|undefined;
+    const pull=successful.steps.find(step=>step.action.operation==="pull")?.result as {url?:string;number?:number}|undefined;
+    if(pull?.url?.startsWith("https://github.com/") && commit?.sha && /^[a-f0-9]{40}$/.test(commit.sha))
+      return reply("Escrita confirmada no GitHub. Arquivos: "+
+        (requested?.map(f=>f.path).join(", ")||"conforme plano")+
+        ". Commit "+commit.sha+". Pull request em rascunho: "+pull.url+
+        ". A pasta existe na branch do PR; não foi incorporada à branch principal.");
+  }
   const jobs=await bridgeStatus();
   if(!jobs.enabled||!("jobs" in jobs))return reply("Ponte n8n não está disponível. Nenhuma escrita confirmada.");
   const entries=("jobs" in jobs && Array.isArray(jobs.jobs)) ? jobs.jobs : [];
