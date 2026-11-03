@@ -5,7 +5,7 @@ import { cookieName } from "../auth";
 import { hash } from "./security";
 import { connectors, connectorStore } from "./server";
 import { requestedProject, selectProjectResources } from "./project-selection";
-import { parseGitHubWriteIntent } from "./write-intent";
+import { parseGitHubWriteIntent, isConversationalGitHubApproval } from "./write-intent";
 import { enqueueApprovedGithubPlan, workerReady, status as bridgeStatus } from "../n8n/bridge";
 export async function prepareGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
   const previous=history.slice(-8).reverse().find(t=>t.role==="user"&&/github|git hub|jarvis kiro|repositori|projeto/i.test(t.content));
@@ -115,7 +115,7 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
 export async function approveGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
   const match=/^(?:jarvis[,!:.]?\s*)?aprovar\s+([a-f0-9]{8})[.!\s]*$/i.exec(message.trim());
   const plain=/^(?:(?:sim|eu)[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar|pode fazer|pode prosseguir|esta aprovado|está aprovado|aprovado)[.! ]*$/i.test(message.trim());
-  if(!match&&!plain)return null;
+  if(!match&&!isConversationalGitHubApproval(message))return null;
   const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
   const prior=history.slice(-6).reverse().find(turn=>turn.role==="assistant"&&/\bAPROVAR\s+[a-f0-9]{8}\b/i.test(turn.content));
   const previousCode=/\bAPROVAR\s+([a-f0-9]{8})\b/i.exec(prior?.content||"")?.[1];
@@ -123,7 +123,7 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
   if(!session)return reply("Sessão do proprietário ausente. Nenhuma alteração foi executada.");
   const sessionId=hash(session);
   const state=await connectorStore.read();
-  const digestCode=match?.[1]?.toLowerCase() || (plain ? previousCode?.toLowerCase() : undefined);
+  const digestCode=match?.[1]?.toLowerCase() || (isConversationalGitHubApproval(message) ? previousCode?.toLowerCase() : undefined);
   const pending=state.plans.filter(p=>
     ["draft","approved"].includes(p.status) &&
     p.conversationSession===sessionId &&
@@ -132,7 +132,7 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
     p.steps.every(step=>step.action.provider==="github")
   );
   const withCode=digestCode?pending.filter(p=>p.digest.startsWith(digestCode)):[];
-  const matches=withCode.length?withCode:(plain&&pending.length===1?pending:[]);
+  const matches=withCode.length?withCode:(isConversationalGitHubApproval(message)&&pending.length===1?pending:[]);
   if(matches.length!==1)
     return reply("Não encontrei uma única proposta recente de escrita autorizável nesta sessão. Nenhuma alteração foi executada.");
   const plan=matches[0];
