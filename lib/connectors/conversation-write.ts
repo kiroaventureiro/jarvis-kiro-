@@ -6,8 +6,10 @@ import { hash } from "./security";
 import { connectors, connectorStore } from "./server";
 import { requestedProject, selectProjectResources } from "./project-selection";
 import { parseGitHubWriteIntent } from "./write-intent";
-export async function prepareGitHubWrite(message:string) {
-  const request=parseGitHubWriteIntent(message);
+export async function prepareGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
+  const previous=history.slice(-8).reverse().find(t=>t.role==="user"&&/github|git hub|jarvis kiro|repositori|projeto/i.test(t.content));
+  const contextual=previous?.content||"";
+  const request=parseGitHubWriteIntent(message,contextual);
   if(!request)return null;
   const state=await connectorStore.read();
   const account=state.connections.github;
