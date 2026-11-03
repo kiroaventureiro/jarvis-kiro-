@@ -80,7 +80,10 @@ return NextResponse.json({ error: "Origem inválida" }, { status: 403 });
   try {
     const { normalizeProviderSpeech } = await import("../../../../lib/connectors/provider-speech");
     const understood = normalizeProviderSpeech(body.query, history);
+    const { parseGitHubWriteIntent } = await import("../../../../lib/connectors/write-intent");
+    const isWrite = !!parseGitHubWriteIntent(understood) || /^(?:jarvis[,!:.]?\s*)?aprovar\s+[a-f0-9]{8}[.!\s]*$/i.test(understood.trim());
     const reply =
+      (isWrite ? await answerNativeRequest(understood, request.signal, history, true) : null) ||
       answerCodexPlanning(understood) ||
       (await answerNaviRequest(understood, history, request.signal)) ||
       (await answerCouncilRequest(understood, request.signal, false)) ||
