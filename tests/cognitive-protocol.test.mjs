@@ -236,3 +236,13 @@ test("calling JK administrator never authorizes a write or calls a provider", as
   assert.equal(calls, 0);
   assert.match(r.text, /aprove-o individualmente/);
 });
+
+test("same global investigation and verified outcome standards reach text, voice and classifier", () => {
+  for (const channel of ["text", "voice", "classifier"]) {
+    const prompt = cognitiveProtocol("A operação falhou, tente outra alternativa", channel);
+    assert.match(prompt, /independente de aplicativo ou domínio/);
+    assert.match(prompt, /alternativa equivalente, segura e autorizada/);
+    assert.match(prompt, /concluído com prova/);
+    assert.match(prompt, /Não diga apenas procure a central correspondente/);
+  }
+});
