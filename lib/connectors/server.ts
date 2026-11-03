@@ -91,7 +91,7 @@ export async function answerNativeRequest(
     return arrivalBriefing(connectorStore);
   }
   const { prepareGitHubWrite, approveGitHubWrite } = await import("./conversation-write");
-  const approvalReply = await approveGitHubWrite(message);
+  const approvalReply = await approveGitHubWrite(message, history);
   if (approvalReply) return approvalReply;
   const writeReply = await prepareGitHubWrite(message);
   if (writeReply) return writeReply;
