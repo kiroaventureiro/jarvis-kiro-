@@ -1,11 +1,12 @@
 import { depthFor, normalized } from "./intent";
 import { humanizerGuidance } from "./humanizer";
 import { codexSkillsGuidance } from "./codex-skill-catalog";
+import { codexAgentGuidance } from "./codex-agent-roles";
 import {
   specialistGuidance,
   voiceSpecialistGuidance,
 } from "./specialist-guidance";
-export const COGNITIVE_PROTOCOL_VERSION = "jk-cognitive-4.3";
+export const COGNITIVE_PROTOCOL_VERSION = "jk-cognitive-4.4";
 export type ResponsePurpose = "answer" | "decision" | "creative" | "code";
 export function responseProfile(message: string) {
   const n = normalized(message);
@@ -54,6 +55,7 @@ export function cognitiveProtocol(
       : specialistGuidance(message),
     humanizerGuidance(channel),
     codexSkillsGuidance(message),
+    codexAgentGuidance(message),
     channel === "voice"
       ? "Narre naturalmente, sem Markdown, JSON, identificadores extensos, código bruto ou URLs. Referências técnicas ficam no resultado visual. Não alegue ferramentas de outra modalidade; utilize apenas as funções declaradas nesta sessão de voz."
       : "Quando ajudar a leitura, use negrito, listas curtas ou tabelas. A fala usa roteiro próprio; dados técnicos e resultados visuais permanecem separados.",
