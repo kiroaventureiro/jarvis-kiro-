@@ -33,3 +33,8 @@ test("understands folder requests when GitHub is in conversation history",()=>{
  const result=parse("Jarvis, crie uma pasta chamada testes-kiro", "Estávamos trabalhando no GitHub do projeto Jarvis Kiro");
  assert.deepEqual(result,{kind:"create_folder",path:"testes-kiro/.gitkeep",content:""});
 });
+
+test("recognizes a repository-only spoken request",()=>{
+ const intent=parse("Crie uma pasta chamada teste-voz no repositório");
+ assert.deepEqual(intent,{kind:"create_folder",path:"teste-voz/.gitkeep",content:""});
+});
