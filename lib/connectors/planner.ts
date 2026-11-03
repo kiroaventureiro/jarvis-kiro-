@@ -92,14 +92,10 @@ export class DevelopmentPlanner {
     const paths = rawPaths.map(filePath);
     if (paths.some((path) => !/\.(?:[cm]?[jt]sx?|css|md|html|txt)$/.test(path)))
       throw new ConnectorError("REPAIR_FILE_TYPE_BLOCKED");
-    if (
-      !this.service.options
-        .writeResources()
-        .github?.includes(binding.github.id) ||
-      !binding.vercel ||
-      !this.service.options.writeResources().vercel?.includes(binding.vercel.id)
-    )
-      throw new ConnectorError("PRODUCTION_BLOCKED", 403);
+    // GitHub proposals need GitHub write permission only. Vercel Preview is optional.
+    const githubConnection = (await this.service.options.store.read()).connections.github;
+    if (!githubConnection?.grants.includes("write"))
+      throw new ConnectorError("PERMISSION_DENIED", 403);
     const diagnosis = await this.investigate(projectId),
       commits = diagnosis.steps.find(
         (s) => s.action.operation === "commits",
@@ -219,12 +215,14 @@ export class DevelopmentPlanner {
         operation: "checks",
         args: { sha: "$commit", waitForSuccess: true },
       },
-      {
-        provider: "vercel",
-        resource: binding.vercel.id,
-        operation: "preview",
-        args: { repoId: binding.github.repoId, branch, sha: "$commit" },
-      },
+      ...(binding.vercel && this.service.options.writeResources().vercel?.includes(binding.vercel.id)
+        ? [{
+            provider: "vercel" as const,
+            resource: binding.vercel.id,
+            operation: "preview",
+            args: { repoId: binding.github.repoId, branch, sha: "$commit" },
+          }]
+        : []),
     ]);
   }
   async intent(message: string) {
