@@ -339,3 +339,19 @@ test("shared project resolver understands service mention without fixed phrasing
     "target",
   );
 });
+
+test("Jarvis Kiro maps to the real GitHub owner/repository rather than the project label",()=>{
+  const authorized=[
+    r("kiroaventureiro/jarvis-kiro-","kiroaventureiro/jarvis-kiro-"),
+    r("kiroaventureiro/outro","kiroaventureiro/outro"),
+  ];
+  for(const spoken of [
+    "Crie uma pasta testes no projeto Jarvis Kiro, no GitHub",
+    "Abra o repositório Jarvis Kiro no GitHub",
+    "Consulte o projeto Jarvis Kiro",
+  ]) {
+    const selection=requestedProject(spoken,authorized);
+    const matches=selectProjectResources(selection,authorized);
+    assert.deepEqual(matches.map(item=>item.id),["kiroaventureiro/jarvis-kiro-"]);
+  }
+});
