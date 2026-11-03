@@ -1,12 +1,20 @@
 param(
  [Parameter(Mandatory=$true)][string]$JarvisUrl,
- [Parameter(Mandatory=$true)][string]$BridgeSecret,
- [Parameter(Mandatory=$true)][string]$N8nApiKey,
+ [string]$BridgeSecret = "",
+ [string]$N8nApiKey = "",
  [int]$IntervalSeconds = 15,
  [ValidateSet("preproduction","production")][string]$Environment = "preproduction",
  [string]$VercelBypass = $env:JARVIS_VERCEL_BYPASS
 )
 $ErrorActionPreference = "Stop"
+# Environment credentials are inherited from Windows, never embedded in a workflow.
+if (-not $BridgeSecret) {
+ if ($Environment -eq "production") { $BridgeSecret = $env:JARVIS_N8N_BRIDGE_SECRET_PRODUCTION }
+ else { $BridgeSecret = $env:JARVIS_N8N_BRIDGE_SECRET_PREPRODUCTION }
+ if (-not $BridgeSecret -and $Environment -eq "preproduction") { $BridgeSecret = $env:JARVIS_N8N_BRIDGE_SECRET }
+}
+if (-not $N8nApiKey) { $N8nApiKey = $env:JARVIS_N8N_API_KEY }
+if (-not $N8nApiKey) { throw "Chave n8n não configurada neste Windows." }
 $base = $JarvisUrl.TrimEnd("/")
 if (-not $base.StartsWith("https://")) { throw "O Jarvis exige HTTPS." }
 if ($BridgeSecret.Length -lt 40) { throw "Segredo da ponte inválido." }
