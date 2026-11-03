@@ -155,8 +155,11 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
           "commit "+commit.sha+"; PR em rascunho "+pr.url+
           ". A branch principal não foi alterada.");
       }
-      return reply("O GitHub recebeu a execução, mas ainda não há confirmação completa. Status do plano: "+
-        result.status+". Consulte o status da escrita antes de repetir; não criarei outra tarefa automaticamente.");
+      const failing=result.steps.find(step=>step.status==="failed"||step.status==="uncertain");
+      const detail=failing ? " Etapa: "+failing.action.operation+"; código: "+
+        (failing.error||"DESCONHECIDO")+"." : "";
+      return reply("A criação no GitHub NÃO foi confirmada. Status do plano: "+
+        result.status+"."+detail+" Consulte o status antes de repetir; não criarei outra tarefa automaticamente.");
     } catch(error) {
       const code=error instanceof Error ? error.message : "EXECUTION_UNAVAILABLE";
       return reply("Execução direta não confirmada: "+code+
@@ -199,6 +202,15 @@ export async function githubBridgeWriteStatus(message:string){
         (requested?.map(f=>f.path).join(", ")||"conforme plano")+
         ". Commit "+commit.sha+". Pull request em rascunho: "+pull.url+
         ". A pasta existe na branch do PR; não foi incorporada à branch principal.");
+  }
+  if(process.env.JARVIS_GITHUB_EXECUTION_MODE==="direct" && process.env.VERCEL_ENV==="preview"){
+    const problem=last.steps.find(step=>step.status==="failed"||step.status==="uncertain");
+    const committed=last.steps.find(step=>step.action.operation==="commit");
+    const requested=committed?.action.args.files as Array<{path:string}>|undefined;
+    return reply("Último plano GitHub: "+last.status+
+      ". Caminho solicitado: "+(requested?.map(f=>f.path).join(", ")||"indisponível")+
+      (problem ? ". Falha na etapa "+problem.action.operation+"; código "+(problem.error||"desconhecido") : "")+
+      ". Nenhum commit e PR completos foram confirmados nesta consulta. Não repita antes de verificar.");
   }
   const jobs=await bridgeStatus();
   if(!jobs.enabled||!("jobs" in jobs))return reply("Ponte n8n não está disponível. Nenhuma escrita confirmada.");
