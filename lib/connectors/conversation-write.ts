@@ -110,7 +110,8 @@ export async function githubBridgeWriteStatus(message:string){
   if(!last)return reply("Nenhuma proposta GitHub recente encontrada nesta sessão.");
   const jobs=await bridgeStatus();
   if(!jobs.enabled||!("jobs" in jobs))return reply("Ponte n8n não está disponível. Nenhuma escrita confirmada.");
-  const job=jobs.jobs.find(j=>j.workflow==="github_plan_execute"&&state.n8nBridge?.jobs.find(raw=>raw.id===j.id)?.payload.planId===last.id);
+  const entries=("jobs" in jobs && Array.isArray(jobs.jobs)) ? jobs.jobs : [];
+  const job=entries.find(j=>j.workflow==="github_plan_execute"&&state.n8nBridge?.jobs.find(raw=>raw.id===j.id)?.payload.planId===last.id);
   if(!job)return reply("Última proposta: "+last.status+". Nenhuma tarefa de escrita localizada na ponte n8n.");
   return reply("Tarefa de escrita GitHub "+job.id.slice(0,8)+": "+job.state+"."+
     (job.result?" Resultado: "+job.result:" O commit e o PR ainda não foram confirmados."));
