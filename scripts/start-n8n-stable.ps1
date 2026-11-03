@@ -20,6 +20,10 @@ function Confirm-StableUrl([string]$url,[string]$name) {
      $uri.AbsolutePath -ne "/" -or $uri.Query -or $uri.Fragment) {
   throw "Use somente a origem HTTPS estável, sem caminhos ou parâmetros, para $name."
  }
+ # Vercel deployment URLs rotate on new builds; require a project or custom alias.
+ if ($uri.Host -match "^jarvis-kiro-[a-z0-9]{7,}-umiversokiro[.]vercel[.]app$") {
+  throw "O endereco de $name parece um deployment temporario. Use o dominio estavel do ambiente."
+ }
  return $uri.GetLeftPart([UriPartial]::Authority)
 }
 $pre = Confirm-StableUrl $PreProductionUrl "pré-produção"
