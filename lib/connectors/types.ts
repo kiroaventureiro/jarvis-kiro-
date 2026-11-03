@@ -109,7 +109,7 @@ export type PersistentProject = {
 };
 export type VaultState = import("./workspace").WorkspaceState & {
   n8n?: { baseUrl: string; apiKey: string; connectedAt: string; verifiedAt: string | null };
-  n8nBridge?: { jobs: Array<{id:string;workflow:string;payload:Record<string,string>;state:"queued"|"leased"|"completed"|"failed";createdAt:string;leaseUntil?:number;result?:string;attempts:number}> };
+  n8nBridge?: { jobs: Array<{id:string;workflow:string;payload:Record<string,string>;state:"queued"|"leased"|"executing"|"completed"|"failed";createdAt:string;leaseUntil?:number;result?:string;attempts:number}> };
   voiceUsage?: import("../voice/ledger").VoiceUsageState;
   persistentProjects?: Record<string, PersistentProject>;
 
