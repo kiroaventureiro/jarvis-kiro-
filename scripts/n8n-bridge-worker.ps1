@@ -66,8 +66,13 @@ function Ensure-JarvisWorkflow {
   $workflowId = [string]$item.id
   $details = Invoke-RestMethod -Uri "$n8nApi/workflows/$workflowId" -Headers $n8nHeaders -TimeoutSec 20
   $node = @($details.nodes | Where-Object { $_.name -eq "Executar plano GitHub aprovado" })[0]
-  if (-not $node -or [string]$node.parameters.url -ne "$base/api/director/n8n-bridge/execute") {
-   throw "Workflow local com configuração diferente. Não foi alterado automaticamente."
+  if (-not $node -or [string]$node.type -ne "n8n-nodes-base.httpRequest" -or @($details.nodes).Count -ne 2) {
+   throw "O workflow local foi modificado fora da ponte Jarvis. Não sobrescrevi."
+  }
+  if ([string]$node.parameters.url -ne "$base/api/director/n8n-bridge/execute") {
+   if ($item.active) { Invoke-RestMethod -Uri "$n8nApi/workflows/$workflowId/deactivate" -Method Post -Headers $n8nHeaders -ContentType "application/json" -Body '{}' -TimeoutSec 20 | Out-Null }
+   Invoke-RestMethod -Uri "$n8nApi/workflows/$workflowId" -Method Put -Headers $n8nHeaders -ContentType "application/json" -Body $definition -TimeoutSec 30 | Out-Null
+   $item.active = $false
   }
  } else {
   $created = Invoke-RestMethod -Uri "$n8nApi/workflows" -Method Post -Headers $n8nHeaders -Body $definition -ContentType "application/json" -TimeoutSec 30
