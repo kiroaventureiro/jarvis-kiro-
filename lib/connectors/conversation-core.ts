@@ -24,6 +24,9 @@ const READ_PROVIDERS: Record<Provider, { aliases: string[]; summary: string }> =
         "commit",
         "branch",
         "branches",
+        "arquivos",
+        "pastas",
+        "diretorios",
       ],
       summary: "Repositórios, código e commits",
     },
@@ -270,13 +273,13 @@ export async function conversationalConnectorRead(
                 {},
                 signal,
               );
-              const rows = Array.isArray(detail.data)
-                ? detail.data.slice(0, 5)
-                : [];
+              const list = detailOperation === "tree" && detail.data && typeof detail.data === "object" ? (detail.data as {files?:unknown}).files : detail.data;
+              const rows = Array.isArray(list) ? list.slice(0, 25) : [];
               const names = rows.flatMap((item) => {
                 if (!item || typeof item !== "object") return [];
                 const entry = item as Record<string, unknown>;
                 const label =
+                  typeof entry.path === "string" ? entry.path :
                   typeof entry.message === "string"
                     ? entry.message
                     : typeof entry.title === "string"
