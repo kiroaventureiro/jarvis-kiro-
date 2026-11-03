@@ -97,7 +97,7 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
   if(!main||!sha) return reply("Não foi possível confirmar a branch principal e o commit base.");
   const branch="jk/arquivo-"+randomUUID().slice(0,8);
   const description=request.kind==="create_folder"?"Criar a pasta "+request.path.slice(0,-9):"Criar o arquivo "+request.path;
-  if(!await workerReady())return reply("O GitHub está autorizado, mas o executor n8n não está ativo nesta mesma versão do Jarvis. Não vou pedir aprovação para uma escrita que não consigo encaminhar.");
+  if(process.env.JARVIS_GITHUB_EXECUTION_MODE!=="direct" && !await workerReady())return reply("O GitHub está autorizado, mas o executor n8n não está ativo nesta versão. Não vou solicitar aprovação sem um executor disponível.");
   const plan=await connectors.plan(description+" em "+resource.name,[
     {provider:"github",resource:resource.id,operation:"branch",args:{branch,baseSha:sha}},
     {provider:"github",resource:resource.id,operation:"commit",args:{branch,baseSha:sha,path:request.path,content:request.content,message:"feat: "+(request.kind==="create_folder"?"criar pasta ":"adicionar arquivo ")+(request.kind==="create_folder"?request.path.slice(0,-9):request.path)}},
@@ -137,6 +137,32 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
     return reply("Não encontrei uma única proposta recente de escrita autorizável nesta sessão. Nenhuma alteração foi executada.");
   const plan=matches[0];
   if(plan.status==="draft")await connectors.approve(plan.id,plan.digest,"APROVAR "+plan.digest.slice(0,8),sessionId);
+  if(process.env.JARVIS_GITHUB_EXECUTION_MODE==="direct" && process.env.VERCEL_ENV==="preview") {
+    try {
+      // Execute the same owner-approved GitHub connector plan inside the existing
+      // Vercel function. No local n8n worker, GitHub PAT or extra host is needed.
+      let result=await connectors.execute(plan.id,plan.digest,sessionId);
+      for(let i=0;i<3&&result.status==="waiting";i++)
+        result=await connectors.execute(plan.id,plan.digest,sessionId);
+      const step=result.steps.find(s=>s.action.operation==="pull");
+      const pr=step?.result as {url?:string}|undefined;
+      const commit=result.steps.find(s=>s.action.operation==="commit")?.result as {sha?:string}|undefined;
+      const path=result.steps.find(s=>s.action.operation==="commit")?.action.args.path;
+      if(result.status==="done" && typeof pr?.url==="string" &&
+         pr.url.startsWith("https://github.com/") && typeof commit?.sha==="string") {
+        return reply("Confirmado no GitHub: "+
+          (typeof path==="string"?path+"; ":"")+
+          "commit "+commit.sha+"; PR em rascunho "+pr.url+
+          ". A branch principal não foi alterada.");
+      }
+      return reply("O GitHub recebeu a execução, mas ainda não há confirmação completa. Status do plano: "+
+        result.status+". Consulte o status da escrita antes de repetir; não criarei outra tarefa automaticamente.");
+    } catch(error) {
+      const code=error instanceof Error ? error.message : "EXECUTION_UNAVAILABLE";
+      return reply("Execução direta não confirmada: "+code+
+        ". Consulte o status do GitHub antes de repetir a operação.");
+    }
+  }
   try {
     const job=await enqueueApprovedGithubPlan(plan.id,sessionId);
     return reply("Autorização registrada. Enviei ao n8n a tarefa GitHub "+job.id.slice(0,8)+
