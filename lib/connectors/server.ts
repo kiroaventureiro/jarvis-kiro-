@@ -91,12 +91,19 @@ export async function answerNativeRequest(
     return arrivalBriefing(connectorStore);
   }
   const { prepareGitHubWrite, approveGitHubWrite, githubBridgeWriteStatus } = await import("./conversation-write");
-  const bridgeReply=await githubBridgeWriteStatus(message);
-  if(bridgeReply)return bridgeReply;
-  const approvalReply = await approveGitHubWrite(message, history);
-  if (approvalReply) return approvalReply;
-  const writeReply = await prepareGitHubWrite(message, history);
-  if (writeReply) return writeReply;
+  try {
+    const bridgeReply=await githubBridgeWriteStatus(message);
+    if(bridgeReply)return bridgeReply;
+    const approvalReply = await approveGitHubWrite(message, history);
+    if (approvalReply) return approvalReply;
+    const writeReply = await prepareGitHubWrite(message, history);
+    if (writeReply) return writeReply;
+  } catch (error) {
+    const code=error instanceof ConnectorError?error.code:"WRITE_EXECUTION_UNAVAILABLE";
+    return {text:"Não consegui concluir a etapa de escrita ou aprovação: "+code+
+      ". A alteração não está confirmada. Verifique o estado da tarefa antes de repetir a operação.",
+      model:"jk-write-diagnostic",provider:"local_operational" as const,usage:null};
+  }
   const workspaceIntent=workspaceReadIntent(message);
   if(workspaceIntent) {
     let text="";
