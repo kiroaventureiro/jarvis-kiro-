@@ -91,6 +91,12 @@ Write-Host "Jarvis n8n bridge: polling iniciado, sem publicar portas locais."
 while ($true) {
  try {
   $response = Invoke-RestMethod -Uri "$base/api/director/n8n-bridge" -Method Get -Headers $headers -TimeoutSec 25
+  if ($response.protocolVersion -ne 2) {
+   Write-Host "ERRO: este endereço Jarvis não contém o executor n8n atualizado. Configure -JarvisUrl com a URL da mesma versão Preview que você abriu no navegador." -ForegroundColor Red
+   Write-Host "Endereço utilizado: $base"
+   return
+  }
+  if (-not $script:identified) { Write-Host "Jarvis executor compatível, build $($response.build), endpoint $base"; $script:identified=$true }
   if ($null -ne $response.job) {
    $job = $response.job
    $ok = $false
