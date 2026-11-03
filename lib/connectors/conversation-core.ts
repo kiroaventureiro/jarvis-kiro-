@@ -54,7 +54,7 @@ function normalize(input: string) {
     .toLowerCase();
 }
 const readIntent =
-  /\b(consult|verifi[cq]|analis|diagnosti[cq]|listar|liste|mostr|entre|entrar|acesse|acessar|abra|abrir|pesquis|status|situacao|meus projetos|minhas conexoes)\w*/;
+  /\b(consult|verifi[cq]|analis|diagnosti[cq]|listar|liste|mostr|entre|entrar|acesse|acessar|abra|abrir|pesquis|status|situacao|meus projetos|minhas conexoes|arquivos|pastas|estrutura)\w*/;
 /** Convert provider responses into bounded, non-sensitive observations. Never send raw rows to speech. */
 function observation(provider: Provider, data: unknown): string {
   const items = Array.isArray(data) ? data : null;
@@ -133,7 +133,7 @@ export async function conversationalConnectorRead(
     READ_PROVIDERS[p].aliases.some((alias) => n.includes(alias)),
   );
   const detailedGitHub =
-    /\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes)\b/.test(
+    /\b(commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes|arquivos|pastas|estrutura|diretorios)\b/.test(
       n,
     );
   const all =
@@ -258,8 +258,10 @@ export async function conversationalConnectorRead(
           verifiedNames.push(resource.name);
           let finding = observation(provider, checked.data);
           if (provider === "github" && detailedGitHub) {
-            const detailOperation = /\b(branch|branches)\b/.test(n)
-              ? "branches"
+            const detailOperation = /\b(arquivos|pastas|estrutura|diretorios)\b/.test(n)
+              ? "tree"
+              : /\b(branch|branches)\b/.test(n)
+                ? "branches"
               : /\b(issues|problemas abertos)\b/.test(n)
                 ? "issues"
                 : /\b(pulls|pull requests)\b/.test(n)
@@ -369,7 +371,7 @@ export async function conversationalConnectorRead(
         "."
       : ".";
     const focused =
-      /commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes|detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnosti[cq]|analis/.test(
+      /commits?|branches|issues|pulls|pull requests|historico|alteracoes recentes|arquivos|pastas|estrutura|diretorios|detalh|aprofund|resultado|encontr|problema|erro|situacao|diagnosti[cq]|analis/.test(
         n,
       );
     const selectedFindings = focused ? findings.slice(0, 3) : [];
