@@ -93,7 +93,7 @@ export async function answerNativeRequest(
   const { prepareGitHubWrite, approveGitHubWrite } = await import("./conversation-write");
   const approvalReply = await approveGitHubWrite(message, history);
   if (approvalReply) return approvalReply;
-  const writeReply = await prepareGitHubWrite(message);
+  const writeReply = await prepareGitHubWrite(message, history);
   if (writeReply) return writeReply;
   const workspaceIntent=workspaceReadIntent(message);
   if(workspaceIntent) {
