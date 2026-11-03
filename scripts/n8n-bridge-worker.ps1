@@ -55,7 +55,8 @@ $definition = @'
   "connections":{"Receber tarefa Jarvis":{"main":[[{"node":"Executar plano GitHub aprovado","type":"main","index":0}]]}},
   "settings":{"executionOrder":"v1","saveDataSuccessExecution":"none","saveDataErrorExecution":"none","saveManualExecutions":false}
 }
-'@.Replace("__JARVIS_URL__", $base)
+'@
+$definition = $definition.Replace("__JARVIS_URL__", $base)
 $workflowName = "Jarvis Kiro - GitHub aprovado (ponte v1)"
 function Ensure-JarvisWorkflow {
  $list = Invoke-RestMethod -Uri "$n8nApi/workflows?limit=100" -Headers $n8nHeaders -TimeoutSec 20
