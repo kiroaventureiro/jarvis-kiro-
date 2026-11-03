@@ -28,3 +28,8 @@ test("recognizes a spoken directory request",()=>{
 test("rejects directory traversal",()=>{
   assert.equal(parse("Crie a pasta ../segredos no projeto Jarvis Kiro"),null);
 });
+
+test("understands folder requests when GitHub is in conversation history",()=>{
+ const result=parse("Jarvis, crie uma pasta chamada testes-kiro", "Estávamos trabalhando no GitHub do projeto Jarvis Kiro");
+ assert.deepEqual(result,{kind:"create_folder",path:"testes-kiro/.gitkeep",content:""});
+});
