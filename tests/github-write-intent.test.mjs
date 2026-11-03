@@ -4,7 +4,7 @@ import fs from "node:fs";
 import ts from "typescript";
 const source=fs.readFileSync("lib/connectors/write-intent.ts","utf8");
 const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
-const {parseGitHubWriteIntent:parse}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
+const {parseGitHubWriteIntent:parse,isConversationalGitHubApproval:approval}=await import("data:text/javascript;base64,"+Buffer.from(js).toString("base64"));
 test("recognizes explicit Portuguese GitHub file creation",()=>{
   const intent=parse("Jarvis, crie no GitHub do projeto Jarvis Kiro um arquivo docs/ensaio.md com o conteúdo: teste");
   assert.deepEqual(intent,{kind:"create_file",path:"docs/ensaio.md",content:"teste"});
@@ -37,4 +37,11 @@ test("understands folder requests when GitHub is in conversation history",()=>{
 test("recognizes a repository-only spoken request",()=>{
  const intent=parse("Crie uma pasta chamada teste-voz no repositório");
  assert.deepEqual(intent,{kind:"create_folder",path:"teste-voz/.gitkeep",content:""});
+});
+
+test("voice approvals are recognized with Jarvis prefix and natural Portuguese",()=>{
+ for(const value of ["Jarvis, eu aprovo","Aprovo","Jarvis, pode executar","Sim, autorizo","APROVAR abcdef12"])
+  assert.equal(approval(value),true,value);
+ for(const value of ["sim","pode ser","não autorizo"])
+  assert.equal(approval(value),false,value);
 });
