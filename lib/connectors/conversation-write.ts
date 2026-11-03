@@ -58,7 +58,7 @@ export async function prepareGitHubWrite(message:string) {
 
 export async function approveGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
   const match=/^(?:jarvis[,!:.]?\s*)?aprovar\s+([a-f0-9]{8})[.!\s]*$/i.exec(message.trim());
-  const plain=/^(?:sim[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar)[.! ]*$/i.test(message.trim());
+  const plain=/^(?:(?:sim|eu)[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar|pode fazer|pode prosseguir|esta aprovado|está aprovado|aprovado)[.! ]*$/i.test(message.trim());
   if(!match&&!plain)return null;
   const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
   const prior=history.slice(-6).reverse().find(turn=>turn.role==="assistant"&&/\bAPROVAR\s+[a-f0-9]{8}\b/i.test(turn.content));
