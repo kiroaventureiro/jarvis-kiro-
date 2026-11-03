@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, createHmac, timingSafeEqual, randomUUID } from "node:crypto";
 import { connectorStore } from "../connectors/server";
 type Job={id:string;workflow:string;payload:Record<string,string>;state:"queued"|"leased"|"executing"|"completed"|"failed";createdAt:string;leaseUntil?:number;result?:string;attempts:number};
-type Queue={jobs:Job[]};
+type Queue={jobs:Job[];lastWorkerPollAt?:number};
 function authorizedSecret(value:string|null){const secret=process.env.JARVIS_N8N_BRIDGE_SECRET||"";if(secret.length<40||!value?.startsWith("Bearer "))return false;const token=value.slice(7);const a=createHash("sha256").update(token).digest(),b=createHash("sha256").update(secret).digest();return timingSafeEqual(a,b);}
 export function bridgeAuth(header:string|null){return authorizedSecret(header);}
 export function bridgeEnabled(){return connectorStore.configured()&&!!process.env.JARVIS_N8N_BRIDGE_SECRET&&process.env.JARVIS_N8N_BRIDGE_SECRET.length>=40;}
