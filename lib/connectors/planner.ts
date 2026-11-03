@@ -15,14 +15,31 @@ export class DevelopmentPlanner {
   ) {}
   private async binding(projectId: string) {
     const state = await this.service.options.store.read();
-    const github = state.connections.github?.resources.find(
-        (r) => r.kiroProject === projectId,
-      ),
-      vercel = state.connections.vercel?.resources.find(
-        (r) => r.kiroProject === projectId,
-      );
-    if (!this.projects.some((p) => p.id === projectId) || !github)
-      throw new ConnectorError("PROJECT_BINDING_REQUIRED", 409);
+    if (!this.projects.some((p) => p.id === projectId))
+      throw new ConnectorError("PROJECT_NOT_FOUND", 404);
+    const repositories = state.connections.github?.resources || [];
+    const deployments = state.connections.vercel?.resources || [];
+    // Prefer an explicit legacy link, but no longer require one. Resolve a unique
+    // provider-visible project name; never guess when multiple matches exist.
+    const aliases: Record<string, string[]> = {
+      "jarvis-kiro": ["jarvis-kiro", "jarvis-kiro-"],
+      "kiro-editor": ["kiro-editor"],
+      "kiro-gestao": ["kiro-gest-ao", "kiro-gestao"],
+      "universo-kiro": ["site-guardioes-origem"],
+    };
+    const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const keys = aliases[projectId] || [projectId];
+    const findUnique = <T extends { id: string; name: string; kiroProject?: string }>(items: T[]) => {
+      const explicit = items.filter(r => r.kiroProject === projectId);
+      if (explicit.length === 1) return explicit[0];
+      if (explicit.length > 1) throw new ConnectorError("PROJECT_AMBIGUOUS", 409);
+      const matches = items.filter(r => keys.some(k => slug(r.name.split("/").at(-1) || "") === slug(k)));
+      if (matches.length > 1) throw new ConnectorError("PROJECT_AMBIGUOUS", 409);
+      return matches[0];
+    };
+    const github = findUnique(repositories);
+    const vercel = findUnique(deployments);
+    if (!github) throw new ConnectorError("PROJECT_NOT_AUTHORIZED", 403);
     return { github, vercel };
   }
   async investigate(projectId: string, paths: string[] = []) {
