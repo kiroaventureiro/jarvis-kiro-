@@ -6,6 +6,7 @@ import { hash } from "./security";
 import { connectors, connectorStore } from "./server";
 import { requestedProject, selectProjectResources } from "./project-selection";
 import { parseGitHubWriteIntent } from "./write-intent";
+import { enqueueApprovedGithubPlan, status as bridgeStatus } from "../n8n/bridge";
 export async function prepareGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
   const previous=history.slice(-8).reverse().find(t=>t.role==="user"&&/github|git hub|jarvis kiro|repositori|projeto/i.test(t.content));
   const contextual=previous?.content||"";
@@ -75,7 +76,7 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
   const state=await connectorStore.read();
   const digestCode=match?.[1]?.toLowerCase() || (plain ? previousCode?.toLowerCase() : undefined);
   const pending=state.plans.filter(p=>
-    p.status==="draft" &&
+    ["draft","approved"].includes(p.status) &&
     p.conversationSession===sessionId &&
     p.expiresAt>Date.now() &&
     p.createdAt>Date.now()-300000 &&
@@ -85,11 +86,32 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
   if(matches.length!==1)
     return reply("Não encontrei uma única proposta recente de escrita autorizável nesta sessão. Nenhuma alteração foi executada.");
   const plan=matches[0];
-  await connectors.approve(plan.id,plan.digest,"APROVAR "+plan.digest.slice(0,8),sessionId);
-  const completed=await connectors.execute(plan.id,plan.digest,sessionId);
-  const failed=completed.steps.find(step=>step.status==="failed"||step.status==="uncertain");
-  if(failed)return reply("Execução GitHub "+completed.status+" na etapa "+failed.action.operation+" ("+(failed.error||"erro não identificado")+"). Verifique o registro antes de repetir a alteração.");
-  const pr=completed.steps.find(step=>step.action.operation==="pull")?.result as {url?:string}|undefined;
-  return reply("Execução GitHub: "+completed.status+"."+(pr?.url?" Pull request: "+pr.url:"")+
-    (completed.status==="waiting"?" O plano ainda está em andamento.":""));
+  if(plan.status==="draft")await connectors.approve(plan.id,plan.digest,"APROVAR "+plan.digest.slice(0,8),sessionId);
+  try {
+    const job=await enqueueApprovedGithubPlan(plan.id,sessionId);
+    return reply("Autorização registrada. Enviei ao n8n a tarefa GitHub "+job.id.slice(0,8)+
+      " ("+job.state+"). A criação ainda não está concluída. Pergunte 'status da escrita no GitHub' para conferir commit e PR.");
+  } catch {
+    return reply("A operação foi autorizada, mas a ponte n8n não recebeu a tarefa. Nenhuma escrita foi confirmada. Verifique a conexão n8n.");
+  }
+}
+
+export async function githubBridgeWriteStatus(message:string){
+  const n=message.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+  if(!(/\b(status|resultado|terminou|concluiu|conseguiu|andamento)\b/.test(n)&&
+    /\b(github|git hub|escrita|pasta|commit|repositorio|criacao|n8n)\b/.test(n)))return null;
+  const reply=(text:string)=>({text,model:"jk-github-bridge",provider:"local_operational" as const,usage:null});
+  const session=(await cookies()).get(cookieName)?.value;
+  if(!session)return reply("Sessão expirada. Não consigo consultar o andamento.");
+  const sessionId=hash(session);
+  const state=await connectorStore.read();
+  const plans=state.plans.filter(p=>p.conversationSession===sessionId&&p.steps.some(step=>step.action.provider==="github")).sort((a,b)=>b.createdAt-a.createdAt);
+  const last=plans[0];
+  if(!last)return reply("Nenhuma proposta GitHub recente encontrada nesta sessão.");
+  const jobs=await bridgeStatus();
+  if(!jobs.enabled||!("jobs" in jobs))return reply("Ponte n8n não está disponível. Nenhuma escrita confirmada.");
+  const job=jobs.jobs.find(j=>j.workflow==="github_plan_execute"&&state.n8nBridge?.jobs.find(raw=>raw.id===j.id)?.payload.planId===last.id);
+  if(!job)return reply("Última proposta: "+last.status+". Nenhuma tarefa de escrita localizada na ponte n8n.");
+  return reply("Tarefa de escrita GitHub "+job.id.slice(0,8)+": "+job.state+"."+
+    (job.result?" Resultado: "+job.result:" O commit e o PR ainda não foram confirmados."));
 }
