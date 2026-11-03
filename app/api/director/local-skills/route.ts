@@ -3,6 +3,7 @@ import { authorized } from "../../../../lib/auth";
 import { runLocalSkill } from "../../../../lib/jarvis-local-skills";
 import { CODEX_SKILLS, CODEX_SKILL_SOURCE } from "../../../../lib/cognitive/codex-skill-catalog";
 import localSkills from "../../../../config/jarvis-local-skills.json";
+import {CODEX_AGENT_ROLES,CODEX_AGENT_SOURCE} from "../../../../lib/cognitive/codex-agent-roles";
 export const dynamic="force-dynamic";
 export async function POST(request:Request){
  if(!(await authorized()))return NextResponse.json({error:"Não autorizado"},{status:401});
@@ -26,13 +27,15 @@ export async function POST(request:Request){
 export async function GET(){
  if(!(await authorized()))return NextResponse.json({error:"Não autorizado"},{status:401});
  return NextResponse.json({
-  version:2,
+  version:3,
   native:localSkills.skills.map(skill=>({...skill,kind:"local_operation",available:true})),
   engineering:CODEX_SKILLS.map(({id,group,description})=>({
    id,group,description,kind:"contextual_guidance",available:true,
    independentExecution:false
   })),
   engineeringSource:CODEX_SKILL_SOURCE,
-  notes:"Orientação contextual ativa; execução depende de conectores e permissões, não é um scanner ou agente independente."
+  specialistAgents:CODEX_AGENT_ROLES.map(({id,plugin,purpose,sourcePath})=>({id,plugin,purpose,sourcePath,kind:"contextual_agent_role",available:true,independentExecution:false,requiresToolAuthorization:true})),
+  agentSource:CODEX_AGENT_SOURCE,
+  notes:"Skills e perfis especializados ativos como orientação contextual. Agentes independentes, scanners e mutações exigem executores reais, escopos e aprovação separados."
  },{headers:{"Cache-Control":"no-store"}});
 }
