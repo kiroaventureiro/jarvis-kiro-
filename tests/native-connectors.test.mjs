@@ -81,7 +81,8 @@ function fixture() {
     calls = [],
     branches = new Map([["jk/existing", A]]);
   let ready = true,
-    failWrite = false;
+    failWrite = false,
+    authorizedRepos = [{ id: 101, full_name: "owner/project", default_branch: "main" }];
   const call = async (p, c, url, o = {}) => {
     calls.push({ p, url, method: o.method || "GET", body: o.body });
     if (
@@ -93,10 +94,7 @@ function fixture() {
       throw new ConnectorError("UPSTREAM_UNAVAILABLE", 502);
     if (p === "github") {
       if (url === "/user") return { login: "owner" };
-      if (url.startsWith("/user/repos"))
-        return [
-          { id: 101, full_name: "owner/project", default_branch: "main" },
-        ];
+      if (url.startsWith("/user/repos")) return authorizedRepos;
       if (url.endsWith("/check-runs?per_page=100"))
         return {
           check_runs: [
@@ -217,6 +215,7 @@ function fixture() {
     branches,
     setReady: (v) => (ready = v),
     setFailWrite: (v) => (failWrite = v),
+    setAuthorizedRepos: (items) => (authorizedRepos = items),
   };
 }
 async function setup(f, providers = ["github"]) {
