@@ -101,7 +101,12 @@ export class GeminiLiveVoiceAdapter {
   }
   start() {
     if (this.enabled) {
-      if (this.sessionActive && this.ready && !this.audioStarted) void this.startCapture();
+      if (!this.sessionActive) {
+        this.sessionActive = true;
+        this.attempts = 0;
+        this.emit("resuming", "Retomando a conexão Gemini sem desligar o áudio infinito…");
+        void this.connect();
+      } else if (this.ready && !this.audioStarted) void this.startCapture();
       return;
     }
     if (!this.options.desktopAudioAllowed()) { this.emit("off", "Esta experiência de áudio está disponível somente no computador. Use o teclado neste aparelho."); return; }
@@ -343,5 +348,13 @@ export class GeminiLiveVoiceAdapter {
     this.transcript = ""; this.transcriptReady = false; this.pending = null; this.outputAllowed = false; this.playing = false; this.processing = false; this.inputChunks = 0; this.outputChunks = 0; this.usedTurn = false; this.seen.clear();
     this.emit("off", message);
   }
-  private fail(message: string) { this.options.onSpeechUnavailable(); this.stop(message); this.emit("error", message); }
+  private fail(message: string) {
+    const keepSelected = this.enabled;
+    this.options.onSpeechUnavailable();
+    this.stop(message);
+    // A transport failure must not change the user's infinite-listening choice.
+    // No automatic paid retry beyond the existing connection budget.
+    if (keepSelected) this.enabled = true;
+    this.emit("error", message + (keepSelected ? " Áudio infinito continua selecionado; toque nele para reconectar." : ""));
+  }
 }
