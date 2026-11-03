@@ -63,19 +63,23 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
   const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
   const prior=history.slice(-6).reverse().find(turn=>turn.role==="assistant"&&/\bAPROVAR\s+[a-f0-9]{8}\b/i.test(turn.content));
   const previousCode=/\bAPROVAR\s+([a-f0-9]{8})\b/i.exec(prior?.content||"")?.[1];
-  const digestCode=match?.[1]?.toLowerCase() || (plain ? previousCode?.toLowerCase() : undefined);
-  if(!digestCode)return reply("Não localizei uma proposta com código nesta conversa. Nada foi executado.");
-
   const session=(await cookies()).get(cookieName)?.value;
-  if(!session)return reply("Sessão do proprietário ausente. Nada foi executado.");
-  const state=await connectorStore.read();
-  const matches=state.plans.filter(p=>p.digest.startsWith(digestCode)&&p.status==="draft"&&p.expiresAt>Date.now());
-  if(matches.length!==1)return reply("Não encontrei uma proposta única e válida. Nada foi executado.");
-  const plan=matches[0];
-  if(plan.steps.some(step=>step.action.provider!=="github"))
-    return reply("Este plano inclui outras plataformas e precisa de aprovação separada.");
+  if(!session)return reply("Sessão do proprietário ausente. Nenhuma alteração foi executada.");
   const sessionId=hash(session);
-  await connectors.approve(plan.id,plan.digest,"APROVAR "+digestCode,sessionId);
+  const state=await connectorStore.read();
+  const digestCode=match?.[1]?.toLowerCase() || (plain ? previousCode?.toLowerCase() : undefined);
+  const pending=state.plans.filter(p=>
+    p.status==="draft" &&
+    p.conversationSession===sessionId &&
+    p.expiresAt>Date.now() &&
+    p.createdAt>Date.now()-300000 &&
+    p.steps.every(step=>step.action.provider==="github")
+  );
+  const matches=digestCode?pending.filter(p=>p.digest.startsWith(digestCode)):plain?pending:[];
+  if(matches.length!==1)
+    return reply("Não encontrei uma única proposta recente de escrita autorizável nesta sessão. Nenhuma alteração foi executada.");
+  const plan=matches[0];
+  await connectors.approve(plan.id,plan.digest,"APROVAR "+plan.digest.slice(0,8),sessionId);
   const completed=await connectors.execute(plan.id,plan.digest,sessionId);
   const pr=completed.steps.find(step=>step.action.operation==="pull")?.result as {url?:string}|undefined;
   return reply("Execução GitHub: "+completed.status+"."+(pr?.url?" Pull request: "+pr.url:"")+
