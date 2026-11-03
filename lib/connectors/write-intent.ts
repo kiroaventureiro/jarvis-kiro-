@@ -8,10 +8,15 @@ export function parseGitHubWriteIntent(message: string, context = ""): GitHubWri
   if (!/\b(crie|cria|criar|adicione|adiciona|adicionar|escreva|escrever|monte|montar)\b/.test(folded)) return null;
   if (!/\b(github|git hub|kit hub|repositorios?|projeto|jarvis\s+kiro|javaski)\b/.test((message+" "+context).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase())) return null;
 
-  const folder = /\b(?:pasta|diret[oó]rio)\s+(?:chamad[ao]\s+|com\s+nome\s+)?["']?([a-zA-Z0-9_.-]+(?:\/[a-zA-Z0-9_.-]+)*)["']?/i.exec(message);
+  // Preserve multiword names spoken in Portuguese, e.g. "JavaScript Texts".
+  // Stop at repository/project context, not at the first whitespace.
+  const folder = /\b(?:pasta|diret[oó]rio)\s+(?:chamad[ao]\s+|com\s+(?:o\s+)?nome\s+)?(?:"([^"]+)"|'([^']+)'|(.+?))(?=\s+(?:no|na|do|da|para\s+o|para\s+a)\s+(?:reposit[oó]rio|projeto|github|git\s*hub|jarvis\b)|[.!?;,]|$)/i.exec(message);
   if (folder) {
-    const name = folder[1].replace(/\/+$/, "");
-    if (!name || name === "." || name === ".." || name.split("/").some(p => p === "." || p === "..")) return null;
+    const name = (folder[1] || folder[2] || folder[3] || "").trim().replace(/\/+$/, "");
+    if (!name || name.length > 180 || name === "." || name === ".." ||
+        name.split("/").some(p => !p.trim() || p.trim() === "." || p.trim() === "..") ||
+        /[\\\x00-\x1f?#%]/.test(name) ||
+        name.startsWith("/")) return null;
     return { kind: "create_folder", path: name + "/.gitkeep", content: "" };
   }
 
