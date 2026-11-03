@@ -79,6 +79,6 @@ export async function lease(){
 export async function finish(id:string,ok:boolean,result:string){
  if(!bridgeEnabled())throw Error("BRIDGE_NOT_CONFIGURED");
  if(!/^[0-9a-f-]{36}$/.test(id)||result.length>2000)throw Error("INVALID_RESULT");
- return connectorStore.update(s=>{const q=queue(s),job=q.jobs.find(j=>j.id===id);if(!job||job.state!=="leased"||job.workflow==="github_plan_execute")throw Error("JOB_NOT_LEASED");job.state=ok?"completed":"failed";job.result=result.replace(/[\r\n\t]/g," ").slice(0,2000);s.n8nBridge=q;return {id:job.id,state:job.state};});
+ return connectorStore.update(s=>{const q=queue(s),job=q.jobs.find(j=>j.id===id);if(!job||job.state!=="leased"||(job.workflow==="github_plan_execute"&&ok))throw Error("JOB_NOT_LEASED");job.state=ok?"completed":"failed";job.result=result.replace(/[\r\n\t]/g," ").slice(0,2000);s.n8nBridge=q;return {id:job.id,state:job.state};});
 }
 export async function status(){if(!bridgeEnabled())return {enabled:false};const q=queue(await connectorStore.read());return {enabled:true,jobs:q.jobs.slice(-30).map(j=>({id:j.id,workflow:j.workflow,state:j.state,createdAt:j.createdAt,attempts:j.attempts,result:j.result||null}))};}
