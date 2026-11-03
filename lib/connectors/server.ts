@@ -90,7 +90,9 @@ export async function answerNativeRequest(
     const { arrivalBriefing } = await import("./arrival-briefing");
     return arrivalBriefing(connectorStore);
   }
-  const { prepareGitHubWrite } = await import("./conversation-write");
+  const { prepareGitHubWrite, approveGitHubWrite } = await import("./conversation-write");
+  const approvalReply = await approveGitHubWrite(message);
+  if (approvalReply) return approvalReply;
   const writeReply = await prepareGitHubWrite(message);
   if (writeReply) return writeReply;
   const workspaceIntent=workspaceReadIntent(message);
