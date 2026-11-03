@@ -31,6 +31,7 @@ function handler(authenticated, configured = true) {
       ]}}},
     };
     if (id.endsWith("/agent-transport-contract")) return {AGENT_TRANSPORT:{enabled:false,allowRemoteExecution:false}};
+    if (id.endsWith("/agent-transport-auth")) return {sourceSecret:()=>null};
     throw Error("unexpected import: "+id);
   };
   vm.runInNewContext(ts.transpileModule(route, {
