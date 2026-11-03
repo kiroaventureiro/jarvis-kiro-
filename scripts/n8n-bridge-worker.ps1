@@ -3,6 +3,7 @@ param(
  [Parameter(Mandatory=$true)][string]$BridgeSecret,
  [Parameter(Mandatory=$true)][string]$N8nApiKey,
  [int]$IntervalSeconds = 15,
+ [ValidateSet("preproduction","production")][string]$Environment = "preproduction",
  [string]$VercelBypass = $env:JARVIS_VERCEL_BYPASS
 )
 $ErrorActionPreference = "Stop"
@@ -13,7 +14,8 @@ $headers = @{ Authorization = "Bearer $BridgeSecret" }
 if ($VercelBypass) { $headers["x-vercel-protection-bypass"] = $VercelBypass }
 $n8nHeaders = @{ "X-N8N-API-KEY" = $N8nApiKey }
 $n8nApi = "http://127.0.0.1:5678/api/v1"
-$webhook = "http://127.0.0.1:5678/webhook/jarvis-kiro-approved-github-v1"
+$workflowPath = "jarvis-kiro-approved-github-$Environment-v2"
+$webhook = "http://127.0.0.1:5678/webhook/$workflowPath"
 
 # A workflow running in the local n8n makes the HTTPS callback to Jarvis.
 # The workflow stores neither GitHub credentials nor the bridge secret.
@@ -57,7 +59,9 @@ $definition = @'
 }
 '@
 $definition = $definition.Replace("__JARVIS_URL__", $base)
-$workflowName = "Jarvis Kiro - GitHub aprovado (ponte v1)"
+$definition = $definition.Replace("Jarvis Kiro - GitHub aprovado (ponte v1)", "Jarvis Kiro - GitHub aprovado ($Environment)")
+$definition = $definition.Replace("jarvis-kiro-approved-github-v1", $workflowPath)
+$workflowName = "Jarvis Kiro - GitHub aprovado ($Environment)"
 function Ensure-JarvisWorkflow {
  $list = Invoke-RestMethod -Uri "$n8nApi/workflows?limit=100" -Headers $n8nHeaders -TimeoutSec 20
  $existing = @($list.data | Where-Object { $_.name -eq $workflowName })
@@ -92,11 +96,16 @@ while ($true) {
  try {
   $response = Invoke-RestMethod -Uri "$base/api/director/n8n-bridge" -Method Get -Headers $headers -TimeoutSec 25
   if ($response.protocolVersion -ne 2) {
-   Write-Host "ERRO: este endereço Jarvis não contém o executor n8n atualizado. Configure -JarvisUrl com a URL da mesma versão Preview que você abriu no navegador." -ForegroundColor Red
+   Write-Host "ERRO: este endereço Jarvis não contém o executor n8n atualizado. Configure -JarvisUrl com o domínio estável configurado para este ambiente." -ForegroundColor Red
    Write-Host "Endereço utilizado: $base"
    return
   }
-  if (-not $script:identified) { Write-Host "Jarvis executor compatível, build $($response.build), endpoint $base"; $script:identified=$true }
+  $expectedDeployment = if ($Environment -eq "production") { "production" } else { "preview" }
+  if ($response.deploymentEnvironment -ne $expectedDeployment) {
+   Write-Host "ERRO: ambiente incorreto para $Environment. Esperado: $expectedDeployment; recebido: $($response.deploymentEnvironment)." -ForegroundColor Red
+   return
+  }
+  if (-not $script:identified) { Write-Host "Jarvis executor compatível ($Environment), build $($response.build), endereço estável $base"; $script:identified=$true }
   if ($null -ne $response.job) {
    $job = $response.job
    $ok = $false
