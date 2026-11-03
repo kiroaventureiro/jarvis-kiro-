@@ -25,12 +25,13 @@ export async function prepareGitHubWrite(message:string) {
   const sha=(commits.data as Array<{sha?:string}>)[0]?.sha;
   if(!main||!sha) return reply("Não foi possível confirmar a branch principal e o commit base.");
   const branch="jk/arquivo-"+randomUUID().slice(0,8);
-  const plan=await connectors.plan("Criar "+request.path+" em "+resource.name,[
+  const description=request.kind==="create_folder"?"Criar a pasta "+request.path.slice(0,-9):"Criar o arquivo "+request.path;
+  const plan=await connectors.plan(description+" em "+resource.name,[
     {provider:"github",resource:resource.id,operation:"branch",args:{branch,baseSha:sha}},
-    {provider:"github",resource:resource.id,operation:"commit",args:{branch,baseSha:sha,path:request.path,content:request.content,message:"feat: adicionar "+request.path}},
-    {provider:"github",resource:resource.id,operation:"pull",args:{branch,base:main,title:"Adicionar "+request.path,body:"Alteração solicitada pelo proprietário; revisar antes de merge."}}
+    {provider:"github",resource:resource.id,operation:"commit",args:{branch,baseSha:sha,path:request.path,content:request.content,message:"feat: "+(request.kind==="create_folder"?"criar pasta ":"adicionar arquivo ")+(request.kind==="create_folder"?request.path.slice(0,-9):request.path)}},
+    {provider:"github",resource:resource.id,operation:"pull",args:{branch,base:main,title:description,body:"Alteração solicitada pelo proprietário; revisar antes de merge."}}
   ]);
-  return {text:"Preparei o arquivo "+request.path+" no repositório "+resource.name+" com branch, commit e PR em rascunho. Para autorizar, diga: APROVAR "+plan.digest.slice(0,8)+". Nenhuma alteração foi executada ainda.",model:"jk-github",provider:"local_operational" as const,usage:null};
+  return {text:"Preparei "+(request.kind==="create_folder"?"a pasta "+request.path.slice(0,-9)+" (com arquivo .gitkeep para registrá-la no GitHub)":"o arquivo "+request.path)+" no repositório "+resource.name+" com branch, commit e PR em rascunho. Para autorizar, diga: APROVAR "+plan.digest.slice(0,8)+". Nenhuma alteração foi executada ainda.",model:"jk-github",provider:"local_operational" as const,usage:null};
 }
 
 export async function approveGitHubWrite(message:string) {
