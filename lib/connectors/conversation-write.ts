@@ -39,16 +39,20 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
   const plain=/^(?:sim[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar)[.! ]*$/i.test(message.trim());
   if(!match&&!plain)return null;
   const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
+  const prior=history.slice(-6).reverse().find(turn=>turn.role==="assistant"&&/\bAPROVAR\s+[a-f0-9]{8}\b/i.test(turn.content));
+  const previousCode=/\bAPROVAR\s+([a-f0-9]{8})\b/i.exec(prior?.content||"")?.[1];
+  const digestCode=match?.[1]?.toLowerCase() || (plain ? previousCode?.toLowerCase() : undefined);
+  if(!digestCode)return reply("Não localizei uma proposta com código nesta conversa. Nada foi executado.");
   const session=(await cookies()).get(cookieName)?.value;
   if(!session)return reply("Sessão do proprietário ausente. Nada foi executado.");
   const state=await connectorStore.read();
-  const matches=state.plans.filter(p=>p.digest.startsWith(match[1].toLowerCase())&&p.status==="draft"&&p.expiresAt>Date.now());
+  const matches=state.plans.filter(p=>p.digest.startsWith(digestCode)&&p.status==="draft"&&p.expiresAt>Date.now());
   if(matches.length!==1)return reply("Não encontrei uma proposta única e válida. Nada foi executado.");
   const plan=matches[0];
   if(plan.steps.some(step=>step.action.provider!=="github"))
     return reply("Este plano inclui outras plataformas e precisa de aprovação separada.");
   const sessionId=hash(session);
-  await connectors.approve(plan.id,plan.digest,"APROVAR "+match[1].toLowerCase(),sessionId);
+  await connectors.approve(plan.id,plan.digest,"APROVAR "+digestCode,sessionId);
   const completed=await connectors.execute(plan.id,plan.digest,sessionId);
   const pr=completed.steps.find(step=>step.action.operation==="pull")?.result as {url?:string}|undefined;
   return reply("Execução GitHub: "+completed.status+"."+(pr?.url?" Pull request: "+pr.url:"")+
