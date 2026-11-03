@@ -43,6 +43,7 @@ export async function approveGitHubWrite(message:string, history:Array<{role:str
   const previousCode=/\bAPROVAR\s+([a-f0-9]{8})\b/i.exec(prior?.content||"")?.[1];
   const digestCode=match?.[1]?.toLowerCase() || (plain ? previousCode?.toLowerCase() : undefined);
   if(!digestCode)return reply("Não localizei uma proposta com código nesta conversa. Nada foi executado.");
+
   const session=(await cookies()).get(cookieName)?.value;
   if(!session)return reply("Sessão do proprietário ausente. Nada foi executado.");
   const state=await connectorStore.read();
