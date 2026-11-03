@@ -17,9 +17,12 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
   const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
   if(!account?.verifiedAt||account.status!=="connected"||!account.grants.includes("write"))
     return reply("GitHub conectado para leitura, mas a permissão de escrita ainda não está validada. Nenhum arquivo foi alterado.");
+  const explicitlyJarvis=/(?:jarvis[ -]*(?:kiro|quiro|cairo)|java[ -]*skiro|javaskiro)/i.test(message+" "+contextual);
   const selection=requestedProject(message,account.resources);
   let resources=selectProjectResources(selection,account.resources);
-  if(resources.length!==1 && contextual){
+  if(explicitlyJarvis)
+    resources=account.resources.filter(r=>r.id.toLowerCase()==="kiroaventureiro/jarvis-kiro-");
+  if(resources.length!==1 && contextual && !explicitlyJarvis){
     const priorSelection=requestedProject(contextual,account.resources);
     if(priorSelection.kind==="target")resources=selectProjectResources(priorSelection,account.resources);
   }
@@ -31,7 +34,7 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
     const matched=account.resources.filter(r=>r.id.toLowerCase()==="kiroaventureiro/jarvis-kiro-");
     if(matched.length===1)resources=matched;
   }
-  if(resources.length!==1) {
+  if(resources.length!==1 && !explicitlyJarvis) {
     const fold=(v:string)=>v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
     const said=fold(message);
     const aliases=[
@@ -58,7 +61,10 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
         const name = key(r.name.split("/").at(-1) || "");
         return name.length >= 5 && textKey.includes(name);
       });
-      if (matched.length === 1) resources = matched;
+      if (explicitlyJarvis) {
+        const exact=refreshed.filter(r=>r.id.toLowerCase()==="kiroaventureiro/jarvis-kiro-");
+        if(exact.length===1) resources=exact;
+      } else if (matched.length === 1) resources = matched;
       else {
         const selection = requestedProject(message || contextual,refreshed);
         const matching = selectProjectResources(selection,refreshed);
