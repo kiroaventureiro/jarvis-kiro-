@@ -79,7 +79,7 @@ export function normalizeAction(value: unknown): Action {
       const files = Array.isArray(input.files)
         ? input.files
         : [{ path: input.path, content: input.content }];
-      if (!files.length || files.length > 6)
+      if (!files.length || files.length > 30)
         throw new ConnectorError("FILES_LIMIT");
       args = {
         branch: devBranch(input.branch),
@@ -98,7 +98,7 @@ export function normalizeAction(value: unknown): Action {
           return {
             path,
             content:
-              typeof v.content === "string" && v.content.length <= 24000
+              typeof v.content === "string" && v.content.length <= 100000
                 ? v.content
                 : (() => {
                     throw new ConnectorError("FILE_LIMIT");
