@@ -15,8 +15,24 @@ export async function prepareGitHubWrite(message:string) {
   if(!account?.verifiedAt||account.status!=="connected"||!account.grants.includes("write"))
     return reply("GitHub conectado para leitura, mas a permissão de escrita ainda não está validada. Nenhum arquivo foi alterado.");
   const selection=requestedProject(message,account.resources);
-  const resources=selectProjectResources(selection,account.resources);
-  if(selection.kind!=="target"||resources.length!==1)
+  let resources=selectProjectResources(selection,account.resources);
+  // Speech recognition can omit hyphens or trailing punctuation in repo names.
+  // Use only a unique, exact alias among the provider-authorized repositories.
+  if(resources.length!==1) {
+    const fold=(v:string)=>v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+    const said=fold(message);
+    const aliases=[
+      {alias:"jarviskiro",repo:"jarviskiro"},
+      {alias:"javaskiro",repo:"jarviskiro"},
+      {alias:"jarvisquiro",repo:"jarviskiro"},
+    ];
+    const requested=aliases.filter(x=>said.includes(x.alias)).map(x=>x.repo);
+    if(requested.length===1){
+      const matches=account.resources.filter(r=>fold(r.name.split("/").at(-1)||"")===requested[0]);
+      if(matches.length===1)resources=matches;
+    }
+  }
+  if(resources.length!==1)
     return reply("Não identifiquei um único repositório autorizado para a alteração. Nenhuma escrita foi realizada.");
   const resource=resources[0];
   const repo=await connectors.readAuthorized("github",resource.id,"repo");
