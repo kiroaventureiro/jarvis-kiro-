@@ -25,6 +25,12 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
   }
   // Speech recognition can omit hyphens or trailing punctuation in repo names.
   // Use only a unique, exact alias among the provider-authorized repositories.
+  // Canonical Jarvis repository is known, but it can only be selected when
+  // it is present in the owner's actual GitHub authorization.
+  if(resources.length!==1 && /(?:jarvis[ -]*(?:kiro|quiro|cairo)|java[ -]*skiro|javaskiro)/i.test(message+" "+contextual)) {
+    const matched=account.resources.filter(r=>r.id.toLowerCase()==="kiroaventureiro/jarvis-kiro-");
+    if(matched.length===1)resources=matched;
+  }
   if(resources.length!==1) {
     const fold=(v:string)=>v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
     const said=fold(message);
