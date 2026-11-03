@@ -39,8 +39,31 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
       if(matches.length===1)resources=matches;
     }
   }
+  if (resources.length !== 1) {
+    // A previous "connected" view may hold an outdated list of repositories.
+    // Refresh the GitHub credential against the live API once, then match the
+    // real owner/repository identifier rather than inventing a project.
+    try {
+      await connectors.test("github");
+      const refreshed = (await connectorStore.read()).connections.github?.resources || [];
+      const key = (value:string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+      const textKey = key(message + " " + contextual);
+      const matched = refreshed.filter(r => {
+        const name = key(r.name.split("/").at(-1) || "");
+        return name.length >= 5 && textKey.includes(name);
+      });
+      if (matched.length === 1) resources = matched;
+      else {
+        const selection = requestedProject(message || contextual,refreshed);
+        const matching = selectProjectResources(selection,refreshed);
+        if (matching.length === 1) resources = matching;
+      }
+    } catch {
+      return reply("Não consegui atualizar os repositórios autorizados do GitHub. Nenhuma alteração foi preparada.");
+    }
+  }
   if(resources.length!==1)
-    return reply("Não identifiquei um único repositório autorizado para a alteração. Nenhuma escrita foi realizada.");
+    return reply("Não foi possível identificar um único repositório autorizado. Nenhuma alteração foi preparada.");
   const resource=resources[0];
   const repo=await connectors.readAuthorized("github",resource.id,"repo");
   const commits=await connectors.readAuthorized("github",resource.id,"commits");
