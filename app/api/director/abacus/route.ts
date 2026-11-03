@@ -89,8 +89,8 @@ export async function POST(request: Request) {
     localReply: async (message, signal, input) => {
       const { normalizeProviderSpeech } = await import("../../../../lib/connectors/provider-speech");
       const understood = normalizeProviderSpeech(message, input.history || []);
-      const { parseGitHubWriteIntent } = await import("../../../../lib/connectors/write-intent");
-      const isWrite = !!parseGitHubWriteIntent(understood) || /^(?:sim[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar)[.! ]*$/i.test(understood.trim()) || /^(?:jarvis[,!:.]?\s*)?aprovar\s+[a-f0-9]{8}[.!\s]*$/i.test(understood.trim());
+      const { parseGitHubWriteIntent, isConversationalGitHubApproval } = await import("../../../../lib/connectors/write-intent");
+      const isWrite = !!parseGitHubWriteIntent(understood) || isConversationalGitHubApproval(understood);
       return (
       (isWrite ? await answerNativeRequest(understood, signal, input.history) : null) ||
       answerCodexPlanning(understood) ||
