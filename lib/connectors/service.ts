@@ -104,7 +104,7 @@ export class ConnectorService {
             ? publicConnection(state.connections[provider]!)
             : null,
           operations: OPERATIONS.filter((x) => x.provider === provider),
-          writeAllowlist: this.options.writeResources()[provider] || [],
+          writeAllowlist: provider === "github" ? state?.connections.github?.resources.map(r=>r.id) || [] : this.options.writeResources()[provider] || [],
           revocationUrl:
             provider === "github"
               ? "https://github.com/settings/installations"
@@ -395,7 +395,7 @@ export class ConnectorService {
     if (
       mutation(action) &&
       (resource.environment === "production" ||
-        !this.options.writeResources()[action.provider]?.includes(resource.id))
+        (action.provider !== "github" && !this.options.writeResources()[action.provider]?.includes(resource.id)))
     )
       throw new ConnectorError("PRODUCTION_BLOCKED", 403);
     return resource;
