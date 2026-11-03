@@ -29,8 +29,8 @@ export async function enqueueApprovedGithubPlan(planId:string,session:string){
   const q=queue(s);
   const current=s.plans.find(p=>p.id===planId);
   if(!current||current.status!=="approved"||current.approval?.session!==session)throw Error("PLAN_CHANGED");
-  const existing=q.jobs.find(j=>j.workflow==="github_plan_execute"&&j.payload.planId===planId);
-  if(existing)return {id:existing.id,state:existing.state};
+  const existing=[...q.jobs].reverse().find(j=>j.workflow==="github_plan_execute"&&j.payload.planId===planId);
+  if(existing&&existing.state!=="failed")return {id:existing.id,state:existing.state};
   const job:Job={id:randomUUID(),workflow:"github_plan_execute",payload:{planId,digest:current.digest},state:"queued",createdAt:new Date().toISOString(),attempts:0};
   if(q.jobs.filter(j=>["queued","leased","executing"].includes(j.state)).length>=30)throw Error("QUEUE_FULL");
   q.jobs=[...q.jobs.filter(j=>Date.now()-Date.parse(j.createdAt)<86400000).slice(-99),job];
