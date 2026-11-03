@@ -90,7 +90,9 @@ export async function answerNativeRequest(
     const { arrivalBriefing } = await import("./arrival-briefing");
     return arrivalBriefing(connectorStore);
   }
-  const { prepareGitHubWrite, approveGitHubWrite } = await import("./conversation-write");
+  const { prepareGitHubWrite, approveGitHubWrite, githubBridgeWriteStatus } = await import("./conversation-write");
+  const bridgeReply=await githubBridgeWriteStatus(message);
+  if(bridgeReply)return bridgeReply;
   const approvalReply = await approveGitHubWrite(message, history);
   if (approvalReply) return approvalReply;
   const writeReply = await prepareGitHubWrite(message, history);
