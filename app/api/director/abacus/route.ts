@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     admit: (permission) => providerCallBudget.admit("abacus", permission),
     localReply: async (message, signal, input) => {
       const { normalizeProviderSpeech } = await import("../../../../lib/connectors/provider-speech");
-      const understood = normalizeProviderSpeech(understood, input.history || []);
+      const understood = normalizeProviderSpeech(message, input.history || []);
       return (
       answerCodexPlanning(understood) ||
       (await answerNaviRequest(understood, input.history || [], signal)) ||
