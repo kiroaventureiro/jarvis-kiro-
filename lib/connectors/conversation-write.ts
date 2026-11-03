@@ -72,10 +72,11 @@ export async function prepareGitHubWrite(message:string, history:Array<{role:str
     return reply("Não foi possível identificar um único repositório autorizado. Nenhuma alteração foi preparada.");
   const resource=resources[0];
   const repo=await connectors.readAuthorized("github",resource.id,"repo");
-  const branches=await connectors.readAuthorized("github",resource.id,"branches");
+  const commits=await connectors.readAuthorized("github",resource.id,"commits");
   const main=(repo.data as {defaultBranch?:string}).defaultBranch;
-  const sha=(branches.data as Array<{name?:string;sha?:string}>)
-    .find(item=>item.name===main)?.sha;
+  // GitHub's /commits endpoint defaults to the repository's default branch.
+  // Unlike the first page of /branches, this works when many branches exist.
+  const sha=(commits.data as Array<{sha?:string}>)[0]?.sha;
   if(!main||!sha) return reply("Não foi possível confirmar a branch principal e o commit base.");
   const branch="jk/arquivo-"+randomUUID().slice(0,8);
   const description=request.kind==="create_folder"?"Criar a pasta "+request.path.slice(0,-9):"Criar o arquivo "+request.path;
