@@ -21,7 +21,8 @@ export function parseGitHubWriteIntent(message: string, context = ""): GitHubWri
 }
 
 export function isConversationalGitHubApproval(message: string) {
-  const normalized=message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
-  return /^(?:jarvis[,!.]?\s*)?aprovar\s+[a-f0-9]{8}[.!\s]*$/.test(normalized) ||
-    /^(?:(?:sim|eu)[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar|pode fazer|pode prosseguir|esta aprovado|aprovado)[.! ]*$/.test(normalized);
+  const normalized=message.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
+  const code=/^(?:jarvis[,!:.]?\s*)?aprovar\s+[a-f0-9]{8}[.!\s]*$/i.test(normalized);
+  const natural=/^(?:jarvis[,!:.]?\s*)?(?:(?:sim|eu)[,!.]?\s*)?(?:aprovo|autorizo|confirmo|pode executar|pode criar|pode fazer|pode prosseguir|esta aprovado|aprovado)[.!\s]*$/i.test(normalized);
+  return code||natural;
 }
