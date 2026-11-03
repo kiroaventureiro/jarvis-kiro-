@@ -206,7 +206,9 @@ export class GeminiLiveVoiceAdapter {
   }
   private reconnect() {
     if (!this.sessionActive) return;
-    this.connection++; this.ready = false; this.clearTimers(); this.abort?.abort();
+    // The backend request may already have queued an approved write. Do not
+    // cancel it just because the audio transport dropped during a reply.
+    this.connection++; this.ready = false; this.clearTimers();
     this.provisioning?.abort(); this.outputAllowed = false; this.pending = null; this.playing = false;
     this.audio.interrupt();
     this.audio.pauseCapture();
@@ -291,7 +293,14 @@ export class GeminiLiveVoiceAdapter {
     this.options.onUser(text); this.emit("processing", "Consultando o núcleo Jarvis…");
     try {
       const reply = await this.options.command(text, abort.signal);
-      if (abort.signal.aborted || connection !== this.connection || !this.sessionActive) { this.processing = false; return; }
+      if (abort.signal.aborted || !this.sessionActive) { this.processing = false; return; }
+      if (connection !== this.connection) {
+        // Stale Gemini tool-call IDs cannot be replayed into a new session, but
+        // the confirmed Jarvis result must still be shown in the HUD.
+        this.processing = false;
+        this.options.onReply({ ...reply, speechPending: false });
+        return;
+      }
       this.processing = false;
       this.options.onReply({ ...reply, speechPending: true });
       this.outputAllowed = true;
