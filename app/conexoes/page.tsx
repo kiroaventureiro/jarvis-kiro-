@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import AbacusHub from "../components/AbacusHub";
 import AbacusStatus from "../components/AbacusStatus";
-import NativeConnectors from "../components/NativeConnectors";
+import SimpleDevelopmentConnections from "../components/SimpleDevelopmentConnections";
 import WorkspaceConnectors from "../components/WorkspaceConnectors";
 import ObsConnection from "../components/ObsConnection";
 import DeviceCamera from "../components/DeviceCamera";
@@ -68,7 +68,7 @@ export default function ConnectionsPage() {
       </section>
       <AbacusStatus />
       <AbacusHub />
-      <NativeConnectors />
+      <SimpleDevelopmentConnections />
       <WorkspaceConnectors />
       <DeviceCamera />
       <ObsConnection />
