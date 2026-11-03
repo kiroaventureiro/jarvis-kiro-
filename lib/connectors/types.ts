@@ -66,6 +66,8 @@ export type Plan = {
     | "uncertain";
   connectionRevisions: Partial<Record<Provider, string>>;
   steps: Step[];
+  /** Owner session that initiated a conversational write; never exposed to the model. */
+  conversationSession?: string;
   approval?: { at: number; session: string; digest: string };
   results?: unknown[];
 };
