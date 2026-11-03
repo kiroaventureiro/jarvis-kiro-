@@ -34,7 +34,7 @@ export async function prepareGitHubWrite(message:string) {
   return {text:"Preparei "+(request.kind==="create_folder"?"a pasta "+request.path.slice(0,-9)+" (com arquivo .gitkeep para registrá-la no GitHub)":"o arquivo "+request.path)+" no repositório "+resource.name+" com branch, commit e PR em rascunho. Para autorizar, diga: APROVAR "+plan.digest.slice(0,8)+". Nenhuma alteração foi executada ainda.",model:"jk-github",provider:"local_operational" as const,usage:null};
 }
 
-export async function approveGitHubWrite(message:string) {
+export async function approveGitHubWrite(message:string, history:Array<{role:string;content:string}>=[]) {
   const match=/^(?:jarvis[,!:.]?\s*)?aprovar\s+([a-f0-9]{8})[.!\s]*$/i.exec(message.trim());
   if(!match)return null;
   const reply=(text:string)=>({text,model:"jk-github",provider:"local_operational" as const,usage:null});
