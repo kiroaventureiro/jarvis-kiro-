@@ -113,6 +113,20 @@ export function createAdapters(call: Call) {
           description: r.description,
         };
       }
+      if (op === "tree") {
+        const metadata = record(await call(p, c, base));
+        const ref = encodeURIComponent(s(metadata.default_branch || resource.defaultBranch));
+        if (!ref) throw new ConnectorError("UPSTREAM_INVALID", 502);
+        const branch = record(await call(p, c, base + "/branches/" + ref));
+        const rootSha = sha(branch.commit?.sha);
+        const tree = record(await call(p, c, base + "/git/trees/" + rootSha + "?recursive=1"));
+        const prefix = a.path ? String(a.path).replace(/\\/$/, "") + "/" : "";
+        const entries = array(tree.tree)
+          .filter((e) => typeof e.path === "string" && (!prefix || e.path === a.path || e.path.startsWith(prefix)))
+          .slice(0, 120)
+          .map((e) => ({ path: s(e.path).slice(0, 250), type: e.type === "tree" ? "directory" : "file" }));
+        return { branch: s(metadata.default_branch), files: entries, truncated: tree.truncated === true || entries.length === 120 };
+      }
       if (op === "file") {
         const r = record(
           await call(
