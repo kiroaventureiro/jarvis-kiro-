@@ -41,7 +41,7 @@ DECLARE c jk_hml.commands%ROWTYPE; a jk_hml.approvals%ROWTYPE; replay boolean:=f
 BEGIN
  IF p_id IS NULL OR p_id !~ '^[A-Za-z0-9_-]{1,128}$'
  OR p_env IS DISTINCT FROM 'homologation' OR p_origin IS DISTINCT FROM 'jarvis-kiro-hml'
- OR p_authority IS DISTINCT FROM 'https://jarvis-kiro.vercel.app'
+ OR p_authority IS DISTINCT FROM 'jarvis-kiro-hml-approval'
  OR p_decision IS NULL OR p_decision NOT IN ('approve','reject')
  OR p_expiry IS NULL OR p_expiry<=clock_timestamp() THEN
  RETURN QUERY SELECT false,p_id,p_job,p_plan,p_digest,p_cap,p_env,p_decision,p_expiry,false,false,NULL::text,400,'invalid'::text; RETURN;
@@ -75,7 +75,7 @@ RETURNS jsonb LANGUAGE plpgsql SET search_path=pg_catalog,jk_hml AS $$
 DECLARE c jk_hml.commands%ROWTYPE; r jk_hml.reservations%ROWTYPE; a jk_hml.approvals%ROWTYPE;
  v_count integer; v_id text; v_token uuid; v_expiry timestamptz;
 BEGIN
- IF p_origin IS DISTINCT FROM 'jarvis-kiro-hml' OR p_authority IS DISTINCT FROM 'https://jarvis-kiro.vercel.app' THEN RETURN jsonb_build_object('acquired',false,'statusCode','FENCING_REJECTED'); END IF;
+ IF p_origin IS DISTINCT FROM 'jarvis-kiro-hml' OR p_authority IS DISTINCT FROM 'jarvis-kiro-hml-approval' THEN RETURN jsonb_build_object('acquired',false,'statusCode','FENCING_REJECTED'); END IF;
  SELECT * INTO c FROM jk_hml.commands WHERE job_id=p_job FOR UPDATE;
  IF NOT FOUND THEN RETURN jsonb_build_object('acquired',false,'statusCode','JOB_NOT_FOUND'); END IF;
  SELECT * INTO r FROM jk_hml.reservations WHERE job_id=p_job FOR UPDATE;

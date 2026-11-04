@@ -3,7 +3,7 @@ CREATE OR REPLACE FUNCTION jk_hml.recover_jobs(p_origin text,p_authority text)
 RETURNS integer LANGUAGE plpgsql SET search_path=pg_catalog,jk_hml AS $$
 DECLARE n integer:=0; v integer;
 BEGIN
- IF p_origin IS DISTINCT FROM 'jarvis-kiro-hml' OR p_authority IS DISTINCT FROM 'https://jarvis-kiro.vercel.app' THEN RAISE EXCEPTION 'Invalid HML identity'; END IF;
+ IF p_origin IS DISTINCT FROM 'jarvis-kiro-hml' OR p_authority IS DISTINCT FROM 'jarvis-kiro-hml-approval' THEN RAISE EXCEPTION 'Invalid HML identity'; END IF;
  -- An interrupted or expired in-flight operation is uncertain; never replay it automatically.
  WITH expired AS (
  SELECT c.job_id FROM jk_hml.commands c JOIN jk_hml.attempts a USING(job_id)
@@ -35,7 +35,7 @@ BEGIN
  SELECT pg_get_functiondef('jk_hml.reserve_jobs(integer,integer,text)'::regprocedure) INTO definition;
  IF position('PERFORM jk_hml.recover_jobs' IN definition)=0 THEN
   IF position('    RETURN QUERY' IN definition)=0 THEN RAISE EXCEPTION 'Unexpected reserve_jobs definition'; END IF;
-  definition:=replace(definition,'    RETURN QUERY',E'    PERFORM jk_hml.recover_jobs(p_origin, ''https://jarvis-kiro.vercel.app'');\n    RETURN QUERY');
+  definition:=replace(definition,'    RETURN QUERY',E'    PERFORM jk_hml.recover_jobs(p_origin, ''jarvis-kiro-hml-approval'');\n    RETURN QUERY');
   EXECUTE definition;
  END IF;
 END;

@@ -3,11 +3,11 @@ DO $test$
 DECLARE j text:='audit_recovery_'||replace(gen_random_uuid()::text,'-',''); e timestamptz:=clock_timestamp()+interval '10 minutes'; r record; t jsonb; receipt record; i integer;
 BEGIN
  PERFORM * FROM jk_hml.register_command(j,j,'jarvis-kiro-hml','homologation',1,j,repeat('a',64),'simulation.transient','transient','audit/recovery',e);
- PERFORM * FROM jk_hml.record_approval(j||'_approval',j,j,repeat('a',64),'simulation.transient','homologation','https://jarvis-kiro.vercel.app','jarvis-kiro-hml','approve',e);
+ PERFORM * FROM jk_hml.record_approval(j||'_approval',j,j,repeat('a',64),'simulation.transient','homologation','jarvis-kiro-hml-approval','jarvis-kiro-hml','approve',e);
  FOR i IN 1..3 LOOP
  SELECT * INTO r FROM jk_hml.reserve_jobs(10,120,'jarvis-kiro-hml') WHERE "jobId"=j;
  IF r."jobId" IS NULL THEN RAISE EXCEPTION 'Retry reservation missing on attempt %',i; END IF;
- t:=jk_hml.begin_attempt(j,r."reservationToken",'jarvis-kiro-hml','https://jarvis-kiro.vercel.app',120,3);
+ t:=jk_hml.begin_attempt(j,r."reservationToken",'jarvis-kiro-hml','jarvis-kiro-hml-approval',120,3);
  IF (t->>'attemptCount')::integer<>i THEN RAISE EXCEPTION 'Attempt counter mismatch'; END IF;
  SELECT * INTO receipt FROM jk_hml.record_failure(j,t->>'attemptId',(t->>'leaseToken')::uuid,'transient','SIM_TRANSIENT',i,true);
  IF NOT receipt.persisted THEN RAISE EXCEPTION 'Failure not persisted'; END IF;
