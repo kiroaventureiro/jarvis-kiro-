@@ -26,7 +26,7 @@ export async function discoverSkillTools(verify = false, signal?: AbortSignal) {
   }
   const bindings = skillToolBindings().map(skill => ({ ...skill, tools: skill.tools.map(id => ({
     id, authorized: id.startsWith("n8n.") ? n8n.authorized : direct.find(d => d.provider === "github")!.authorized,
-    verifiedNow: id.startsWith("n8n.") && n8n.verifiedNow,
+    verifiedNow: id === "n8n.workflows.list" && n8n.verifiedNow,
   })) }));
   return { skills: bindings, agents: agentToolBindings(), direct, n8n,
     runnerAvailable: false, autonomousAgentsAvailable: false,

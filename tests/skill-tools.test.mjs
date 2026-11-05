@@ -34,6 +34,7 @@ test('discovery checks n8n only on request and never exports credentials, arbitr
  const r=runtime();let result=await r.api.discoverSkillTools();assert.equal(r.checks(),0);assert.equal(result.n8n.verifiedNow,false);
  result=await r.api.discoverSkillTools(true);assert.equal(r.checks(),1);assert.equal(result.n8n.workflowCount,1);
  assert.equal(result.skills.find(s=>s.id==='code-review-excellence').tools[0].verifiedNow,true);
+ assert.equal(result.skills.find(s=>s.id==='code-review-excellence').tools[1].verifiedNow,false);
  assert.equal(result.skills.find(s=>s.id==='git-advanced-workflows').tools[0].authorized,true);
  assert.equal(result.skills.find(s=>s.id==='git-advanced-workflows').tools[0].verifiedNow,false);
  assert.doesNotMatch(JSON.stringify(result),/PRIVATE_|accessToken|apiKey/);
