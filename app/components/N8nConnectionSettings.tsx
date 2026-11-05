@@ -2,12 +2,20 @@
 import {useCallback,useEffect,useState} from "react";
 type Status={vaultConfigured?:boolean;connected?:boolean;verified?:boolean;baseUrl?:string|null;verifiedAt?:string|null};
 export default function N8nConnectionSettings(){
+  const [detail,setDetail]=useState<{name:string;active:boolean;nodes:Array<{id:string;name:string;type:string;disabled:boolean}>;settings:Record<string,unknown>;note:string}|null>(null);
   const [workflows,setWorkflows]=useState<Array<{id:string;name:string;active:boolean}>|null>(null);
   const [status,setStatus]=useState<Status|null>(null),[url,setUrl]=useState(""),[apiKey,setApiKey]=useState(""),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
   const refresh=useCallback(async()=>{
     try{const r=await fetch("/api/director/n8n",{credentials:"same-origin",cache:"no-store"});const data=await r.json();if(!r.ok)throw Error(data.error||"Consulta indisponível");setStatus(data);}catch(e){setMessage(e instanceof Error?e.message:"Consulta indisponível");}
   },[]);
   useEffect(()=>{void refresh();},[refresh]);
+  async function details(id:string){
+    setBusy(true);setMessage("");setDetail(null);
+    try{
+      const r=await fetch("/api/director/n8n",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"details",id})});
+      const data=await r.json();if(!r.ok)throw Error(data.error||"Consulta indisponível");setDetail(data);
+    }catch(e){setMessage(e instanceof Error?e.message:"Consulta indisponível");}finally{setBusy(false);}
+  }
   async function action(name:"connect"|"test"|"disconnect"|"list"){
     if(name==="disconnect"&&!window.confirm("Desconectar o n8n do Jarvis? As credenciais salvas serão eliminadas."))return;
     setBusy(true);setMessage("");
@@ -16,7 +24,7 @@ export default function N8nConnectionSettings(){
       const data=await r.json();
       if(!r.ok)throw Error(data.error||"Falha de conexão");
       if(name==="list"){setWorkflows(data.workflows||[]);setMessage("Workflows consultados somente para leitura. Nenhuma execução foi iniciada.");return;}
-      setApiKey("");setStatus(data);if(name==="disconnect")setWorkflows(null);setMessage(name==="connect"?"n8n conectado e credencial verificada. Workflows ainda precisam de autorização individual.":name==="test"?"Conexão verificada.":"n8n desconectado.");
+      setApiKey("");setStatus(data);if(name==="disconnect"||name==="connect"){setWorkflows(null);setDetail(null);}setMessage(name==="connect"?"n8n conectado e credencial verificada. Workflows ainda precisam de autorização individual.":name==="test"?"Conexão verificada.":"n8n desconectado.");
     }catch(e){setMessage(e instanceof Error?e.message:"Falha de conexão");}
     finally{setBusy(false);}
   }
@@ -36,7 +44,8 @@ export default function N8nConnectionSettings(){
       <button type="button" className="subtle-button" disabled={busy||!status?.connected} onClick={()=>void action("disconnect")}>Desconectar</button>
     </div>
     {message?<p role="status">{message}</p>:null}
-    {workflows?<div><h3>Workflows identificados ({workflows.length})</h3><ul>{workflows.map(w=><li key={w.id}>{w.name} — {w.active?"ativo no n8n":"inativo no n8n"}</li>)}</ul><p>Lista apenas para consulta; o Jarvis não executa esses workflows automaticamente.</p></div>:null}
+    {workflows?<div><h3>Workflows identificados ({workflows.length})</h3><ul>{workflows.map(w=><li key={w.id}>{w.name} — {w.active?"ativo no n8n":"inativo no n8n"} <button type="button" disabled={busy} onClick={()=>void details(w.id)}>Ver configuração de {w.name}</button></li>)}</ul><p>Lista apenas para consulta; o Jarvis não executa esses workflows automaticamente.</p></div>:null}
+    {detail?<section aria-label="Configuração do workflow"><h3>{detail.name}</h3><p>{detail.active?"Publicado":"Inativo"}</p><ul>{detail.nodes.map(n=><li key={n.id}>{n.name} — {n.type}{n.disabled?" (desativado)":""}</li>)}</ul><pre style={{whiteSpace:"pre-wrap",overflowWrap:"anywhere"}}>{JSON.stringify(detail.settings,null,2)}</pre><p>{detail.note}</p></section>:null}
     <p><small>Instâncias n8n Cloud são aceitas. Para uma instância própria, o administrador deve configurar o domínio permitido no servidor. Nenhum workflow é executado por este painel.</small></p>
   </section>;
 }

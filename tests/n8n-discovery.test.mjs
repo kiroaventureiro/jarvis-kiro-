@@ -6,7 +6,7 @@ const source=fs.readFileSync('lib/n8n/discovery.ts','utf8').replace('import "ser
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 function runtime(env={},response=Response.json({found:false},{status:404}),admin={connected:false}) {
   const exports={},calls=[];
-  new Function('exports','process','fetch','require',code)(exports,{env},async(...args)=>{calls.push(args);return response;},()=>({n8nStatus:async()=>admin,listN8nWorkflows:async()=>({workflows:[{name:'Fluxo real',active:true}]})}));
+  new Function('exports','process','fetch','require',code)(exports,{env},async(...args)=>{calls.push(args);return response;},(name)=>name==='./workflow-details'?{requestedWorkflowDetails:()=>null}:{n8nStatus:async()=>admin,listN8nWorkflows:async()=>({workflows:[{name:'Fluxo real',active:true}]})});
   return {api:exports,calls};
 }
 const env={JARVIS_HML_INGRESS_KEY:'x'.repeat(40),JARVIS_HML_INGRESS_URL:'https://n8n.guardioesdaorigem.com.br/webhook/jk-hml/v1/commands'};
