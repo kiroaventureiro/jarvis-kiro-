@@ -1,5 +1,5 @@
 import "server-only";
-import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { connectorStore } from "../connectors/server";
 import { listN8nWorkflows } from "./connection";
 
@@ -8,6 +8,7 @@ const webhook = "https://n8n.guardioesdaorigem.com.br/webhook/jarvis-kiro/catalo
 export type CatalogRun = {
   id: string; workflowId: string; createdAt: number; expiresAt: number;
   state: "queued" | "running" | "succeeded" | "failed";
+  inputDigest?: string;
   report?: { total: number; active: number; partial: boolean; names: string[] };
   error?: string;
 };
@@ -23,7 +24,7 @@ function secret() {
   return key;
 }
 function ticket(run: CatalogRun) {
-  return createHmac("sha256", secret()).update("n8n-catalog-report:v1:" + run.id + ":" + run.expiresAt).digest("hex");
+  return createHmac("sha256", secret()).update("n8n-catalog-report:v2:" + run.id + ":" + run.expiresAt + ":" + run.inputDigest).digest("hex");
 }
 function validId(id: string) { return /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(id); }
 export async function catalogRunStatus(id: string) {
@@ -45,33 +46,43 @@ export function catalogRunText(run: CatalogRun | null) {
   return "Relatório " + (run.state === "queued" ? "registrado" : "em execução") + ". Referência: " + run.id + ". Consulte o resultado antes de iniciar outro.";
 }
 
-/** Called only by the fixed n8n report workflow, using a single-use run-bound ticket. */
-export async function completeCatalogRun(id: string, signature: string) {
+/** Accept only a bound response on the original outbound request. No public callback. */
+export async function acceptCatalogReceipt(id: string, receipt: unknown, expected: NonNullable<CatalogRun["report"]>) {
   secret();
-  if (!validId(id) || !/^[a-f0-9]{64}$/.test(signature)) throw Error("N8N_REPORT_TICKET_DENIED");
+  if (!validId(id) || !receipt || typeof receipt !== "object" || Array.isArray(receipt)) throw Error("N8N_REPORT_RECEIPT_DENIED");
+  const value = receipt as Record<string, unknown>;
+  const report = value.report as Record<string, unknown> | undefined;
+  if (value.runId !== id || typeof value.ticket !== "string" || !/^[a-f0-9]{64}$/.test(value.ticket) ||
+    !report || report.total !== expected.total || report.active !== expected.active || report.partial !== expected.partial ||
+    !Array.isArray(report.names) || report.names.length !== expected.names.length || report.names.some((n, i) => n !== expected.names[i])) {
+    throw Error("N8N_REPORT_RECEIPT_DENIED");
+  }
   await connectorStore.update(state => {
     const run = state.n8nCatalogRuns?.find(r => r.id === id);
-    if (!run || run.workflowId !== CATALOG_WORKFLOW_ID || run.state !== "queued" || run.expiresAt <= Date.now() ||
-      !timingSafeEqual(Buffer.from(signature), Buffer.from(ticket(run)))) throw Error("N8N_REPORT_TICKET_DENIED");
-    run.state = "running";
+    if (!run || run.workflowId !== CATALOG_WORKFLOW_ID || run.state !== "running" || run.expiresAt <= Date.now() ||
+      value.inputDigest !== run.inputDigest || !timingSafeEqual(Buffer.from(value.ticket as string), Buffer.from(ticket(run)))) {
+      throw Error("N8N_REPORT_RECEIPT_DENIED");
+    }
+    run.report = expected;
+    run.state = "succeeded";
   });
-  try {
-    const catalog = await listN8nWorkflows();
-    await connectorStore.update(state => {
-      const run = state.n8nCatalogRuns?.find(r => r.id === id);
-      if (!run || run.state !== "running") throw Error("N8N_REPORT_STATE_INVALID");
-      run.report = { total: catalog.workflows.length, active: catalog.workflows.filter(w => w.active).length,
-        partial: catalog.partial, names: catalog.workflows.slice(0, 20).map(w => w.name) };
-      run.state = "succeeded";
-    });
-  } catch {
-    await connectorStore.update(state => {
-      const run = state.n8nCatalogRuns?.find(r => r.id === id);
-      if (run?.state === "running") { run.state = "failed"; run.error = "N8N_CATALOG_READ_FAILED"; }
-    });
-    throw Error("N8N_CATALOG_READ_FAILED");
-  }
   return catalogRunStatus(id);
+}
+
+async function receiptJson(response: Response) {
+  const reader = response.body?.getReader();
+  if (!reader) throw Error("N8N_REPORT_RESPONSE_INVALID");
+  const chunks: Uint8Array[] = []; let size = 0;
+  try {
+    for (;;) {
+      const item = await reader.read(); if (item.done) break;
+      size += item.value.byteLength;
+      if (size > 32768) { await reader.cancel(); throw Error("N8N_REPORT_RESPONSE_TOO_LARGE"); }
+      chunks.push(item.value);
+    }
+  } finally { reader.releaseLock(); }
+  try { return JSON.parse(Buffer.concat(chunks).toString("utf8")); }
+  catch { throw Error("N8N_REPORT_RESPONSE_INVALID"); }
 }
 
 /** Owner-requested, real read-only workflow. No URL, workflow ID or input is supplied by a model. */
@@ -88,13 +99,29 @@ export async function startCatalogRun() {
     state.n8nCatalogRuns = [...recent.slice(-19), run];
   });
   try {
+    const catalog = await listN8nWorkflows();
+    const items = catalog.workflows.map(w => ({ id: w.id, name: w.name, active: w.active }));
+    run.inputDigest = createHash("sha256").update(JSON.stringify({ items, partial: catalog.partial })).digest("hex");
+    const expected = { total: items.length, active: items.filter(w => w.active).length,
+      partial: catalog.partial, names: items.slice(0, 20).map(w => w.name) };
+    await connectorStore.update(state => {
+      const current = state.n8nCatalogRuns?.find(r => r.id === run.id);
+      if (!current || current.state !== "queued" || current.expiresAt <= Date.now()) throw Error("N8N_REPORT_STATE_INVALID");
+      current.inputDigest = run.inputDigest; current.state = "running";
+    });
     const response = await fetch(webhook, { method: "POST", redirect: "error", cache: "no-store", signal: AbortSignal.timeout(25000),
-      headers: { "Content-Type": "application/json", "X-Jarvis-Key": key }, body: JSON.stringify({ runId: run.id, ticket: ticket(run) }) });
-    await response.body?.cancel();
-  } catch { /* Stored execution state is authoritative, including after a transport timeout. */ }
-  await connectorStore.update(state => {
-    const current = state.n8nCatalogRuns?.find(r => r.id === run.id);
-    if (current?.state === "queued") { current.state = "failed"; current.error = "N8N_WORKFLOW_DISPATCH_FAILED"; }
-  });
+      headers: { "Content-Type": "application/json", "X-Jarvis-Key": key },
+      body: JSON.stringify({ runId: run.id, inputDigest: run.inputDigest, ticket: ticket(run), partial: catalog.partial, items }) });
+    if (!response.ok) throw Error("N8N_WORKFLOW_HTTP_" + response.status);
+    await acceptCatalogReceipt(run.id, await receiptJson(response), expected);
+  } catch (error) {
+    await connectorStore.update(state => {
+      const current = state.n8nCatalogRuns?.find(r => r.id === run.id);
+      if (current && current.state !== "succeeded") {
+        current.state = "failed";
+        current.error = error instanceof Error && /^N8N_[A-Z0-9_]+$/.test(error.message) ? error.message : "N8N_REPORT_FAILED";
+      }
+    });
+  }
   return catalogRunStatus(run.id);
 }

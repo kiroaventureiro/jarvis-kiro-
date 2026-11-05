@@ -2,35 +2,45 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
-import {createHmac,randomUUID,timingSafeEqual} from 'node:crypto';
+import {createHash,createHmac,randomUUID,timingSafeEqual} from 'node:crypto';
 const code=ts.transpileModule(fs.readFileSync('lib/n8n/catalog-run.ts','utf8').replace(/^import .*;\r?\n/gm,''),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const env={VERCEL_ENV:'preview',VERCEL_GIT_COMMIT_REF:'fix/hml-integration-audit',JARVIS_N8N_BRIDGE_SECRET:'b'.repeat(48),JARVIS_HML_INGRESS_KEY:'k'.repeat(48)};
-function runtime({patch={},callback=true,connected=true}={}){
+let definition;
+new Function('require','console',fs.readFileSync('scripts/prepare-n8n-catalog-report.cjs','utf8'))(name=>name==='node:fs'?{
+ readFileSync:()=>JSON.stringify([{nodes:[{type:'n8n-nodes-base.webhook',credentials:{httpHeaderAuth:{id:'existing',name:'Existing ingress'}}}]}]),
+ writeFileSync:(_,value)=>{definition=JSON.parse(value)[0];}
+}:{randomUUID},{log:()=>{}});
+const reportNode=definition.nodes.find(n=>n.type==='n8n-nodes-base.code');
+function workflowReceipt(body){return new Function('$input',reportNode.parameters.jsCode)({first:()=>({json:{body}})})[0].json;}
+function runtime({patch={},tamper=value=>value,connected=true}={}){
  const state=connected?{n8n:{apiKey:'server-only-api-key'}}:{};
- const exports={},requests=[];let reads=0;
- new Function('exports','createHmac','randomUUID','timingSafeEqual','connectorStore','listN8nWorkflows','fetch','process',code)(exports,
-  createHmac,randomUUID,timingSafeEqual,{read:async()=>structuredClone(state),update:async fn=>fn(state)},
-  async()=>{reads++;return {workflows:[{name:'Fluxo real',active:true},{name:'Outro fluxo',active:false}],partial:false};},
-  async(url,options)=>{requests.push({url,options});if(callback){const body=JSON.parse(options.body);await exports.completeCatalogRun(body.runId,body.ticket);}return Response.json({state:'succeeded',report:{total:999}});},
+ const exports={},requests=[];let reads=0,receipt;
+ new Function('exports','createHash','createHmac','randomUUID','timingSafeEqual','connectorStore','listN8nWorkflows','fetch','process',code)(exports,
+  createHash,createHmac,randomUUID,timingSafeEqual,{read:async()=>structuredClone(state),update:async fn=>fn(state)},
+  async()=>{reads++;return {workflows:[{id:'one',name:'Fluxo real',active:true},{id:'two',name:'Outro fluxo',active:false}],partial:false};},
+  async(url,options)=>{requests.push({url,options});receipt=workflowReceipt(JSON.parse(options.body));return Response.json(tamper(structuredClone(receipt)));},
   {env:{...env,...patch}});
- return {api:exports,state,requests,reads:()=>reads};
+ return {api:exports,state,requests,reads:()=>reads,receipt:()=>receipt};
 }
-test('real report dispatch uses fixed webhook and trusts only the persisted callback result',async()=>{
+test('real report executes the generated n8n transform and accepts only a bound response on the outbound connection',async()=>{
  const r=runtime();const run=await r.api.startCatalogRun();
  assert.equal(run.state,'succeeded');assert.equal(run.report.total,2);assert.equal(run.report.active,1);assert.equal(r.reads(),1);
  assert.equal(r.requests[0].url,'https://n8n.guardioesdaorigem.com.br/webhook/jarvis-kiro/catalog-report-v1');
  assert.equal(r.requests[0].options.headers['X-Jarvis-Key'],env.JARVIS_HML_INGRESS_KEY);assert.equal(r.requests[0].options.redirect,'error');
  assert.doesNotMatch(JSON.stringify(run),/server-only-api-key|bbbbbbbb|kkkkkkkk|ticket/);
- const forged=runtime({callback:false});assert.equal((await forged.api.startCatalogRun()).state,'failed');assert.equal(forged.reads(),0);
+ assert.doesNotMatch(r.requests[0].options.body,/server-only-api-key/);
+ assert.equal(definition.nodes.some(n=>n.type==='n8n-nodes-base.httpRequest'),false);
+ for(const tamper of [r=>({...r,runId:randomUUID()}),r=>({...r,inputDigest:'0'.repeat(64)}),r=>({...r,ticket:'a'.repeat(64)}),r=>({...r,report:{...r.report,total:999}})]){
+  const forged=runtime({tamper});assert.equal((await forged.api.startCatalogRun()).state,'failed');
+ }
 });
-test('tickets are run-bound, expiring and single-use; concurrent callbacks read at most once',async()=>{
- const r=runtime({callback:false});await r.api.startCatalogRun();const request=JSON.parse(r.requests[0].options.body);const stored=r.state.n8nCatalogRuns[0];
- stored.state='queued';
- await assert.rejects(r.api.completeCatalogRun(request.runId,'a'.repeat(64)),/TICKET_DENIED/);assert.equal(r.reads(),0);
- const results=await Promise.allSettled([r.api.completeCatalogRun(request.runId,request.ticket),r.api.completeCatalogRun(request.runId,request.ticket)]);
- assert.equal(results.filter(x=>x.status==='fulfilled').length,1);assert.equal(r.reads(),1);
- await assert.rejects(r.api.completeCatalogRun(request.runId,request.ticket),/TICKET_DENIED/);
- stored.state='queued';stored.expiresAt=Date.now()-1;await assert.rejects(r.api.completeCatalogRun(request.runId,request.ticket),/TICKET_DENIED/);
+test('receipt acceptance is expiring and single-use, including concurrent replays',async()=>{
+ const r=runtime();const run=await r.api.startCatalogRun();const receipt=r.receipt();const stored=r.state.n8nCatalogRuns[0];
+ await assert.rejects(r.api.acceptCatalogReceipt(run.id,receipt,run.report),/RECEIPT_DENIED/);
+ stored.state='running';
+ const results=await Promise.allSettled([r.api.acceptCatalogReceipt(run.id,receipt,run.report),r.api.acceptCatalogReceipt(run.id,receipt,run.report)]);
+ assert.equal(results.filter(x=>x.status==='fulfilled').length,1);
+ stored.state='running';stored.expiresAt=Date.now()-1;await assert.rejects(r.api.acceptCatalogReceipt(run.id,receipt,run.report),/RECEIPT_DENIED/);
  assert.equal(r.reads(),1);
 });
 test('execution is restricted to audit preview, connected owner vault and a bounded request rate',async()=>{
@@ -38,7 +48,7 @@ test('execution is restricted to audit preview, connected owner vault and a boun
   const r=runtime({patch});await assert.rejects(r.api.startCatalogRun(),/NOT_CONFIGURED/);assert.equal(r.requests.length,0);
  }
  const disconnected=runtime({connected:false});await assert.rejects(disconnected.api.startCatalogRun(),/N8N_NOT_CONNECTED/);
- const r=runtime({callback:false});for(let i=0;i<5;i++)await r.api.startCatalogRun();await assert.rejects(r.api.startCatalogRun(),/RATE_LIMIT/);assert.equal(r.requests.length,5);
+ const r=runtime();for(let i=0;i<5;i++)await r.api.startCatalogRun();await assert.rejects(r.api.startCatalogRun(),/RATE_LIMIT/);assert.equal(r.requests.length,5);
 });
 test('natural execution requires an explicit imperative and never treats a question as permission',()=>{
  const r=runtime();
