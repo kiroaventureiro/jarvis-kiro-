@@ -81,6 +81,9 @@ export async function answerNativeRequest(
 ) {
   const { normalizeProviderSpeech } = await import("./provider-speech");
   message = normalizeProviderSpeech(message, history);
+  const { answerN8nRequest } = await import("../n8n/discovery");
+  const n8nReply = await answerN8nRequest(message, signal);
+  if (n8nReply) return n8nReply;
   // Explicit daily briefing or a direct greeting to Jarvis. No background polling.
   const greeting = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   if (

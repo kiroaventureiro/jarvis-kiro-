@@ -54,6 +54,7 @@ export function operationalQuestion(
   return null;
 }
 function describe(s: ServiceStatus) {
+  if (s.id === "n8n") return s.name + ": " + s.label.toLowerCase() + ". " + s.note;
   if (!s.configured) return s.name + ": não configurado neste ambiente.";
   if (!s.configurationValid)
     return (

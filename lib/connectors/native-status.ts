@@ -6,11 +6,26 @@ import {
   type ServiceId,
 } from "../operational/state";
 import catalog from "../../config/connection-catalog.json";
+import { hmlAvailability } from "../n8n/discovery";
 export async function withNativeConnectors(
   input: OperationalSnapshot,
   verify = false,
 ): Promise<OperationalSnapshot> {
   const snapshot = structuredClone(input);
+  const hml = await hmlAvailability(verify);
+  if (hml.configured) {
+    const before = snapshot.integrations.findIndex(s => s.id === "n8n");
+    const status = serviceStatus({
+      id: "n8n", name: "n8n — homologação", configured: true,
+      configurationValid: hml.configurationValid, authorized: false,
+      note: "Transporte HML separado do catálogo administrativo. Somente simulações; ações externas não habilitadas. Teste em /integracoes/hml.",
+    }, verify && hml.configurationValid ? {
+      ok: hml.verified, checkedAt: Date.now(), checks: hml.verified ? ["authenticated_hml_status"] : [],
+      ...(!hml.verified ? { failure: "verification_unavailable" as const } : {}),
+    } : undefined);
+    if (before >= 0) snapshot.integrations[before] = status;
+    else snapshot.integrations.push(status);
+  }
   if (!connectorStore.configured()) {
     snapshot.nativeRegistryState = "not_configured";
     return snapshot;

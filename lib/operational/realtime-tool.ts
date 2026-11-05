@@ -114,7 +114,7 @@ export function createOperationalVoiceTool(options: {
                 abacusPlatformIntent(question) ||
                 voiceUsageIntent(question) ||
                 voiceStudioIntent(question) ||
-                /\b(github|git hub|vercel|versel|supabase|supa base)\b/i.test(
+                /\b(github|git hub|vercel|versel|supabase|supa base|n8n|n\s*8\s*n|m8m)\b/i.test(
                   question,
                 ) ||
                 isReadFollowup(question) ||
