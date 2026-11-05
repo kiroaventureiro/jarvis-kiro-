@@ -24,10 +24,15 @@ export async function POST(request:Request){
 /** Authenticated inventory. The 20 Codex-derived skills are contextual
  * engineering guidance, not executable server operations or remote agents.
  */
-export async function GET(){
+export async function GET(request:Request){
  if(!(await authorized()))return NextResponse.json({error:"Não autorizado"},{status:401});
+ const {discoverSkillTools}=await import("../../../../lib/cognitive/skill-discovery");
+ let tooling;
+ try{tooling=await discoverSkillTools(new URL(request.url).searchParams.get("verify")==="1",request.signal);}
+ catch{return NextResponse.json({error:"SKILL_DISCOVERY_UNAVAILABLE"},{status:503,headers:{"Cache-Control":"no-store"}});}
  return NextResponse.json({
-  version:3,
+  version:4,
+  tooling,
   native:localSkills.skills.map(skill=>({...skill,kind:"local_operation",available:true})),
   engineering:CODEX_SKILLS.map(({id,group,description})=>({
    id,group,description,kind:"contextual_guidance",available:true,

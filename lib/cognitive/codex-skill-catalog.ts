@@ -150,7 +150,9 @@ export const CODEX_SKILLS: readonly CodexSkill[] = [
 const normalize=(v:string)=>v.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 export function selectCodexSkills(message:string,limit=2):CodexSkill[]{
  const n=normalize(message.slice(0,3000));
- const context=/\b(codigo|code|typescript|javascript|node|api|software|aplicativo|repositorio|github|git|deploy|banco|sql|seguranca|vulnerabilidade|testes?|debug|build|monorepo|nx|turbo|bazel|estrategia de desenvolvimento)\b/.test(n);
+ const explicit=CODEX_SKILLS.filter(s=>new RegExp("(?:^|[^a-z0-9-])"+s.id+"(?:$|[^a-z0-9-])").test(n));
+ if(explicit.length)return explicit.slice(0,Math.max(0,Math.min(3,limit)));
+ const context=/\b(codigo|code|typescript|javascript|node|api|software|aplicativo|repositorio|github|git|deploy|banco|sql|seguranca|vulnerabilidade|testes?|debug|build|monorepo|nx|turbo|bazel|n8n|workflow|estrategia de desenvolvimento)\b/.test(n);
  if(!context)return [];
  const eligible=CODEX_SKILLS.filter(s=>new RegExp("\\b(?:"+s.pattern+")\\b","i").test(n));
  return eligible.slice(0,Math.max(0,Math.min(3,limit)));

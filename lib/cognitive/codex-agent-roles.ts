@@ -42,6 +42,8 @@ export const CODEX_AGENT_ROLES:readonly AgentRole[]=[
 const normalize=(s:string)=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 export function selectCodexAgents(message:string,limit=2):AgentRole[]{
  const n=normalize(message.slice(0,3000));
+ const explicit=CODEX_AGENT_ROLES.filter(role=>new RegExp("(?:^|[^a-z0-9-])"+role.id+"(?:$|[^a-z0-9-])").test(n));
+ if(explicit.length)return explicit.slice(0,Math.max(0,Math.min(2,limit)));
  const engineering=/\b(codigo|code|sistema|arquitetura|aplicativo|app|software|api|desenvolvimento|seguranca|repositorio|projeto|build|typescript|javascript|node|monorepo|nx|turborepo|bazel|ameaca|stride|tipagem|promise|async|erro|debug|risco|teste)\b/.test(n);
  if(!engineering)return [];
  return CODEX_AGENT_ROLES.filter(role=>new RegExp("\\b(?:"+role.match+")\\b","i").test(n)).slice(0,Math.max(0,Math.min(2,limit)));

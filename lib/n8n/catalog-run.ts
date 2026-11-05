@@ -16,6 +16,12 @@ export function catalogRunIntent(message: string) {
   const n = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
   return /^(?:jarvis[, :\s]*)?(?:execute|rode|gere|faca)\b/.test(n) && /\brelatorio\b/.test(n) && /\b(catalogo|workflows|fluxos)\b/.test(n);
 }
+export function catalogReportConfigured() {
+  const bridge = process.env.JARVIS_N8N_BRIDGE_SECRET || "";
+  const ingress = process.env.JARVIS_HML_INGRESS_KEY || "";
+  return process.env.VERCEL_ENV === "preview" && process.env.VERCEL_GIT_COMMIT_REF === "fix/hml-integration-audit" &&
+    bridge.length >= 40 && ingress.length >= 32 && !/[\r\n]/.test(bridge + ingress);
+}
 function secret() {
   const key = process.env.JARVIS_N8N_BRIDGE_SECRET || "";
   if (process.env.VERCEL_ENV !== "preview" || process.env.VERCEL_GIT_COMMIT_REF !== "fix/hml-integration-audit" || key.length < 40 || /[\r\n]/.test(key)) {

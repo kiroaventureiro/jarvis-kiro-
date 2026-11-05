@@ -2,6 +2,7 @@ import InternalPage from "../components/InternalPage";
 import PrivateArea from "../components/PrivateArea";
 import { authorized } from "../../lib/auth";
 import skills from "../../config/jarvis-local-skills.json";
+import SkillConnections from "../components/SkillConnections";
 export const dynamic = "force-dynamic";
 export default async function ControlPage() {
   const allowed = await authorized();
@@ -14,6 +15,7 @@ export default async function ControlPage() {
             Windows e publicações continuam sujeitos às políticas de aprovação
             existentes.
           </p>
+          <SkillConnections />
           <div className="card-grid">
             <article className="card glass">
               <h2>Habilidades locais</h2>
@@ -44,8 +46,9 @@ export default async function ControlPage() {
             <article className="card glass">
               <h2>Tarefas e automações</h2>
               <p>
-                Contratos de tarefas e registro n8n preservados. O armazenamento
-                persistente de tarefas ainda não está configurado.
+                O catálogo n8n, a leitura de configurações e o relatório específico
+                usam o conector em Configurações. Consulte o estado neste ambiente
+                antes de iniciar uma tarefa.
               </p>
               <p>
                 Não há execução remota irrestrita ou agente local instalado por
