@@ -12,6 +12,8 @@ type Result = { text: string; model: "jk-settings"; provider: "local_operational
 const answer = (text: string): Result => ({text,model:"jk-settings",provider:"local_operational",usage:null,visual:undefined});
 export function jarvisSettingsCommand(text: string): Result | null {
   const raw = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  // n8n workflow settings belong to the authenticated connector, not device preferences.
+  if (/\b(?:n8n|n\s*8\s*n|m8m|m\s*8\s*m)\b/.test(raw)) return null;
   const requested = /(jarvis|configur|preferenc|ajust|ativ|desativ|aument|diminu|reduz|alter|mudar|trocar|coloc|selecion|voz|volume|tom|velocidade|holograma|historico|escuta)/.test(raw);
   if (!requested) return null;
   // Read-only inventory: report actual persisted preferences, never invent access.

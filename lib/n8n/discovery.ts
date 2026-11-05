@@ -30,6 +30,15 @@ export async function hmlAvailability(verify = false, signal?: AbortSignal) {
 
 export async function answerN8nRequest(message: string, signal?: AbortSignal) {
   if (!n8nIntent(message)) return null;
+  const { catalogRunIntent, startCatalogRun, latestCatalogRun, catalogRunText } = await import("./catalog-run");
+  const normalized = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const reportStatus = /\b(status|resultado|terminou|concluiu)\b/.test(normalized) && /\brelatorio\b/.test(normalized) && /\b(catalogo|workflows|fluxos)\b/.test(normalized);
+  if (catalogRunIntent(message) || reportStatus) {
+    let text: string;
+    try { text = catalogRunText(catalogRunIntent(message) ? await startCatalogRun() : await latestCatalogRun()); }
+    catch { text = "Não consegui iniciar ou consultar o relatório do catálogo no n8n. A execução não está confirmada; confira a conexão administrativa e o executor desta prévia."; }
+    return { text, model: "jk-n8n-catalog-run", provider: "local_operational" as const, usage: null };
+  }
   const hml = await hmlAvailability(true, signal);
   let text = hml.verified
     ? "Confirmei agora a comunicação autenticada com o n8n na homologação. Posso consultar o estado e o resultado das tarefas simuladas pelo percurso /integracoes/hml. Esse acesso não libera ações externas."

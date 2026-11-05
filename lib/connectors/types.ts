@@ -108,6 +108,7 @@ export type PersistentProject = {
   updatedAt: string;
 };
 export type VaultState = import("./workspace").WorkspaceState & {
+  n8nCatalogRuns?: import("../n8n/catalog-run").CatalogRun[];
   n8n?: { baseUrl: string; apiKey: string; connectedAt: string; verifiedAt: string | null };
   n8nBridge?: { lastWorkerPollAt?: number; jobs: Array<{id:string;workflow:string;payload:Record<string,string>;state:"queued"|"leased"|"executing"|"completed"|"failed";createdAt:string;leaseUntil?:number;result?:string;attempts:number}> };
   voiceUsage?: import("../voice/ledger").VoiceUsageState;
