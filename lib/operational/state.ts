@@ -139,6 +139,7 @@ export function operationalPrompt(snapshot: OperationalSnapshot) {
           checks,
           failure,
           budgetAvailable,
+          note,
         }) => ({
           id,
           name,
@@ -152,6 +153,7 @@ export function operationalPrompt(snapshot: OperationalSnapshot) {
           checks,
           failure,
           budgetAvailable,
+          note,
         }),
       ),
     catalog: {

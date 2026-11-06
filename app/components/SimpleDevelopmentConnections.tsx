@@ -17,7 +17,7 @@ export default function SimpleDevelopmentConnections(){
  async function run(p:Provider,fn:()=>Promise<void>){setBusy(p);setError("");try{await fn();await refresh();}catch(e){setError(e instanceof Error?e.message:"Operação indisponível");}finally{setBusy(null);}}
  async function connect(p:Provider){await run(p,async()=>{const data=await request({op:"connect",provider:p});const url=new URL(data.authorizationUrl);if(url.protocol!=="https:"||!["github.com","vercel.com","api.supabase.com"].includes(url.hostname))throw Error("Destino inválido");window.location.assign(url.href);});}
  async function saveToken(p:Provider){await run(p,async()=>{await request({op:"token",provider:p,token,...(p==="vercel"&&teamId?{teamId}:{})});if(p==="github"){const result=await request({op:"test",provider:p});await request({op:"scope",provider:p,resources:result.resources,grants:["read","write"]});}setManual(null);setToken("");});}
- async function verify(p:Provider){await run(p,async()=>{const result=await request({op:"test",provider:p});if(p==="github"){await request({op:"scope",provider:"github",resources:result.resources,grants:["read","write"]});}});}
+ async function verify(p:Provider){await run(p,async()=>{await request({op:"test",provider:p});});}
  return <section className="glass notice" aria-label="Conexões de desenvolvimento">
  <h2>Conexões de desenvolvimento</h2><p>Conecte uma vez. O Jarvis utiliza os recursos já autorizados na conta; ações de alteração continuam exigindo autorização apropriada.</p>
  {error?<p role="alert">{error}</p>:null}

@@ -70,6 +70,8 @@ function describe(s: ServiceStatus) {
         ? "O limite local foi atingido; isso não prova desconexão."
         : "A última verificação não foi concluída com sucesso; não significa que nunca esteve conectado.")
     );
+  if (!s.verified && s.authorized && ["google", "microsoft"].includes(s.id))
+    return s.name + ": autorização salva. " + s.note;
   if (!s.verified)
     return (
       s.name +

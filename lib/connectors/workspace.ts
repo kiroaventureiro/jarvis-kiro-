@@ -133,6 +133,6 @@ export function workspaceReadIntent(message:string){
  const service=/\bgoogle\b/.test(n)&&/tarefas|tasks/.test(n)?"google-tasks":(/\bforms\b/.test(n)||/\bgoogle\b/.test(n)&&/formularios/.test(n))?"google-forms":/\bmeet\b/.test(n)?"google-meet":(/\b(to do|todo)\b/.test(n)||/\bmicrosoft\b/.test(n)&&/tarefas/.test(n))?"microsoft-todo":/\bteams\b/.test(n)?"microsoft-teams":/\bsharepoint\b/.test(n)?"sharepoint":/\bgmail\b/.test(n)?"gmail":/\boutlook\b/.test(n)&&!/agenda|calendario|contatos/.test(n)?"outlook":/\bonedrive\b/.test(n)?"onedrive":/\b(drive|docs|sheets|slides)\b/.test(n)?"google-drive":/\byoutube\b/.test(n)&&/canal|canais/.test(n)?"youtube":/\bgoogle\b/.test(n)&&/agenda|calendario/.test(n)?"google-calendar":/\b(microsoft|outlook)\b/.test(n)&&/agenda|calendario/.test(n)?"microsoft-calendar":/\bgoogle\b/.test(n)&&/contatos/.test(n)?"google-contacts":/\bmicrosoft\b/.test(n)&&/contatos/.test(n)?"microsoft-contacts":null;
  if(!service)return null;
  if(/\b(envie|enviar|apague|exclua|publique|crie|edite|altere|conclua|marque|atualize|remova|delete)\b/.test(n))return {service,writeRequested:true};
- if(!/\b(liste|listar|mostre|mostrar|consulte|consultar|verifique|verificar|quais)\b/.test(n))return null;
+ if(!/\b(liste|listar|mostre|mostrar|consulte|consultar|verifique|verificar|quais|veja|ver|leia|ler|acesse|acessar)\b/.test(n))return null;
  return {service,writeRequested:false};
 }

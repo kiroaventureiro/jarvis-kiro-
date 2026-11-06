@@ -9,7 +9,9 @@ function send(id: string, message: unknown): Promise<Reply> {
     const timer = setTimeout(() => reject(Error("A extensão não respondeu. Confira o ID e se ela está ativada.")), 8000);
     try { runtime.sendMessage(id, message, reply => {
       clearTimeout(timer);
-      if (runtime.lastError || !reply?.ok) reject(Error(reply?.error || "Não consegui comunicar com a extensão."));
+      if (runtime.lastError || !reply?.ok) reject(Error(reply?.error === "ORIGIN_DENIED"
+        ? "A extensão recusou a origem desta página. Recarregue o painel no endereço estável da prévia e tente identificar novamente; isso não indica revogação da extensão."
+        : reply?.error || "Não consegui comunicar com a extensão."));
       else resolve(reply);
     }); } catch { clearTimeout(timer); reject(Error("Conexão com a extensão indisponível.")); }
   });

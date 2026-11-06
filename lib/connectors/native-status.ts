@@ -7,6 +7,7 @@ import {
 } from "../operational/state";
 import catalog from "../../config/connection-catalog.json";
 import { hmlAvailability } from "../n8n/discovery";
+import { workspaceAuthorization } from "./authorization-status";
 export async function withNativeConnectors(
   input: OperationalSnapshot,
   verify = false,
@@ -50,6 +51,22 @@ export async function withNativeConnectors(
       );
     state = await connectorStore.read();
     snapshot.nativeRegistryState = "ready";
+    for (const provider of ["google", "microsoft"] as const) {
+      const view = workspaceAuthorization(state, provider);
+      if (!view.saved) continue;
+      const old = snapshot.integrations.findIndex(s => s.id === provider);
+      const prior = old >= 0 ? snapshot.integrations[old] : undefined;
+      // Grants persist across deploys. Old per-service reads do not prove a
+      // fresh full-provider test and must never erase the saved authorization.
+      const status = serviceStatus({
+        id: provider, name: provider === "google" ? "Google" : "Microsoft",
+        configured: true, configurationValid: prior?.configurationValid ?? false,
+        authorized: view.services.length > 0,
+        note: "Autorização salva no cofre para: " + view.services.map(s => s.name).join(", ") + ". Somente metadados; nenhuma leitura de serviço realizada nesta consulta. Não afirme revogação por falta de verificação recente.",
+      }, undefined);
+      if (old >= 0) snapshot.integrations[old] = status;
+      else snapshot.integrations.push(status);
+    }
     for (const p of ["github", "supabase", "vercel"] as const) {
       const c = state.connections[p];
       if (!c?.credentials || c.status === "disconnected") continue;

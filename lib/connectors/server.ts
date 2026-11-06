@@ -81,6 +81,9 @@ export async function answerNativeRequest(
 ) {
   const { normalizeProviderSpeech } = await import("./provider-speech");
   message = normalizeProviderSpeech(message, history);
+  const { answerAuthorizationStatus } = await import("./authorization-status");
+  const authorizationReply = await answerAuthorizationStatus(message, connectorStore);
+  if (authorizationReply) return authorizationReply;
   const { answerSkillRequest } = await import("../cognitive/skill-discovery");
   const skillReply = await answerSkillRequest(message, signal);
   if (skillReply) return skillReply;
