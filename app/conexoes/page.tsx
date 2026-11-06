@@ -70,6 +70,11 @@ export default function ConnectionsPage() {
       <AbacusHub />
       <SimpleDevelopmentConnections />
       <WorkspaceConnectors />
+      <section className="glass notice" aria-label="Conectar navegador">
+        <h2>Navegador deste computador</h2>
+        <p>Conector local supervisionado para abas, navegação, leitura e preenchimento. Requer instalar e autorizar a extensão Jarvis; não herda a sessão do Codex.</p>
+        <Link href="/integracoes/navegador">Abrir conexão do navegador</Link>
+      </section>
       <DeviceCamera />
       <ObsConnection />
       <section

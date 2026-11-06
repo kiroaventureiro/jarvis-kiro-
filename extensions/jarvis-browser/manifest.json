@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Jarvis Kiro — Navegador supervisionado",
+  "version": "0.1.0",
+  "description": "Abas, navegação, leitura e preenchimento com confirmação local por ação.",
+  "minimum_chrome_version": "120",
+  "permissions": ["tabs", "storage", "activeTab", "scripting"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_title": "Revisar ação do Jarvis", "default_popup": "popup.html" },
+  "externally_connectable": { "matches": ["https://jarvis-kiro-git-fix-hml-integration-audit-umiversokiro.vercel.app/*"] },
+  "incognito": "not_allowed"
+}
