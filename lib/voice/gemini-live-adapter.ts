@@ -308,7 +308,17 @@ export class GeminiLiveVoiceAdapter {
       if (reply.navigate) { this.stop(); this.options.navigate(reply.navigate); }
     } catch {
       this.processing = false;
-      if (!abort.signal.aborted && connection === this.connection && this.sessionActive) this.fail("O núcleo Jarvis não respondeu. Nenhuma execução foi confirmada. Use o teclado ou reative a escuta.");
+      if (!abort.signal.aborted && connection === this.connection && this.sessionActive) {
+        // A failed application request is not a failed audio transport. Finish
+        // this tool call without retrying the command or replaying any writes.
+        const text = "Não consegui confirmar a resposta do núcleo Jarvis para esta solicitação. Nenhuma execução foi confirmada. A sessão de voz permanece conectada; você pode fazer outra pergunta.";
+        this.options.onReply({ text, speechPending: true });
+        this.outputAllowed = true;
+        try {
+          this.session?.sendToolResponse({ functionResponses: [{ id: call.id, name: GEMINI_JARVIS_TOOL, response: { text } }] });
+          this.emit("processing", "Consulta indisponível · sessão Gemini preservada");
+        } catch { this.reconnect(); }
+      }
     }
   }
   /** Keyboard shares this session and the same Jarvis callback, not a second TTS. */

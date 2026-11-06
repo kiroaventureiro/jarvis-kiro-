@@ -15,6 +15,13 @@ export function requestOriginStatus(request: Request, configuredOrigin?: string,
   const raw = request.headers.get("origin"), submitted = origin(raw);
   const fetchSite = request.headers.get("sec-fetch-site");
   const allowed = new Set([...(canonical ? [canonical] : configuredOrigin ? [] : [urlOrigin]), ...official]);
+  // Vercel supplies this exact deployment hostname. OAuth keeps its fixed
+  // callback, while same-deployment API calls also work from the deploy URL.
+  // Never trust a wildcard vercel.app suffix or a forwarded Host header.
+  const deploymentHost = process.env.VERCEL_ENV === "preview" ? process.env.VERCEL_URL : undefined;
+  const deploymentOrigin = deploymentHost && /^[a-z0-9][a-z0-9.-]*\.vercel\.app$/i.test(deploymentHost)
+    ? origin(`https://${deploymentHost}`) : null;
+  if (deploymentOrigin) allowed.add(deploymentOrigin);
   let reason = "ALLOWED";
   if (configuredOrigin && !canonical) reason = "ORIGIN_CONFIG_INVALID";
   else if (fetchSite === "cross-site") reason = "CROSS_SITE";

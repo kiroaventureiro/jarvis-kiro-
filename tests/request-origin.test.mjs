@@ -39,3 +39,26 @@ test('OAuth callbacks require the configured public target and ignore forwarded-
  assert.equal(callbackAllowed(request(undefined,{host:'evil.example'}),canonical),false);
  assert.equal(callbackAllowed(request(),undefined),false);
 });
+
+test('Preview trusts only its exact Vercel deployment origin alongside the fixed OAuth origin', () => {
+ const beforeEnv=process.env.VERCEL_ENV, beforeUrl=process.env.VERCEL_URL;
+ try {
+  process.env.VERCEL_ENV='preview';
+  process.env.VERCEL_URL='jarvis-kiro-example-umiversokiro.vercel.app';
+  const deployment='https://'+process.env.VERCEL_URL;
+  const callback='https://jarvis-kiro-git-fix-hml-integration-audit-umiversokiro.vercel.app';
+  assert.equal(allowed(request(deployment,{'sec-fetch-site':'same-origin'}),callback),true);
+  assert.equal(allowed(request(callback),callback),true);
+  assert.equal(allowed(request('https://other-preview.vercel.app'),callback),false);
+  assert.equal(allowed(request(deployment,{'sec-fetch-site':'cross-site'}),callback),false);
+  assert.equal(callbackAllowed(request(undefined,{},deployment+'/callback'),callback),false);
+  process.env.VERCEL_ENV='production';
+  assert.equal(allowed(request(deployment),callback),false);
+  process.env.VERCEL_ENV='preview';
+  process.env.VERCEL_URL='evil.example/path';
+  assert.equal(allowed(request('https://evil.example'),callback),false);
+ } finally {
+  if(beforeEnv===undefined)delete process.env.VERCEL_ENV;else process.env.VERCEL_ENV=beforeEnv;
+  if(beforeUrl===undefined)delete process.env.VERCEL_URL;else process.env.VERCEL_URL=beforeUrl;
+ }
+});
