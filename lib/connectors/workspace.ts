@@ -2,7 +2,10 @@ import "server-only";
 import { randomBytes, createHash } from "node:crypto";
 import type { StateStore } from "./types";
 import { readJsonBounded } from "../abacus/hub";
+import { readPersonalData, type PersonalWindow } from "./personal-read";
 export const WORKSPACE_SERVICES = [
+  {id:"gmail-messages",provider:"google",name:"Gmail · texto para resumo pessoal",scope:"https://www.googleapis.com/auth/gmail.readonly",url:"https://gmail.googleapis.com/gmail/v1/users/me/messages",key:"messages"},
+  {id:"google-events",provider:"google",name:"Google Agenda · compromissos da agenda principal",scope:"https://www.googleapis.com/auth/calendar.events.readonly",url:"https://www.googleapis.com/calendar/v3/calendars/primary/events",key:"items"},
   {id:"gmail",provider:"google",name:"Gmail",scope:"https://www.googleapis.com/auth/gmail.metadata",url:"https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5",key:"messages"},
   {id:"google-drive",provider:"google",name:"Drive · Docs · Sheets · Slides",scope:"https://www.googleapis.com/auth/drive.metadata.readonly",url:"https://www.googleapis.com/drive/v3/files?pageSize=5&fields=files(id,name,mimeType)",key:"files"},
   {id:"google-calendar",provider:"google",name:"Google Agenda",scope:"https://www.googleapis.com/auth/calendar.calendarlist.readonly",url:"https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=5",key:"items"},
@@ -37,7 +40,7 @@ function config(p:WorkspaceProvider,env:NodeJS.ProcessEnv){
  return origin&&id&&secret?{origin,id,secret}:null;
 }
 function selections(p:WorkspaceProvider,input:unknown){
- if(!Array.isArray(input)||!input.length||input.length>9||!input.every(x=>typeof x==="string"&&WORKSPACE_SERVICES.some(s=>s.id===x&&s.provider===p)))throw Error("INVALID_SERVICES");
+ if(!Array.isArray(input)||!input.length||input.length>16||!input.every(x=>typeof x==="string"&&WORKSPACE_SERVICES.some(s=>s.id===x&&s.provider===p)))throw Error("INVALID_SERVICES");
  return [...new Set(input as string[])];
 }
 export class WorkspaceConnectors {
@@ -51,7 +54,7 @@ export class WorkspaceConnectors {
    return {provider,authorizationReady:configured&&!!config(provider,this.env),
     missing:[...(!configured?["cofre de conectores"]:[]),...(!workspaceOrigin(this.env)?["JARVIS_CONNECTOR_ORIGIN válido"]:[]),...["CLIENT_ID","CLIENT_SECRET"].filter(key=>!this.env[(provider==="google"?"GOOGLE_":"MICROSOFT_")+key]).map(key=>(provider==="google"?"GOOGLE_":"MICROSOFT_")+key)],
     connected:!!a,services:a?.services||[],verifiedAt:a?.verifiedAt||{},callback:workspaceOrigin(this.env)?workspaceOrigin(this.env)+"/api/director/workspace-connectors/"+provider+"/callback":null};
-  }),services:WORKSPACE_SERVICES.map(({id,provider,name,scope})=>({id,provider,name,scope})),mode:"read_metadata_only",writesEnabled:false};
+  }),services:WORKSPACE_SERVICES.map(({id,provider,name,scope})=>({id,provider,name,scope})),mode:"read_metadata_with_optional_personal_read",writesEnabled:false};
  }
  async start(provider:string,input:unknown,sessionExpires:number){
   if(!providerValid(provider)||!Number.isFinite(sessionExpires)||sessionExpires<=this.now())throw Error("INVALID_PROVIDER_OR_SESSION");
@@ -99,7 +102,20 @@ export class WorkspaceConnectors {
    return await this.store.update(s=>{const a=s.workspaceAccounts?.[p];if(!a||a.id!==account.id||a.refreshLease!==lease)throw Error("WORKSPACE_NOT_CONNECTED");Object.assign(a,tokens,{refreshToken:tokens.refreshToken||a.refreshToken});delete a.refreshLease;delete a.refreshLeaseAt;return a;});
   }catch{await this.store.update(s=>{const a=s.workspaceAccounts?.[p];if(a?.refreshLease===lease){delete a.refreshLease;delete a.refreshLeaseAt;}});throw Error("WORKSPACE_REAUTHORIZE");}
  }
+ async personalRead(kind:"agenda"|"mail",options:{window:PersonalWindow;unread?:boolean}){
+  const serviceId=kind==="agenda"?"google-events":"gmail-messages";
+  const account=await this.account("google");
+  if(!account.services.includes(serviceId))throw Error("WORKSPACE_SCOPE_REQUIRED");
+  const result=await readPersonalData(kind,account.accessToken,options,this.fetcher,this.now);
+  await this.store.update(s=>{const a=s.workspaceAccounts?.google;if(!a||a.id!==account.id)throw Error("WORKSPACE_NOT_CONNECTED");a.verifiedAt[serviceId]=result.checkedAt;});
+  return result;
+ }
  async read(serviceId:string){
+  if(serviceId==="gmail-messages"||serviceId==="google-events"){
+   const window={start:new Date(this.now()).toISOString(),end:new Date(this.now()+7*86400000).toISOString()};
+   const result=await this.personalRead(serviceId==="google-events"?"agenda":"mail",{window});
+   return {service:serviceId,checkedAt:result.checkedAt,items:result.events?.map(e=>({id:e.id,name:e.start+" · "+e.title}))||result.messages?.map(m=>({id:m.id,name:m.subject}))||[],source:"live",untrusted:true,scope:"personal_read",writesEnabled:false};
+  }
   const service=WORKSPACE_SERVICES.find(s=>s.id===serviceId);if(!service)throw Error("INVALID_SERVICE");
   const account=await this.account(service.provider);if(!account.services.includes(service.id))throw Error("WORKSPACE_SCOPE_REQUIRED");
   // Destination and fields are fixed by the implemented adapter; no arbitrary URL or tool execution.

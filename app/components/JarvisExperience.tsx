@@ -853,7 +853,7 @@ export default function JarvisExperience({ experimentalGemini = false }: { exper
     setMic(enabled);
   }
   function selfControlReply(text:string) {
-    if (arrivalBriefingIntent(text)) {
+    if (arrivalBriefingIntent(text) && /repit[ae]|novamente|[uú]ltimo|anterior/i.test(text)) {
       window.dispatchEvent(new Event("jk-arrival-reveal"));
       return {text:arrivalText.current || "O boletim ainda não está disponível. Verifique sua sessão e tente novamente.",model:"jk-arrival-replay",provider:"local_operational" as const,usage:null,visual:undefined};
     }

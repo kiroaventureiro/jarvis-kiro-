@@ -14,7 +14,9 @@ export default function WorkspaceConnectors(){
  }catch(e){setError(e instanceof Error?e.message:"Consulta indisponível.");}finally{setBusy(false);}}
  return <section id="workspace-connectors" className="glass notice" aria-label="Conectar Google e Microsoft">
   <h2>Google e Microsoft · autorização por serviço</h2>
-  <p>Selecione os serviços e autorize na tela oficial. Esta versão lista até cinco registros por consulta; não lê corpos de e-mail, não edita arquivos, não envia mensagens e não publica no YouTube.</p>
+  <p>Selecione os serviços e autorize na tela oficial. As conexões básicas continuam consultando metadados. Para seu resumo pessoal, há duas permissões adicionais opcionais abaixo: texto das mensagens Gmail e compromissos da agenda principal.</p>
+  <p>Ao selecionar “Gmail · texto para resumo pessoal”, você permite consultar até cinco mensagens recentes da caixa de entrada, com texto limitado, sem anexos. Ao pedir análise ou resumo, o conteúdo consultado pode ser processado pela Abacus e, na conversa por voz, pelo Gemini do Google. Mensagens de autenticação são omitidas do resumo. Desmarcar essa opção não remove as outras conexões.</p>
+  <p>“Google Agenda · compromissos da agenda principal” lê até 20 eventos no período solicitado. O Jarvis informa quando há mais resultados. Esta etapa não envia mensagens, marca e-mails como lidos, edita arquivos nem altera compromissos.</p>
   <p>Tasks e To Do listam listas, não seus itens. Forms lista arquivos, sem respostas. Meet lista registros, sem entrar em reuniões. Teams e SharePoint exigem conta corporativa/escolar; o administrador pode precisar aprovar os escopos.</p>
   <p>SharePoint consulta apenas sites seguidos. A Microsoft informa uma limitação conhecida que pode causar resultados incompletos ou incorretos; não trate a consulta como inventário completo.</p>
   <p>Ao reconectar, os serviços já autorizados aparecem marcados. A nova autorização substitui a seleção anterior; desmarque apenas se quiser retirar esse serviço do acesso do Jarvis.</p>

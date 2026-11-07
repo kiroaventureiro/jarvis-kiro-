@@ -84,6 +84,9 @@ export async function answerNativeRequest(
   const { answerAuthorizationStatus } = await import("./authorization-status");
   const authorizationReply = await answerAuthorizationStatus(message, connectorStore);
   if (authorizationReply) return authorizationReply;
+  const { answerPersonalAssistant } = await import("../personal-assistant-server");
+  const personalReply = await answerPersonalAssistant(message, signal, history);
+  if (personalReply) return personalReply;
   const { answerSkillRequest } = await import("../cognitive/skill-discovery");
   const skillReply = await answerSkillRequest(message, signal);
   if (skillReply) return skillReply;
@@ -97,7 +100,7 @@ export async function answerNativeRequest(
     /^(?:oi[,]?\s*)?(?:bom dia|boa tarde|boa noite)[,! ]*jarvis[!?. ]*$/.test(greeting)
   ) {
     const { arrivalBriefing } = await import("./arrival-briefing");
-    return arrivalBriefing(connectorStore);
+    return (await answerPersonalAssistant("Prepare meu resumo do dia", signal, history)) || arrivalBriefing(connectorStore);
   }
   const { prepareGitHubWrite, approveGitHubWrite, githubBridgeWriteStatus } = await import("./conversation-write");
   try {

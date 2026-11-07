@@ -62,7 +62,7 @@ export async function withNativeConnectors(
         id: provider, name: provider === "google" ? "Google" : "Microsoft",
         configured: true, configurationValid: prior?.configurationValid ?? false,
         authorized: view.services.length > 0,
-        note: "Autorização salva no cofre para: " + view.services.map(s => s.name).join(", ") + ". Somente metadados; nenhuma leitura de serviço realizada nesta consulta. Não afirme revogação por falta de verificação recente.",
+        note: "Autorização salva no cofre para: " + view.services.map(s => s.name).join(", ") + ". Leitura limitada aos serviços selecionados; nenhuma leitura de serviço realizada nesta consulta. Não afirme revogação por falta de verificação recente.",
       }, undefined);
       if (old >= 0) snapshot.integrations[old] = status;
       else snapshot.integrations.push(status);

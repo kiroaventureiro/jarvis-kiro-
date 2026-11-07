@@ -7,6 +7,7 @@ type Target = keyof typeof names;
 export function authorizationStatusIntent(message: string): Target[] | null {
   const n = message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   if (/\b(?:conecte|autorize|revogue|desconecte|remova|publique|execute|envie|apague|edite)\b/.test(n)) return null;
+  if (/\b(?:liste|listar|leia|ler|veja|mostre|consulte|consultar|acesse)\b/.test(n) && !/autoriz|permiss|conect|integrac/.test(n)) return null;
   if (!/acess|autoriz|permiss|conect|conex|integrac/.test(n)) return null;
   const targets: Target[] = [];
   if (/\b(?:google|gmail|drive|youtube)\b/.test(n)) targets.push("google");
@@ -43,7 +44,9 @@ export async function answerAuthorizationStatus(message: string, store: StateSto
       const view = workspaceAuthorization(state, target);
       if (!view.saved) return names[target] + ": não encontrei autorização salva neste ambiente. Isso não descreve outras versões do Jarvis.";
       return names[target] + ": autorização salva para " + (view.services.map(s => s.name).join(", ") || "nenhum serviço reconhecido") +
-        ". Posso consultar os metadados dos serviços autorizados quando você pedir. Não leio corpos de e-mail nem altero arquivos por esse conector. " +
+        (view.services.some(s => ["gmail-messages", "google-events"].includes(s.id))
+          ? ". A leitura pessoal de mensagens ou compromissos está autorizada para os serviços selecionados. Posso preparar o resumo quando você pedir; não envio e-mails nem altero compromissos por essa consulta. "
+          : ". Posso consultar os metadados dos serviços autorizados quando você pedir. A leitura do texto de e-mails e dos compromissos exige selecionar as duas permissões pessoais adicionais em Conexões. ") +
         "Esta consulta confirmou o registro da autorização, sem testar os serviços agora. Para testar, peça por exemplo: " + (target === "google" ? "liste os arquivos do Drive." : "liste os arquivos do OneDrive.");
     }
     const connection = state.connections[target];
